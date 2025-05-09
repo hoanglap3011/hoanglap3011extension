@@ -78,19 +78,19 @@ document.addEventListener("DOMContentLoaded", () => {
     let toDoList = result[toDoListKey];
 
     if (diary) {
-      diaryElement.textContent = "Nhật ký";
+      diaryElement.textContent = "📔 Nhật ký";
       diaryElement.href = diary;
     }
     if (diaryChecklist) {
-      diaryChecklistElement.textContent = "Nhật ký checklist";
+      diaryChecklistElement.textContent = "✅ Nhật ký checklist";
       diaryChecklistElement.href = diaryChecklist;
     }
     if (thought) {
-      thoughtElement.textContent = "Suy nghĩ";
+      thoughtElement.textContent = "💭 Suy nghĩ";
       thoughtElement.href = thought;
     }
     if (toDoList) {
-      toDoListElement.textContent = "To Do List";
+      toDoListElement.textContent = "📝 To Do List";
       toDoListElement.href = toDoList;
     }
 
