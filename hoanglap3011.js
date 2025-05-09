@@ -1,5 +1,9 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbwI4Xjkkt1HrrGDL9dQsN8bsK6-s85r7Hu_t8mWG1Wr_ZILQpiiQf6bti7gj1r6TeQ_/exec"; 
 
+function isExtensionEnv() {
+  return typeof chrome !== "undefined" && chrome.storage && chrome.storage.local;
+}
+
 function getISOWeekNumber() {
   var date = new Date();
   var target = new Date(date.valueOf());
@@ -26,14 +30,22 @@ function fetchAndStoreLink(callback) {
       const thoughtKey = `${weekNumber}thought`;
       const toDoListKey = `${weekNumber}todo`;
 
-      chrome.storage.local.set({
-        [diaryKey]: diary.trim(),
-        [diaryChecklistKey]: diaryChecklist.trim(),
-        [thoughtKey]: thought.trim(),
-        [toDoListKey]: toDoList.trim()
-      }, () => {
+      if (isExtensionEnv()) {
+        chrome.storage.local.set({
+          [diaryKey]: diary.trim(),
+          [diaryChecklistKey]: diaryChecklist.trim(),
+          [thoughtKey]: thought.trim(),
+          [toDoListKey]: toDoList.trim()
+        }, () => {
+          if (typeof callback === 'function') callback();
+        });
+      } else {
+        localStorage.setItem(diaryKey, diary.trim());
+        localStorage.setItem(diaryChecklistKey, diaryChecklist.trim());
+        localStorage.setItem(thoughtKey, thought.trim());
+        localStorage.setItem(toDoListKey, toDoList.trim());
         if (typeof callback === 'function') callback();
-      });
+      }
     })
     .catch(error => {
       console.error("Lỗi khi gọi API và lưu cache:", error);
@@ -59,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const thoughtKey = `${weekNumber}thought`;
   const toDoListKey = `${weekNumber}todo`;
 
-  chrome.storage.local.get([diaryKey, diaryChecklistKey, thoughtKey, toDoListKey], (result) => {
+  function handleStorageResult(result) {
     let diary = result[diaryKey];
     let diaryChecklist = result[diaryChecklistKey];
     let thought = result[thoughtKey];
@@ -82,21 +94,36 @@ document.addEventListener("DOMContentLoaded", () => {
       toDoListElement.href = toDoList;
     }
 
-    function updateLinksFromCache() {
-      chrome.storage.local.get([diaryKey, diaryChecklistKey, thoughtKey, toDoListKey], (result) => {
-        diaryElement.href = result[diaryKey];
-        diaryChecklistElement.href = result[diaryChecklistKey] ;
-        thoughtElement.href = result[thoughtKey] ;
-        toDoListElement.href = result[toDoListKey] ;
-        diaryElement.textContent = "Nhật ký";
-        diaryChecklistElement.textContent = "Nhật ký Checklist";
-        thoughtElement.textContent = "Suy nghĩ";        
-        toDoListElement.textContent = "To Do List";        
+    if (!diary || !diaryChecklist || !thought || !toDoList) {
+      fetchAndStoreLink(() => {
+        if (isExtensionEnv()) {
+          chrome.storage.local.get([diaryKey, diaryChecklistKey, thoughtKey, toDoListKey], (newResult) => {
+            handleStorageResult(newResult);
+          });
+        } else {
+          const newResult = {
+            [diaryKey]: localStorage.getItem(diaryKey),
+            [diaryChecklistKey]: localStorage.getItem(diaryChecklistKey),
+            [thoughtKey]: localStorage.getItem(thoughtKey),
+            [toDoListKey]: localStorage.getItem(toDoListKey)
+          };
+          handleStorageResult(newResult);
+        }
       });
     }
+  }
 
-    if (!diary || !diaryChecklist || !thought || !toDoList) {
-      fetchAndStoreLink(updateLinksFromCache);
-    } 
-  });
+  if (isExtensionEnv()) {
+    chrome.storage.local.get([diaryKey, diaryChecklistKey, thoughtKey, toDoListKey], (result) => {
+      handleStorageResult(result);
+    });
+  } else {
+    const result = {
+      [diaryKey]: localStorage.getItem(diaryKey),
+      [diaryChecklistKey]: localStorage.getItem(diaryChecklistKey),
+      [thoughtKey]: localStorage.getItem(thoughtKey),
+      [toDoListKey]: localStorage.getItem(toDoListKey)
+    };
+    handleStorageResult(result);
+  }
 });
