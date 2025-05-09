@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Check Date</title>
+  </head>
+  <body>
+    <div id="output"></div>
+
+    <script>
+      const today = new Date();
+      const isTargetDate = today.getFullYear() === 2070 &&
+                           today.getMonth() === 0 && // tháng 0 là tháng 1
+                           today.getDate() === 1;
+      document.getElementById("output").innerText = isTargetDate ? "abc" : "";
+    </script>
+  </body>
+</html>
