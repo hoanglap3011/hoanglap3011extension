@@ -53,6 +53,48 @@ function fetchAndStoreLink(callback) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  let countdownInterval;
+  const btnPomodoro = document.getElementById("btnPomodoro");
+  const countdownDisplay = document.getElementById("countdown-display"); // Thêm biến để truy cập phần tử hiển thị countdown
+  if (btnPomodoro) {
+    btnPomodoro.addEventListener("click", () => {
+      if (!countdownInterval) {
+        countdownDisplay.textContent = "";
+        countdownDisplay.style.display = "inline";
+        let countdown = 45 * 60;
+        countdownInterval = setInterval(() => {
+        const minutes = Math.floor(countdown / 60);
+        const seconds = countdown % 60;
+        countdownDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+          countdown--;
+          if (countdown < 0) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+
+            chrome.tabs.query({}, (tabs) => {
+              tabs.forEach((tab) => {
+                if (tab.url?.startsWith("http")) {
+                  chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    func: () => alert("Thời gian đã hết!")
+                  });
+                }
+              });
+            });
+
+            const audio = new Audio("https://media.geeksforgeeks.org/wp-content/uploads/20190531135120/beep.mp3");
+            audio.play();
+          }
+        }, 1000);
+      } else {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+        countdownDisplay.style.display = "none";
+      }
+    });
+  }
+
+
   const diaryElement = document.getElementById("diary");
   const diaryChecklistElement = document.getElementById("diaryChecklist");
   const thoughtElement = document.getElementById("thought");

@@ -8,7 +8,6 @@
     body {
       font-family: sans-serif;
       padding: 20px;
-      max-width: 600px;
       margin: auto;
     }
     a {
@@ -40,15 +39,79 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+    .columns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .column {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    @media (max-width: 768px) {
+      .columns {
+        flex-direction: column;
+        gap: 10px;
+      }
+    }
+    .a-like {
+      display: block;
+      margin: 10px 0;
+      font-size: clamp(16px, 4vw, 22px);
+      color: blue;
+      padding: 12px 16px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background-color: #f9f9f9;
+      transition: background-color 0.2s;
+      text-align: left;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .a-like:hover {
+      background-color: #eef;
+    }
+    .first-button {
+      margin-top: 40px;
+    }
   </style>
 </head>
 <body>
-  <h2>Liên kết</h2>
-  <div id="link-container">
-    <a id="diary" href="#" target="_blank">📔 Nhật ký</a>
-    <a id="diaryChecklist" href="#" target="_blank">✅ Nhật ký checklist</a>
-    <a id="thought" href="#" target="_blank">💭 Suy nghĩ</a>
-    <a id="toDoList" href="#" target="_blank">📝 To Do List</a>
+  <div id="link-container" class="columns">
+    <div class="column">
+      <a id="diary" href="#" target="_blank">📔 Nhật ký</a>
+      <a id="diaryChecklist" href="#" target="_blank">✅ Nhật ký checklist</a>
+      <a id="thought" href="#" target="_blank">💭 Suy nghĩ</a>
+      <a id="toDoList" href="#" target="_blank">📝 To Do List</a>
+      <a id="calendar" href="https://calendar.google.com/calendar/" target="_blank"><img src="https://ssl.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_24_2x.png" alt="Google Calendar" style="vertical-align: text-bottom; height: 1.2em;"> Lịch</a>
+      <button class="a-like first-button" onclick="alert('Button clicked!')">🧭 Tổng hợp Nhật ký ngày</button>
+      <button class="a-like" onclick="alert('Button clicked!')">🧭 Tổng hợp Nhật ký tuần</button>
+    </div>
+    <div class="column">
+      <a href="#" target="_blank">🎵 Nhạc không lời học tập</a>
+      <button class="a-like" id="btnPomodoro">🍅 Pomodoro <span id="countdown-display" style="display: none; color: red"></span></button>
+      <a href="https://www.youtube.com/watch?v=QhIxGtxIFF4&list=PLpl9CTbHHB9W879FlKDxuke-rmCiRvCSW" target="_blank">🌬️ Hít thở</a>
+      <a href="https://youtu.be/PmuFF36uIxk?si=uDASfLl8lL2FfC1M" target="_blank">🧘 Thiền Vipassana</a>
+      <a href="https://music.youtube.com/watch?v=8Unx4chbLl0&si=okde0RL5sByOie7z" target="_blank">🧘‍♀️ Thiền metta</a>
+      <a href="#" target="_blank">📚 Luyện tiếng Anh</a>
+    </div>
+    <div class="column">
+      <a href="https://music.youtube.com/playlist?list=PLpl9CTbHHB9Wy7WRZ8-28U0hcLATWA4OX" target="_blank">🎶 Nhạc tích cực động lực có lời</a>
+      <a href="#" target="_blank">📰 Tin tổng hợp</a>
+      <a href="#" target="_blank">✨ Tin tích cực</a>
+      <a href="#" target="_blank">🤖 Mở nhiều AI</a>
+      <a href="https://www.24h.com.vn/bong-da/lich-thi-dau-bong-da-hom-nay-moi-nhat-c48a364371.html" target="_blank">⚽ Lịch thi đấu bóng đá</a>
+      <a href="https://www.edumall.vn/vn/course-player/hoc-guitar-dem-hat-cap-toc-trong-30-ngay" target="_blank">🎸 Guitar edumall</a>
+      <a href="#" target="_blank">💪🎧 Gym Music</a>
+      <a href="https://docs.google.com/document/d/1Yn04JziVUUTyqUVNqKfKOeEBCDlulV9R1jJPITNpdEA/edit?usp=drive_link" target="_blank">👪 Note về gia đình</a>
+      <a href="#" target="_blank">🎙️ Tin tức thành podcast</a>
+      <a href="#" target="_blank">😂 Playlist cười</a>
+      <a href="https://music.youtube.com/playlist?list=PLpl9CTbHHB9UXfVctUpy4NzvNhsQ7s7dX" target="_blank">🧠 Playlist sâu sắc</a>
+      <a href="#" target="_blank">📖 Đọc sách Kindle</a>
+    </div>
   </div>
   <script src="hoanglap3011.js"></script>
 </body>
