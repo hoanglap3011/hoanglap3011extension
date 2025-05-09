@@ -7,7 +7,8 @@
     "activeTab",
     "tabs",
     "scripting",
-    "windows"
+    "windows",
+    "storage"
   ],
   "action": {
     "default_popup": "hello.html",
@@ -20,7 +21,8 @@
     "128": "icon.png"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
@@ -35,8 +37,16 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["add.png"],
+      "resources": ["add.png","hoanglap3011.html"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "commands": {
+    "open_hoanglap3011": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+L"
+      },
+      "description": "Mở trang chủ của extension hoanglap3011"
+    }
+  }
 }

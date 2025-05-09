@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Link động từ API</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    a { display: block; margin: 10px 0; font-size: 16px; color: blue; }
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(0, 0, 255, 0.3);
+      border-top-color: rgba(0, 0, 255, 1);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <h2>Liên kết</h2>
+  <div id="link-container">
+    <a id="diary" href="#" target="_blank"></a>
+    <a id="diaryChecklist" href="#" target="_blank"></a>
+    <a id="thought" href="#" target="_blank"></a>
+    <a id="toDoList" href="#" target="_blank"></a>
+  </div>
+  <script src="hoanglap3011.js"></script>
+</body>
+</html>

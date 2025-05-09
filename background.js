@@ -1,3 +1,11 @@
+chrome.commands.onCommand.addListener((command) => {
+  if (command === "open_hoanglap3011") {
+    chrome.tabs.create({
+      url: chrome.runtime.getURL("hoanglap3011.html")
+    });
+  }
+});
+
 // Hàm xử lý khi một tab mới được tạo
 async function handleTabCreated(tab) {
     // Nếu tab không có windowId hoặc id thì bỏ qua
