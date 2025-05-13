@@ -20,5 +20,28 @@ async function handleTabCreated(tab) {
     }
 }
 
+// Hàm kiểm tra số lượng cửa sổ đang mở và đóng cửa sổ nếu vượt quá 3
+async function checkMaxWindows(newWindow) {
+    const windows = await chrome.windows.getAll();
+
+    if (windows.length > 3 && newWindow.type === "normal") {
+        chrome.windows.remove(newWindow.id);
+        alertMaxWindows();
+    }
+}
+
+// Hàm hiển thị cảnh báo (bằng notification hoặc alert)
+function alertMaxWindows() {
+    chrome.notifications.create({
+        type: "basic",
+        iconUrl: "icon.png", // đảm bảo bạn có icon.png trong extension
+        title: "Giới hạn cửa sổ",
+        message: "Bạn chỉ được mở tối đa 2 cửa sổ trình duyệt."
+    });
+}
+
+// Lắng nghe sự kiện tạo cửa sổ mới
+chrome.windows.onCreated.addListener(checkMaxWindows);
+
 // Lắng nghe sự kiện khi một tab mới được tạo và gọi hàm xử lý
 chrome.tabs.onCreated.addListener(handleTabCreated);

@@ -144,6 +144,63 @@ document.addEventListener("DOMContentLoaded", () => {
   thoughtElement.innerHTML = '<span class="spinner"></span>';
   toDoListElement.innerHTML = '<span class="spinner"></span>';
 
+  // Add click event handler for diaryElement with conditional logic
+  if (diaryElement) {
+    diaryElement.addEventListener("click", function (e) {
+      const isSmallScreen = window.innerWidth <= 768;
+      if (!isSmallScreen) {
+        e.preventDefault();
+        const iframe = document.getElementById("content-viewer");
+        if (iframe && diaryElement.href) {
+          iframe.src = diaryElement.href;
+        }
+      }
+      // else: let default behavior occur (open in new tab)
+    });
+  }
+
+  // Add click event handler for diaryChecklistElement
+  if (diaryChecklistElement) {
+    diaryChecklistElement.addEventListener("click", function (e) {
+      const isSmallScreen = window.innerWidth <= 768;
+      if (!isSmallScreen) {
+        e.preventDefault();
+        const iframe = document.getElementById("content-viewer");
+        if (iframe && diaryChecklistElement.href) {
+          iframe.src = diaryChecklistElement.href;
+        }
+      }
+    });
+  }
+
+  // Add click event handler for thoughtElement
+  if (thoughtElement) {
+    thoughtElement.addEventListener("click", function (e) {
+      const isSmallScreen = window.innerWidth <= 768;
+      if (!isSmallScreen) {
+        e.preventDefault();
+        const iframe = document.getElementById("content-viewer");
+        if (iframe && thoughtElement.href) {
+          iframe.src = thoughtElement.href;
+        }
+      }
+    });
+  }
+
+  // Add click event handler for toDoListElement
+  if (toDoListElement) {
+    toDoListElement.addEventListener("click", function (e) {
+      const isSmallScreen = window.innerWidth <= 768;
+      if (!isSmallScreen) {
+        e.preventDefault();
+        const iframe = document.getElementById("content-viewer");
+        if (iframe && toDoListElement.href) {
+          iframe.src = toDoListElement.href;
+        }
+      }
+    });
+  }
+
   const weekNumber = getISOWeekNumber();
   const toDayStr = `${String(today.getDate()).padStart(2, '0')}${String(today.getMonth() + 1).padStart(2, '0')}${today.getFullYear()}`;
   const diaryKey = `${toDayStr}diary`;
@@ -205,5 +262,51 @@ document.addEventListener("DOMContentLoaded", () => {
       [toDoListKey]: localStorage.getItem(toDoListKey)
     };
     handleStorageResult(result);
+  }
+
+  const homeButton = document.getElementById("home");
+  if (homeButton) {
+    homeButton.addEventListener("click", () => {
+      const iframe = document.getElementById("content-viewer");
+      if (iframe) {
+        iframe.src = "";
+      }
+    });
+  }
+
+  // Add Lich Thi Dau button event handler
+  const btnLichThiDau = document.getElementById("btnLichThiDau");
+  if (btnLichThiDau) {
+    btnLichThiDau.addEventListener("click", function (e) {
+      const url = "https://www.24h.com.vn/bong-da/lich-thi-dau-bong-da-hom-nay-moi-nhat-c48a364371.html";
+      const isSmallScreen = window.innerWidth <= 768;
+      if (isSmallScreen) {
+        window.open(url, "_blank");
+      } else {
+        fetch(url)
+          .then(response => response.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, "text/html");
+
+            const style = document.createElement("style");
+            style.textContent = `
+              body > *:not(#article_body) { display: none !important; }
+              #article_body { display: block !important; }
+            `;
+            doc.head.appendChild(style);
+
+            const iframe = document.getElementById("content-viewer");
+            if (iframe) {
+              const blob = new Blob([doc.documentElement.outerHTML], { type: 'text/html' });
+              const blobUrl = URL.createObjectURL(blob);
+              iframe.src = blobUrl;
+            }
+          })
+          .catch(err => {
+            console.error("Failed to fetch article content:", err);
+          });
+      }
+    });
   }
 });
