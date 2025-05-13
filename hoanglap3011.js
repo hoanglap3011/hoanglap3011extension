@@ -52,44 +52,83 @@ function fetchAndStoreLink(callback) {
     });
 }
 
+let countdownInterval;
+const countdownDisplay = document.getElementById("countdown-display");
+
+function startPomodoro(startTime, duration) {
+  countdownDisplay.style.display = "inline";
+
+  function updateCountdown() {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const remaining = duration - elapsed;
+
+    if (remaining >= 0) {
+      const minutes = Math.floor(remaining / 60);
+      const seconds = remaining % 60;
+      countdownDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    } else {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+      countdownDisplay.style.display = "none";
+      localStorage.removeItem("pomodoroStartTime");
+      localStorage.removeItem("pomodoroDuration");
+
+      if (Notification.permission === "granted") {
+        new Notification("Pomodoro", {
+          body: "⏰ Thời gian đã hết! Hãy nghỉ ngơi một chút nhé.",
+          icon: "https://media.geeksforgeeks.org/wp-content/uploads/20200512235139/pomodoro.png"
+        });
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+            new Notification("Pomodoro", {
+              body: "⏰ Thời gian đã hết! Hãy nghỉ ngơi một chút nhé.",
+              icon: "https://media.geeksforgeeks.org/wp-content/uploads/20200512235139/pomodoro.png"
+            });
+          }
+        });
+      }
+
+      const audio = new Audio("https://media.geeksforgeeks.org/wp-content/uploads/20190531135120/beep.mp3");
+      audio.play();
+    }
+  }
+
+  updateCountdown(); // Run once immediately
+  countdownInterval = setInterval(updateCountdown, 1000);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-  let countdownInterval;
+  const today = new Date();
+  const formattedDate = today.toLocaleDateString('vi-VN', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+  document.getElementById("current-date").textContent = formattedDate;
+
+  const POMODORO_DURATION = 45 * 60; // 45 phút
+
   const btnPomodoro = document.getElementById("btnPomodoro");
-  const countdownDisplay = document.getElementById("countdown-display"); // Thêm biến để truy cập phần tử hiển thị countdown
+
+  const savedStartTime = localStorage.getItem("pomodoroStartTime");
+  const savedDuration = localStorage.getItem("pomodoroDuration");
+  if (savedStartTime && savedDuration) {
+    startPomodoro(parseInt(savedStartTime), parseInt(savedDuration));
+  }
+
   if (btnPomodoro) {
     btnPomodoro.addEventListener("click", () => {
       if (!countdownInterval) {
-        countdownDisplay.textContent = "";
-        countdownDisplay.style.display = "inline";
-        let countdown = 45 * 60;
-        countdownInterval = setInterval(() => {
-        const minutes = Math.floor(countdown / 60);
-        const seconds = countdown % 60;
-        countdownDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-          countdown--;
-          if (countdown < 0) {
-            clearInterval(countdownInterval);
-            countdownInterval = null;
+        const now = Date.now();
+        localStorage.setItem("pomodoroStartTime", now.toString());
+        localStorage.setItem("pomodoroDuration", POMODORO_DURATION.toString());
 
-            chrome.tabs.query({}, (tabs) => {
-              tabs.forEach((tab) => {
-                if (tab.url?.startsWith("http")) {
-                  chrome.scripting.executeScript({
-                    target: { tabId: tab.id },
-                    func: () => alert("Thời gian đã hết!")
-                  });
-                }
-              });
-            });
-
-            const audio = new Audio("https://media.geeksforgeeks.org/wp-content/uploads/20190531135120/beep.mp3");
-            audio.play();
-          }
-        }, 1000);
+        startPomodoro(now, POMODORO_DURATION);
       } else {
         clearInterval(countdownInterval);
         countdownInterval = null;
         countdownDisplay.style.display = "none";
+        localStorage.removeItem("pomodoroStartTime");
+        localStorage.removeItem("pomodoroDuration");
       }
     });
   }
@@ -106,7 +145,6 @@ document.addEventListener("DOMContentLoaded", () => {
   toDoListElement.innerHTML = '<span class="spinner"></span>';
 
   const weekNumber = getISOWeekNumber();
-  const today = new Date();
   const toDayStr = `${String(today.getDate()).padStart(2, '0')}${String(today.getMonth() + 1).padStart(2, '0')}${today.getFullYear()}`;
   const diaryKey = `${toDayStr}diary`;
   const diaryChecklistKey = `${toDayStr}diaryChecklist`;
@@ -120,7 +158,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let toDoList = result[toDoListKey];
 
     if (diary) {
-      diaryElement.textContent = "📔 Nhật ký";
+      diaryElement.textContent = "🖊️ Nhật ký";
       diaryElement.href = diary;
     }
     if (diaryChecklist) {
@@ -132,7 +170,7 @@ document.addEventListener("DOMContentLoaded", () => {
       thoughtElement.href = thought;
     }
     if (toDoList) {
-      toDoListElement.textContent = "📝 To Do List";
+      toDoListElement.textContent = "✅ To Do List";
       toDoListElement.href = toDoList;
     }
 
