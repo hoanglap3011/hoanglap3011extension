@@ -1,4 +1,170 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbwI4Xjkkt1HrrGDL9dQsN8bsK6-s85r7Hu_t8mWG1Wr_ZILQpiiQf6bti7gj1r6TeQ_/exec"; 
+let URL_DIARY = "";
+let URL_CHECKLIST = "";
+let URL_THOUGHT = "";
+let URL_TODOLIST = "";
+const URL_CALENDAR = "https://calendar.google.com/";
+const URL_PROBLEM = "https://docs.google.com/spreadsheets/d/1Ww9sdbQScZdNysDOvD8_1zCqxsi3r-K6FqIKLLoXSho/edit?gid=0#gid=0";
+const URL_SODSCD = "https://docs.google.com/document/d/12oVFyqe-yWjuwTW2YN74WPQl6N9xOcaR8KONvH81Ksg/edit?tab=t.0";
+const URL_TONGHOPTUAN = "";
+const URL_TONGHOPNGAY = "";
+const URL_NHACHOCTAP = "https://music.youtube.com/playlist?list=PLpl9CTbHHB9USqW2dcpaRsXaxbykPaIeg&si=vCiN_9xfrNvY6Pvo";
+const URL_POMODORO = "https://pomodorotimer.online/";
+const URL_HITTHO = "https://www.youtube.com/watch?v=QhIxGtxIFF4&list=PLpl9CTbHHB9W879FlKDxuke-rmCiRvCSW";
+const URL_VIPASSANA = "https://www.youtube.com/watch?v=PmuFF36uIxk&list=PLpl9CTbHHB9VnSnZ5yNLFBuDMp1g-P1Ti&index=8";
+const URL_METTA = "https://www.youtube.com/watch?v=8Unx4chbLl0&list=PLpl9CTbHHB9VnSnZ5yNLFBuDMp1g-P1Ti&index=1";
+const URL_ENGLISH = "";
+const URL_NHACTICHCUCDONGLUC = "https://music.youtube.com/playlist?list=PLpl9CTbHHB9Wy7WRZ8-28U0hcLATWA4OX";
+const URL_TINTONGHOP = "";
+const URL_TINTICHCUC = "";
+const URL_MONHIEUAI = "";
+const URL_LICHTHIDAU = "https://www.24h.com.vn/bong-da/lich-thi-dau-bong-da-hom-nay-moi-nhat-c48a364371.html";
+const URL_GUITAR_EDUMALL = "https://www.edumall.vn/vn/course-player/hoc-guitar-dem-hat-cap-toc-trong-30-ngay";
+const URL_GYM_MUSIC = "https://music.youtube.com/playlist?list=PLpl9CTbHHB9WU4r1ptkQzWjKQ8g_ijIFa";
+const URL_NOTE_GIADINH = "https://docs.google.com/document/d/1Yn04JziVUUTyqUVNqKfKOeEBCDlulV9R1jJPITNpdEA/edit?tab=t.0#heading=h.eejeurvh6dwa";
+const URL_LAUGHT = "https://www.youtube.com/watch?v=e5e8RScN_dg&list=PLpl9CTbHHB9X2uQvoUN3Iwwo_QbKolgvM";
+const URL_DEEP = "https://www.youtube.com/watch?v=qX900P6POEU&list=PLpl9CTbHHB9UXfVctUpy4NzvNhsQ7s7dX";
+const URL_KINDLE = "kindle://";
+
+document.addEventListener("DOMContentLoaded", function() {
+  hienThiNgayHienTai();
+  capNhatURL();
+
+  // Handler for Diary button
+  document.getElementById("btnDiary").addEventListener("click", function() {
+    window.open(URL_DIARY, '_blank');
+  });
+
+  // Handler for Diary Checklist button
+  document.getElementById("btnDiaryChecklist").addEventListener("click", function() {
+    window.open(URL_CHECKLIST, '_blank');
+  });
+
+  // Handler for Thought button
+  document.getElementById("btnThought").addEventListener("click", function() {
+    window.open(URL_THOUGHT, '_blank');
+  });
+
+  // Handler for To Do List button
+  document.getElementById("btnToDoList").addEventListener("click", function() {
+    window.open(URL_TODOLIST, '_blank');
+  });
+
+  // Handler for Calendar button
+  document.getElementById("btnCalendar").addEventListener("click", function() {
+    window.open(URL_CALENDAR, '_blank');
+  });
+
+  // Handler for Problem button
+  document.getElementById("btnProblem").addEventListener("click", function() {
+    window.open(URL_PROBLEM, '_blank');
+  });
+
+  // Handler for Sodscd button
+  document.getElementById("btnSodscd").addEventListener("click", function() {
+    window.open(URL_SODSCD, '_blank');
+  });
+
+  // Handler for Tong Hop Nhat Ky Ngay button
+  document.getElementById("btnTongHopNhatKyNgay").addEventListener("click", function() {
+    window.open(URL_TONGHOPNGAY, '_blank');
+  });
+
+  // Handler for Tong Hop Nhat Ky Tuan button
+  document.getElementById("btnTongHopNhatKyTuan").addEventListener("click", function() {
+    window.open(URL_TONGHOPTUAN, '_blank');
+  });
+
+  // Handler for Nhac Hoc Tap button
+  document.getElementById("btnNhacHocTap").addEventListener("click", function() {
+    window.open(URL_NHACHOCTAP, '_blank');
+  });
+
+  // Handler for Pomodoro button
+  document.getElementById("btnPomodoro").addEventListener("click", function() {
+    window.open(URL_POMODORO, '_blank');
+  });
+
+  // Handler for Hit Tho button
+  document.getElementById("btnHitTho").addEventListener("click", function() {
+    window.open(URL_HITTHO, '_blank');
+  });
+
+  // Handler for Thien Vipassana button
+  document.getElementById("btnThienVipassana").addEventListener("click", function() {
+    window.open(URL_VIPASSANA, '_blank');
+  });
+
+  // Handler for Thien Metta button
+  document.getElementById("btnThienMetta").addEventListener("click", function() {
+    window.open(URL_METTA, '_blank');
+  });
+
+  // Handler for Luyen Tieng Anh button
+  document.getElementById("btnLuyenTiengAnh").addEventListener("click", function() {
+    window.open(URL_ENGLISH, '_blank');
+  });
+
+  // Handler for Nhac Tich Cuc button
+  document.getElementById("btnNhacTichCuc").addEventListener("click", function() {
+    window.open(URL_NHACTICHCUCDONGLUC, '_blank');
+  });
+
+  // Handler for Tin Tong Hop button
+  document.getElementById("btnTinTongHop").addEventListener("click", function() {
+    window.open(URL_TINTONGHOP, '_blank');
+  });
+
+  // Handler for Tin Tich Cuc button
+  document.getElementById("btnTinTichCuc").addEventListener("click", function() {
+    window.open(URL_TINTICHCUC, '_blank');
+  });
+
+  // Handler for Mo Nhieu AI button
+  document.getElementById("btnMoNhieuAi").addEventListener("click", function() {
+    window.open(URL_MONHIEUAI, '_blank');
+  });
+
+  // Handler for Lich Thi Dau Bong Da button
+  document.getElementById("btnLichThiDauBongDa").addEventListener("click", function() {
+    window.open(URL_LICHTHIDAU, '_blank');
+  });
+
+  // Handler for Guitar Edumall button
+  document.getElementById("btnGuitarEdumall").addEventListener("click", function() {
+    window.open(URL_GUITAR_EDUMALL, '_blank');
+  });
+
+  // Handler for Gym Music button
+  document.getElementById("btnGymMusic").addEventListener("click", function() {
+    window.open(URL_GYM_MUSIC, '_blank');
+  });
+
+  // Handler for Note Ve Gia Dinh button
+  document.getElementById("btnNoteVeGiaDinh").addEventListener("click", function() {
+    window.open(URL_NOTE_GIADINH, '_blank');
+  });
+
+  // Handler for Tin Tuc Thanh Podcast button
+  document.getElementById("btnTinTucThanhPodcast").addEventListener("click", function() {
+    window.open("", '_blank');
+  });
+
+  // Handler for Playlist Cuoi button
+  document.getElementById("btnPlaylistCuoi").addEventListener("click", function() {
+    window.open(URL_LAUGHT, '_blank');
+  });
+
+  // Handler for Playlist Sau Sac button
+  document.getElementById("btnPlaylistSauSac").addEventListener("click", function() {
+    window.open(URL_DEEP, '_blank');
+  });
+
+  // Handler for Doc Sach Kindle button
+  document.getElementById("btnDocSachKindle").addEventListener("click", function() {
+    window.open(URL_KINDLE, '_blank');
+  });
+
+});
 
 function isExtensionEnv() {
   return typeof chrome !== "undefined" && chrome.storage && chrome.storage.local;
@@ -15,6 +181,7 @@ function getISOWeekNumber() {
 }
 
 function fetchAndStoreLink(callback) {
+  const API_URL = "https://script.google.com/macros/s/AKfycbwI4Xjkkt1HrrGDL9dQsN8bsK6-s85r7Hu_t8mWG1Wr_ZILQpiiQf6bti7gj1r6TeQ_/exec"; 
   fetch(API_URL)
     .then(response => {
       if (!response.ok) throw new Error("Lỗi khi gọi API");
@@ -52,203 +219,32 @@ function fetchAndStoreLink(callback) {
     });
 }
 
-let countdownInterval;
-const countdownDisplay = document.getElementById("countdown-display");
-
-function startPomodoro(startTime, duration) {
-  countdownDisplay.style.display = "inline";
-
-  function updateCountdown() {
-    const elapsed = Math.floor((Date.now() - startTime) / 1000);
-    const remaining = duration - elapsed;
-
-    if (remaining >= 0) {
-      const minutes = Math.floor(remaining / 60);
-      const seconds = remaining % 60;
-      countdownDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    } else {
-      clearInterval(countdownInterval);
-      countdownInterval = null;
-      countdownDisplay.style.display = "none";
-      localStorage.removeItem("pomodoroStartTime");
-      localStorage.removeItem("pomodoroDuration");
-
-      if (Notification.permission === "granted") {
-        new Notification("Pomodoro", {
-          body: "⏰ Thời gian đã hết! Hãy nghỉ ngơi một chút nhé.",
-          icon: "https://media.geeksforgeeks.org/wp-content/uploads/20200512235139/pomodoro.png"
-        });
-      } else if (Notification.permission !== "denied") {
-        Notification.requestPermission().then(permission => {
-          if (permission === "granted") {
-            new Notification("Pomodoro", {
-              body: "⏰ Thời gian đã hết! Hãy nghỉ ngơi một chút nhé.",
-              icon: "https://media.geeksforgeeks.org/wp-content/uploads/20200512235139/pomodoro.png"
-            });
-          }
-        });
-      }
-
-      const audio = new Audio("https://media.geeksforgeeks.org/wp-content/uploads/20190531135120/beep.mp3");
-      audio.play();
-    }
-  }
-
-  updateCountdown(); // Run once immediately
-  countdownInterval = setInterval(updateCountdown, 1000);
-}
-
-document.addEventListener("DOMContentLoaded", () => {
+function hienThiNgayHienTai(){
   const today = new Date();
   const formattedDate = today.toLocaleDateString('vi-VN', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
   document.getElementById("current-date").textContent = formattedDate;
+}
 
-  const POMODORO_DURATION = 45 * 60; // 45 phút
-
-  const btnPomodoro = document.getElementById("btnPomodoro");
-
-  const savedStartTime = localStorage.getItem("pomodoroStartTime");
-  const savedDuration = localStorage.getItem("pomodoroDuration");
-  if (savedStartTime && savedDuration) {
-    startPomodoro(parseInt(savedStartTime), parseInt(savedDuration));
-  }
-
-  if (btnPomodoro) {
-    btnPomodoro.addEventListener("click", () => {
-      if (!countdownInterval) {
-        const now = Date.now();
-        localStorage.setItem("pomodoroStartTime", now.toString());
-        localStorage.setItem("pomodoroDuration", POMODORO_DURATION.toString());
-
-        startPomodoro(now, POMODORO_DURATION);
-      } else {
-        clearInterval(countdownInterval);
-        countdownInterval = null;
-        countdownDisplay.style.display = "none";
-        localStorage.removeItem("pomodoroStartTime");
-        localStorage.removeItem("pomodoroDuration");
-      }
-    });
-  }
-
-
-  const diaryElement = document.getElementById("diary");
-  const diaryChecklistElement = document.getElementById("diaryChecklist");
-  const thoughtElement = document.getElementById("thought");
-  const toDoListElement = document.getElementById("toDoList");
+function capNhatURL(){
+  const diaryElement = document.getElementById("btnDiary");
+  const diaryChecklistElement = document.getElementById("btnDiaryChecklist");
+  const thoughtElement = document.getElementById("btnThought");
+  const toDoListElement = document.getElementById("btnToDoList");
 
   diaryElement.innerHTML = '<span class="spinner"></span>';
   diaryChecklistElement.innerHTML = '<span class="spinner"></span>';
   thoughtElement.innerHTML = '<span class="spinner"></span>';
   toDoListElement.innerHTML = '<span class="spinner"></span>';
 
-  // Add click event handler for diaryElement with conditional logic
-  if (diaryElement) {
-    diaryElement.addEventListener("click", function (e) {
-      const isSmallScreen = window.innerWidth <= 768;
-      if (!isSmallScreen) {
-        e.preventDefault();
-        const iframe = document.getElementById("content-viewer");
-        if (iframe && diaryElement.href) {
-          iframe.src = diaryElement.href;
-        }
-      }
-      // else: let default behavior occur (open in new tab)
-    });
-  }
-
-  // Add click event handler for diaryChecklistElement
-  if (diaryChecklistElement) {
-    diaryChecklistElement.addEventListener("click", function (e) {
-      const isSmallScreen = window.innerWidth <= 768;
-      if (!isSmallScreen) {
-        e.preventDefault();
-        const iframe = document.getElementById("content-viewer");
-        if (iframe && diaryChecklistElement.href) {
-          iframe.src = diaryChecklistElement.href;
-        }
-      }
-    });
-  }
-
-  // Add click event handler for thoughtElement
-  if (thoughtElement) {
-    thoughtElement.addEventListener("click", function (e) {
-      const isSmallScreen = window.innerWidth <= 768;
-      if (!isSmallScreen) {
-        e.preventDefault();
-        const iframe = document.getElementById("content-viewer");
-        if (iframe && thoughtElement.href) {
-          iframe.src = thoughtElement.href;
-        }
-      }
-    });
-  }
-
-  // Add click event handler for toDoListElement
-  if (toDoListElement) {
-    toDoListElement.addEventListener("click", function (e) {
-      const isSmallScreen = window.innerWidth <= 768;
-      if (!isSmallScreen) {
-        e.preventDefault();
-        const iframe = document.getElementById("content-viewer");
-        if (iframe && toDoListElement.href) {
-          iframe.src = toDoListElement.href;
-        }
-      }
-    });
-  }
-
   const weekNumber = getISOWeekNumber();
+  const today = new Date();
   const toDayStr = `${String(today.getDate()).padStart(2, '0')}${String(today.getMonth() + 1).padStart(2, '0')}${today.getFullYear()}`;
   const diaryKey = `${toDayStr}diary`;
   const diaryChecklistKey = `${toDayStr}diaryChecklist`;
   const thoughtKey = `${weekNumber}thought`;
   const toDoListKey = `${weekNumber}todo`;
-
-  function handleStorageResult(result) {
-    let diary = result[diaryKey];
-    let diaryChecklist = result[diaryChecklistKey];
-    let thought = result[thoughtKey];
-    let toDoList = result[toDoListKey];
-
-    if (diary) {
-      diaryElement.textContent = "🖊️ Nhật ký";
-      diaryElement.href = diary;
-    }
-    if (diaryChecklist) {
-      diaryChecklistElement.textContent = "✅ Nhật ký checklist";
-      diaryChecklistElement.href = diaryChecklist;
-    }
-    if (thought) {
-      thoughtElement.textContent = "💭 Suy nghĩ";
-      thoughtElement.href = thought;
-    }
-    if (toDoList) {
-      toDoListElement.textContent = "✅ To Do List";
-      toDoListElement.href = toDoList;
-    }
-
-    if (!diary || !diaryChecklist || !thought || !toDoList) {
-      fetchAndStoreLink(() => {
-        if (isExtensionEnv()) {
-          chrome.storage.local.get([diaryKey, diaryChecklistKey, thoughtKey, toDoListKey], (newResult) => {
-            handleStorageResult(newResult);
-          });
-        } else {
-          const newResult = {
-            [diaryKey]: localStorage.getItem(diaryKey),
-            [diaryChecklistKey]: localStorage.getItem(diaryChecklistKey),
-            [thoughtKey]: localStorage.getItem(thoughtKey),
-            [toDoListKey]: localStorage.getItem(toDoListKey)
-          };
-          handleStorageResult(newResult);
-        }
-      });
-    }
-  }
 
   if (isExtensionEnv()) {
     chrome.storage.local.get([diaryKey, diaryChecklistKey, thoughtKey, toDoListKey], (result) => {
@@ -263,50 +259,59 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     handleStorageResult(result);
   }
+}
 
-  const homeButton = document.getElementById("home");
-  if (homeButton) {
-    homeButton.addEventListener("click", () => {
-      const iframe = document.getElementById("content-viewer");
-      if (iframe) {
-        iframe.src = "";
-      }
-    });
+function handleStorageResult(result) {
+  const weekNumber = getISOWeekNumber();
+  const today = new Date();
+  const toDayStr = `${String(today.getDate()).padStart(2, '0')}${String(today.getMonth() + 1).padStart(2, '0')}${today.getFullYear()}`;
+  const diaryKey = `${toDayStr}diary`;
+  const diaryChecklistKey = `${toDayStr}diaryChecklist`;
+  const thoughtKey = `${weekNumber}thought`;
+  const toDoListKey = `${weekNumber}todo`;
+
+  let diary = result[diaryKey];
+  let diaryChecklist = result[diaryChecklistKey];
+  let thought = result[thoughtKey];
+  let toDoList = result[toDoListKey];
+
+  const diaryElement = document.getElementById("btnDiary");
+  const diaryChecklistElement = document.getElementById("btnDiaryChecklist");
+  const thoughtElement = document.getElementById("btnThought");
+  const toDoListElement = document.getElementById("btnToDoList");
+
+  if (diary) {
+    diaryElement.innerHTML = "🖊️ Nhật ký";
+    URL_DIARY = diary;
+  }
+  if (diaryChecklist) {
+    diaryChecklistElement.innerHTML = "✅ Nhật ký checklist";
+    URL_CHECKLIST = diaryChecklist;
+  }
+  if (thought) {
+    thoughtElement.innerHTML = "💭 Suy nghĩ";
+    URL_THOUGHT = thought;
+  }
+  if (toDoList) {
+    toDoListElement.innerHTML = "✅ To Do List";
+    URL_TODOLIST = toDoList;
   }
 
-  // Add Lich Thi Dau button event handler
-  const btnLichThiDau = document.getElementById("btnLichThiDau");
-  if (btnLichThiDau) {
-    btnLichThiDau.addEventListener("click", function (e) {
-      const url = "https://www.24h.com.vn/bong-da/lich-thi-dau-bong-da-hom-nay-moi-nhat-c48a364371.html";
-      const isSmallScreen = window.innerWidth <= 768;
-      if (isSmallScreen) {
-        window.open(url, "_blank");
+  if (!diary || !diaryChecklist || !thought || !toDoList) {
+    fetchAndStoreLink(() => {
+      if (isExtensionEnv()) {
+        chrome.storage.local.get([diaryKey, diaryChecklistKey, thoughtKey, toDoListKey], (newResult) => {
+          handleStorageResult(newResult);
+        });
       } else {
-        fetch(url)
-          .then(response => response.text())
-          .then(html => {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, "text/html");
-
-            const style = document.createElement("style");
-            style.textContent = `
-              body > *:not(#article_body) { display: none !important; }
-              #article_body { display: block !important; }
-            `;
-            doc.head.appendChild(style);
-
-            const iframe = document.getElementById("content-viewer");
-            if (iframe) {
-              const blob = new Blob([doc.documentElement.outerHTML], { type: 'text/html' });
-              const blobUrl = URL.createObjectURL(blob);
-              iframe.src = blobUrl;
-            }
-          })
-          .catch(err => {
-            console.error("Failed to fetch article content:", err);
-          });
+        const newResult = {
+          [diaryKey]: localStorage.getItem(diaryKey),
+          [diaryChecklistKey]: localStorage.getItem(diaryChecklistKey),
+          [thoughtKey]: localStorage.getItem(thoughtKey),
+          [toDoListKey]: localStorage.getItem(toDoListKey)
+        };
+        handleStorageResult(newResult);
       }
     });
   }
-});
+}
