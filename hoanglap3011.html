@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,9 +9,8 @@
   <style>
     body {
       font-family: sans-serif;
-      padding: 20px;
-      margin: auto;
     }
+
     .a-like {
       display: block;
       margin: 4px 0;
@@ -25,9 +25,11 @@
       width: 100%;
       cursor: pointer;
     }
+
     .a-like:hover {
       background-color: #eef;
     }
+
     .spinner {
       display: inline-block;
       width: 16px;
@@ -40,45 +42,71 @@
     }
 
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
     }
   </style>
 </head>
+
 <body>
   <div class="text-center fw-bold text-success fs-4 mb-4">
-    👋 Chào Lập, chúc bạn một ngày thật tốt lành! Hôm nay là <span id="current-date"></span>.
+    Chào Lập, chúc bạn một ngày tốt lành! ❤️
+    <br>
+    Hôm nay là <span id="current-date"></span>.
   </div>
-  <div id="link-container" class="container">
+  <div id="link-container" class="container-fluid px-4">
     <div class="row">
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnDiary">🖊️ Nhật ký</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnDiaryChecklist">✅ Nhật ký checklist</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnThought">💭 Suy nghĩ</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnToDoList">✅ To Do List</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnCalendar"><img src="https://ssl.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_24_2x.png" alt="Google Calendar" style="vertical-align: text-bottom; height: 1.2em;"> Lịch</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnProblem">❗ Vấn đề</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnSodscd">🛠️ Sai ở đâu sửa cho đúng</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">📅 Tổng hợp Nhật ký ngày</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnTongHopNhatKyTuan">🗓️ Tổng hợp Nhật ký tuần</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnNhacHocTap">🎵 Nhạc học tập</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnPomodoro">🍅 Pomodoro </button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnHitTho">🌬️ Hít thở</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnThienVipassana">🧘 Thiền Vipassana</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnThienMetta">🧘‍♀️ Thiền metta</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnLuyenTiengAnh">📚 Luyện tiếng Anh</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnNhacTichCuc">🎶 Nhạc tích cực động lực có lời</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnTinTongHop">📰 Tin tổng hợp</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnTinTichCuc">✨ Tin tích cực</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnMoNhieuAi">🤖 Mở nhiều AI</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnLichThiDauBongDa">⚽ Lịch thi đấu bóng đá</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnGuitarEdumall">🎸 Guitar edumall</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnGymMusic">💪🎧 Gym Music</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnNoteVeGiaDinh">👪 Note về gia đình</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnTinTucThanhPodcast">🎙️ Tin tức thành podcast</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnPlaylistCuoi">😂 Playlist cười</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnPlaylistSauSac">🧠 Playlist sâu sắc</button></div>
-      <div class="col-12 col-sm-6 col-md-4 mb-3"><button class="a-like" id="btnDocSachKindle">📖 Đọc sách Kindle</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTamLy">❤️ Trauma</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnDiary">🖊️ Nhật ký</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnDiaryChecklist">✅ Checklist ngày</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnThought">💭 Suy nghĩ</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnToDoList">✅ To Do List</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnCalendar"><img
+            src="https://ssl.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_24_2x.png" alt="Google Calendar"
+            style="vertical-align: text-bottom; height: 1.2em;"> Lịch</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnProblem">❗ Vấn đề</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnSodscd">🛠️ Change</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">📅 Tổng hợp ngày</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyTuan">🗓️ Tổng hợp tuần</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnNhacHocTap">🎵 Nhạc học tập</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnPomodoro">🍅 Pomodoro </button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnHitTho">🌬️ Hít thở</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnThienVipassana">🧘 Vipassana</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnThienMetta">🧘‍♀️ Metta</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnLuyenTiengAnh">📚 English</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnNhacTichCuc">🎶 Pumpup Music</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTinTongHop">📰 Tin tổng hợp</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTinTichCuc">✨ Tin tích cực</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnMoNhieuAi">🤖 Mở nhiều AI</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnLichThiDauBongDa">⚽ Lịch thi đấu</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnGuitarEdumall">🎸 Guitar edumall</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnGymMusic">💪🎧 Gym Music</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnNoteVeGiaDinh">👪 Note gia đình</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTinTucThanhPodcast">🎙️ News podcast</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnPlaylistCuoi">😂 Playlist cười</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnPlaylistSauSac">🧠 Playlist sâu sắc</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnDocSachKindle">📖 Kindle</button></div>
     </div>
   </div>
+  <div class="container-fluid px-4">
+    <div id="divIframePomodoro" style="height: 600px; border: 1px solid #2463eb; display: none">
+      <iframe src="https://pomodorotimer.online/" style="width: 100%; height: 100%; border: none;"></iframe>
+    </div>
+  </div>
+  <div class="container-fluid px-4 mt-4">
+    <div id="divIframeThought" style="height: 500px; border: 1px solid #010628; display: none">
+      <iframe id="iframeThought" style="width: 100%; height: 100%; border: none;"></iframe>
+    </div>
+  </div>
+  <div class="container-fluid px-4 mt-4">
+    <div id="divIframeYoutube" style="height: 100px; border: 1px solid #010628; display: none">
+      <iframe id="iframeYoutube" width="100%" height="100%" src="https://www.youtube.com/embed/QhIxGtxIFF4?si=umecJ5wXItfUmMoA" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+    </div>
+  </div>
+  
+  </script>
   <script src="hoanglap3011.js"></script>
 </body>
+
 </html>

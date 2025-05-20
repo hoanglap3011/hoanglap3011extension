@@ -1,7 +1,19 @@
+const TEXT_DIARY = "🖊️ Nhật ký";
+const TEXT_DIARY_CHECKLIST = "✅ Checklist";
+const TEXT_THOUGHT = "💭 Suy nghĩ";
+const TEXT_TODO_LIST = "✔️ To Do List";
+const TEXT_WRITE = "Viết ra";
+
+let KEY_DIARY;
+let KEY_DIARYCHECKLIST;
+let KEY_THOUGHT;
+let KEY_TODOLIST;
+
 let URL_DIARY = "";
 let URL_CHECKLIST = "";
 let URL_THOUGHT = "";
 let URL_TODOLIST = "";
+
 const URL_CALENDAR = "https://calendar.google.com/";
 const URL_PROBLEM = "https://docs.google.com/spreadsheets/d/1Ww9sdbQScZdNysDOvD8_1zCqxsi3r-K6FqIKLLoXSho/edit?gid=0#gid=0";
 const URL_SODSCD = "https://docs.google.com/document/d/12oVFyqe-yWjuwTW2YN74WPQl6N9xOcaR8KONvH81Ksg/edit?tab=t.0";
@@ -25,142 +37,193 @@ const URL_LAUGHT = "https://www.youtube.com/watch?v=e5e8RScN_dg&list=PLpl9CTbHHB
 const URL_DEEP = "https://www.youtube.com/watch?v=qX900P6POEU&list=PLpl9CTbHHB9UXfVctUpy4NzvNhsQ7s7dX";
 const URL_KINDLE = "kindle://";
 
-document.addEventListener("DOMContentLoaded", function() {
+const HIT_THO_URLS = [
+  "https://www.youtube.com/embed/QhIxGtxIFF4?si=umecJ5wXItfUmMoA",
+  "https://www.youtube.com/embed/yauSdpw3mCs?si=pBiN49B_fn_Lyz32",
+  "https://www.youtube.com/embed/dvqzksrjhpM?si=HDpOcbGCUshCKH9N",
+  "https://www.youtube.com/embed/LwUyeKUred8?si=NqkPazXe2ilSp9JX"
+];
+let hitThoIndex = 0;
+
+const NHAC_VUI_URLS = [
+  "https://www.youtube.com/embed/ubnDMTUui1Y?si=5GA7GJ_-o94fcSt5",
+  "https://www.youtube.com/embed/bKhkqpWoWTU?si=k-CcDAioXVBYc7J9",
+];
+let nhacVuiIndex = 0;
+
+document.addEventListener("DOMContentLoaded", function () {
   hienThiNgayHienTai();
+  getKeyCache();
   capNhatURL();
 
   // Handler for Diary button
-  document.getElementById("btnDiary").addEventListener("click", function() {
+  document.getElementById("btnDiary").addEventListener("click", function () {
     window.open(URL_DIARY, '_blank');
   });
 
   // Handler for Diary Checklist button
-  document.getElementById("btnDiaryChecklist").addEventListener("click", function() {
+  document.getElementById("btnDiaryChecklist").addEventListener("click", function () {
     window.open(URL_CHECKLIST, '_blank');
   });
 
   // Handler for Thought button
-  document.getElementById("btnThought").addEventListener("click", function() {
-    window.open(URL_THOUGHT, '_blank');
+  document.getElementById("btnThought").addEventListener("click", function () {
+    if (isMobile()) {
+      window.open(URL_THOUGHT, '_blank');
+    } else {
+      const iframe = document.getElementById("iframeThought");
+      iframe.src = URL_THOUGHT;
+      const iframeContainer = document.getElementById('divIframeThought');
+      if (iframeContainer.style.display === 'none') {
+        iframeContainer.style.display = 'block';
+      } else {
+        iframeContainer.style.display = 'none';
+      }
+    }
   });
 
   // Handler for To Do List button
-  document.getElementById("btnToDoList").addEventListener("click", function() {
+  document.getElementById("btnToDoList").addEventListener("click", function () {
     window.open(URL_TODOLIST, '_blank');
   });
 
   // Handler for Calendar button
-  document.getElementById("btnCalendar").addEventListener("click", function() {
+  document.getElementById("btnCalendar").addEventListener("click", function () {
     window.open(URL_CALENDAR, '_blank');
   });
 
   // Handler for Problem button
-  document.getElementById("btnProblem").addEventListener("click", function() {
+  document.getElementById("btnProblem").addEventListener("click", function () {
     window.open(URL_PROBLEM, '_blank');
   });
 
   // Handler for Sodscd button
-  document.getElementById("btnSodscd").addEventListener("click", function() {
+  document.getElementById("btnSodscd").addEventListener("click", function () {
     window.open(URL_SODSCD, '_blank');
   });
 
   // Handler for Tong Hop Nhat Ky Ngay button
-  document.getElementById("btnTongHopNhatKyNgay").addEventListener("click", function() {
+  document.getElementById("btnTongHopNhatKyNgay").addEventListener("click", function () {
     window.open(URL_TONGHOPNGAY, '_blank');
   });
 
   // Handler for Tong Hop Nhat Ky Tuan button
-  document.getElementById("btnTongHopNhatKyTuan").addEventListener("click", function() {
+  document.getElementById("btnTongHopNhatKyTuan").addEventListener("click", function () {
     window.open(URL_TONGHOPTUAN, '_blank');
   });
 
-  // Handler for Nhac Hoc Tap button
-  document.getElementById("btnNhacHocTap").addEventListener("click", function() {
-    window.open(URL_NHACHOCTAP, '_blank');
-  });
-
   // Handler for Pomodoro button
-  document.getElementById("btnPomodoro").addEventListener("click", function() {
-    window.open(URL_POMODORO, '_blank');
+  document.getElementById("btnPomodoro").addEventListener("click", function () {
+    if (isMobile()) {
+      window.open(URL_POMODORO, '_blank');
+    } else {
+      const iframeContainer = document.getElementById('divIframePomodoro');
+      if (iframeContainer.style.display === 'none') {
+        iframeContainer.style.display = 'block';
+      } else {
+        iframeContainer.style.display = 'none';
+      }
+    }
   });
 
   // Handler for Hit Tho button
-  document.getElementById("btnHitTho").addEventListener("click", function() {
-    window.open(URL_HITTHO, '_blank');
+  document.getElementById("btnHitTho").addEventListener("click", function () {
+    const iframeContainer = document.getElementById('divIframeYoutube');
+    if (iframeContainer.style.display === 'none') {
+      iframeContainer.style.display = 'block';
+    } 
+    const iframe = document.getElementById("iframeYoutube");
+    if (iframe) {
+      iframe.src = HIT_THO_URLS[hitThoIndex];
+      hitThoIndex = (hitThoIndex + 1) % HIT_THO_URLS.length;
+    }
+  });
+
+  // Handler for Nhac Hoc Tap button
+  document.getElementById("btnNhacHocTap").addEventListener("click", function () {
+    const iframeContainer = document.getElementById('divIframeYoutube');
+    if (iframeContainer.style.display === 'none') {
+      iframeContainer.style.display = 'block';
+    } 
+    const iframe = document.getElementById("iframeYoutube");
+    if (iframe) {
+      iframe.src = NHAC_VUI_URLS[nhacVuiIndex];
+      nhacVuiIndex = (nhacVuiIndex + 1) % NHAC_VUI_URLS.length;
+    }
   });
 
   // Handler for Thien Vipassana button
-  document.getElementById("btnThienVipassana").addEventListener("click", function() {
+  document.getElementById("btnThienVipassana").addEventListener("click", function () {
     window.open(URL_VIPASSANA, '_blank');
   });
 
   // Handler for Thien Metta button
-  document.getElementById("btnThienMetta").addEventListener("click", function() {
+  document.getElementById("btnThienMetta").addEventListener("click", function () {
     window.open(URL_METTA, '_blank');
   });
 
   // Handler for Luyen Tieng Anh button
-  document.getElementById("btnLuyenTiengAnh").addEventListener("click", function() {
+  document.getElementById("btnLuyenTiengAnh").addEventListener("click", function () {
     window.open(URL_ENGLISH, '_blank');
   });
 
   // Handler for Nhac Tich Cuc button
-  document.getElementById("btnNhacTichCuc").addEventListener("click", function() {
+  document.getElementById("btnNhacTichCuc").addEventListener("click", function () {
     window.open(URL_NHACTICHCUCDONGLUC, '_blank');
   });
 
   // Handler for Tin Tong Hop button
-  document.getElementById("btnTinTongHop").addEventListener("click", function() {
+  document.getElementById("btnTinTongHop").addEventListener("click", function () {
     window.open(URL_TINTONGHOP, '_blank');
   });
 
   // Handler for Tin Tich Cuc button
-  document.getElementById("btnTinTichCuc").addEventListener("click", function() {
+  document.getElementById("btnTinTichCuc").addEventListener("click", function () {
     window.open(URL_TINTICHCUC, '_blank');
   });
 
   // Handler for Mo Nhieu AI button
-  document.getElementById("btnMoNhieuAi").addEventListener("click", function() {
+  document.getElementById("btnMoNhieuAi").addEventListener("click", function () {
     window.open(URL_MONHIEUAI, '_blank');
   });
 
   // Handler for Lich Thi Dau Bong Da button
-  document.getElementById("btnLichThiDauBongDa").addEventListener("click", function() {
+  document.getElementById("btnLichThiDauBongDa").addEventListener("click", function () {
     window.open(URL_LICHTHIDAU, '_blank');
   });
 
   // Handler for Guitar Edumall button
-  document.getElementById("btnGuitarEdumall").addEventListener("click", function() {
+  document.getElementById("btnGuitarEdumall").addEventListener("click", function () {
     window.open(URL_GUITAR_EDUMALL, '_blank');
   });
 
   // Handler for Gym Music button
-  document.getElementById("btnGymMusic").addEventListener("click", function() {
+  document.getElementById("btnGymMusic").addEventListener("click", function () {
     window.open(URL_GYM_MUSIC, '_blank');
   });
 
   // Handler for Note Ve Gia Dinh button
-  document.getElementById("btnNoteVeGiaDinh").addEventListener("click", function() {
+  document.getElementById("btnNoteVeGiaDinh").addEventListener("click", function () {
     window.open(URL_NOTE_GIADINH, '_blank');
   });
 
   // Handler for Tin Tuc Thanh Podcast button
-  document.getElementById("btnTinTucThanhPodcast").addEventListener("click", function() {
+  document.getElementById("btnTinTucThanhPodcast").addEventListener("click", function () {
     window.open("", '_blank');
   });
 
   // Handler for Playlist Cuoi button
-  document.getElementById("btnPlaylistCuoi").addEventListener("click", function() {
+  document.getElementById("btnPlaylistCuoi").addEventListener("click", function () {
     window.open(URL_LAUGHT, '_blank');
   });
 
   // Handler for Playlist Sau Sac button
-  document.getElementById("btnPlaylistSauSac").addEventListener("click", function() {
+  document.getElementById("btnPlaylistSauSac").addEventListener("click", function () {
     window.open(URL_DEEP, '_blank');
   });
 
   // Handler for Doc Sach Kindle button
-  document.getElementById("btnDocSachKindle").addEventListener("click", function() {
+  document.getElementById("btnDocSachKindle").addEventListener("click", function () {
     window.open(URL_KINDLE, '_blank');
   });
 
@@ -174,14 +237,14 @@ function getISOWeekNumber() {
   var date = new Date();
   var target = new Date(date.valueOf());
   target.setDate(target.getDate() + 3 - (target.getDay() + 6) % 7);
-  var firstThursday = new Date(target.getFullYear(), 0, 4); 
+  var firstThursday = new Date(target.getFullYear(), 0, 4);
   firstThursday.setDate(firstThursday.getDate() + 3 - (firstThursday.getDay() + 6) % 7);
   var weekNumber = 1 + Math.round(((target - firstThursday) / 86400000 - 3 + ((firstThursday.getDay() + 6) % 7)) / 7);
   return weekNumber;
 }
 
 function fetchAndStoreLink(callback) {
-  const API_URL = "https://script.google.com/macros/s/AKfycbwI4Xjkkt1HrrGDL9dQsN8bsK6-s85r7Hu_t8mWG1Wr_ZILQpiiQf6bti7gj1r6TeQ_/exec"; 
+  const API_URL = "https://script.google.com/macros/s/AKfycbwI4Xjkkt1HrrGDL9dQsN8bsK6-s85r7Hu_t8mWG1Wr_ZILQpiiQf6bti7gj1r6TeQ_/exec";
   fetch(API_URL)
     .then(response => {
       if (!response.ok) throw new Error("Lỗi khi gọi API");
@@ -189,28 +252,20 @@ function fetchAndStoreLink(callback) {
     })
     .then(json => {
       const { diary, diaryChecklist, thought, toDoList } = json;
-      const weekNumber = getISOWeekNumber();
-      const today = new Date();
-      const toDayStr = `${String(today.getDate()).padStart(2, '0')}${String(today.getMonth() + 1).padStart(2, '0')}${today.getFullYear()}`;
-      const diaryKey = `${toDayStr}diary`;
-      const diaryChecklistKey = `${toDayStr}diaryChecklist`;
-      const thoughtKey = `${weekNumber}thought`;
-      const toDoListKey = `${weekNumber}todo`;
-
       if (isExtensionEnv()) {
         chrome.storage.local.set({
-          [diaryKey]: diary.trim(),
-          [diaryChecklistKey]: diaryChecklist.trim(),
-          [thoughtKey]: thought.trim(),
-          [toDoListKey]: toDoList.trim()
+          [KEY_DIARY]: diary.trim(),
+          [KEY_DIARYCHECKLIST]: diaryChecklist.trim(),
+          [KEY_THOUGHT]: thought.trim(),
+          [KEY_TODOLIST]: toDoList.trim()
         }, () => {
           if (typeof callback === 'function') callback();
         });
       } else {
-        localStorage.setItem(diaryKey, diary.trim());
-        localStorage.setItem(diaryChecklistKey, diaryChecklist.trim());
-        localStorage.setItem(thoughtKey, thought.trim());
-        localStorage.setItem(toDoListKey, toDoList.trim());
+        localStorage.setItem(KEY_DIARY, diary.trim());
+        localStorage.setItem(KEY_DIARYCHECKLIST, diaryChecklist.trim());
+        localStorage.setItem(KEY_THOUGHT, thought.trim());
+        localStorage.setItem(KEY_TODOLIST, toDoList.trim());
         if (typeof callback === 'function') callback();
       }
     })
@@ -219,7 +274,7 @@ function fetchAndStoreLink(callback) {
     });
 }
 
-function hienThiNgayHienTai(){
+function hienThiNgayHienTai() {
   const today = new Date();
   const formattedDate = today.toLocaleDateString('vi-VN', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -227,7 +282,7 @@ function hienThiNgayHienTai(){
   document.getElementById("current-date").textContent = formattedDate;
 }
 
-function capNhatURL(){
+function capNhatURL() {
   const diaryElement = document.getElementById("btnDiary");
   const diaryChecklistElement = document.getElementById("btnDiaryChecklist");
   const thoughtElement = document.getElementById("btnThought");
@@ -238,42 +293,26 @@ function capNhatURL(){
   thoughtElement.innerHTML = '<span class="spinner"></span>';
   toDoListElement.innerHTML = '<span class="spinner"></span>';
 
-  const weekNumber = getISOWeekNumber();
-  const today = new Date();
-  const toDayStr = `${String(today.getDate()).padStart(2, '0')}${String(today.getMonth() + 1).padStart(2, '0')}${today.getFullYear()}`;
-  const diaryKey = `${toDayStr}diary`;
-  const diaryChecklistKey = `${toDayStr}diaryChecklist`;
-  const thoughtKey = `${weekNumber}thought`;
-  const toDoListKey = `${weekNumber}todo`;
-
   if (isExtensionEnv()) {
-    chrome.storage.local.get([diaryKey, diaryChecklistKey, thoughtKey, toDoListKey], (result) => {
+    chrome.storage.local.get([KEY_DIARY, KEY_DIARYCHECKLIST, KEY_THOUGHT, KEY_TODOLIST], (result) => {
       handleStorageResult(result);
     });
   } else {
     const result = {
-      [diaryKey]: localStorage.getItem(diaryKey),
-      [diaryChecklistKey]: localStorage.getItem(diaryChecklistKey),
-      [thoughtKey]: localStorage.getItem(thoughtKey),
-      [toDoListKey]: localStorage.getItem(toDoListKey)
+      [KEY_DIARY]: localStorage.getItem(KEY_DIARY),
+      [KEY_DIARYCHECKLIST]: localStorage.getItem(KEY_DIARYCHECKLIST),
+      [KEY_THOUGHT]: localStorage.getItem(KEY_THOUGHT),
+      [KEY_TODOLIST]: localStorage.getItem(KEY_TODOLIST)
     };
     handleStorageResult(result);
   }
 }
 
 function handleStorageResult(result) {
-  const weekNumber = getISOWeekNumber();
-  const today = new Date();
-  const toDayStr = `${String(today.getDate()).padStart(2, '0')}${String(today.getMonth() + 1).padStart(2, '0')}${today.getFullYear()}`;
-  const diaryKey = `${toDayStr}diary`;
-  const diaryChecklistKey = `${toDayStr}diaryChecklist`;
-  const thoughtKey = `${weekNumber}thought`;
-  const toDoListKey = `${weekNumber}todo`;
-
-  let diary = result[diaryKey];
-  let diaryChecklist = result[diaryChecklistKey];
-  let thought = result[thoughtKey];
-  let toDoList = result[toDoListKey];
+  let diary = result[KEY_DIARY];
+  let diaryChecklist = result[KEY_DIARYCHECKLIST];
+  let thought = result[KEY_THOUGHT];
+  let toDoList = result[KEY_TODOLIST];
 
   const diaryElement = document.getElementById("btnDiary");
   const diaryChecklistElement = document.getElementById("btnDiaryChecklist");
@@ -281,37 +320,51 @@ function handleStorageResult(result) {
   const toDoListElement = document.getElementById("btnToDoList");
 
   if (diary) {
-    diaryElement.innerHTML = "🖊️ Nhật ký";
+    diaryElement.innerHTML = TEXT_DIARY;
     URL_DIARY = diary;
   }
   if (diaryChecklist) {
-    diaryChecklistElement.innerHTML = "✅ Nhật ký checklist";
+    diaryChecklistElement.innerHTML = TEXT_DIARY_CHECKLIST;
     URL_CHECKLIST = diaryChecklist;
   }
   if (thought) {
-    thoughtElement.innerHTML = "💭 Suy nghĩ";
+    thoughtElement.innerHTML = TEXT_THOUGHT;
     URL_THOUGHT = thought;
   }
   if (toDoList) {
-    toDoListElement.innerHTML = "✅ To Do List";
+    toDoListElement.innerHTML = TEXT_TODO_LIST;
     URL_TODOLIST = toDoList;
   }
 
   if (!diary || !diaryChecklist || !thought || !toDoList) {
     fetchAndStoreLink(() => {
       if (isExtensionEnv()) {
-        chrome.storage.local.get([diaryKey, diaryChecklistKey, thoughtKey, toDoListKey], (newResult) => {
+        chrome.storage.local.get([KEY_DIARY, KEY_DIARYCHECKLIST, KEY_THOUGHT, KEY_TODOLIST], (newResult) => {
           handleStorageResult(newResult);
         });
       } else {
         const newResult = {
-          [diaryKey]: localStorage.getItem(diaryKey),
-          [diaryChecklistKey]: localStorage.getItem(diaryChecklistKey),
-          [thoughtKey]: localStorage.getItem(thoughtKey),
-          [toDoListKey]: localStorage.getItem(toDoListKey)
+          [KEY_DIARY]: localStorage.getItem(KEY_DIARY),
+          [KEY_DIARYCHECKLIST]: localStorage.getItem(KEY_DIARYCHECKLIST),
+          [KEY_THOUGHT]: localStorage.getItem(KEY_THOUGHT),
+          [KEY_TODOLIST]: localStorage.getItem(KEY_TODOLIST)
         };
         handleStorageResult(newResult);
       }
     });
   }
+}
+
+function getKeyCache() {
+  const weekNumber = getISOWeekNumber();
+  const today = new Date();
+  const toDayStr = `${String(today.getDate()).padStart(2, '0')}${String(today.getMonth() + 1).padStart(2, '0')}${today.getFullYear()}`;
+  KEY_DIARY = `${toDayStr}diary`;
+  KEY_DIARYCHECKLIST = `${toDayStr}diaryChecklist`;
+  KEY_THOUGHT = `${weekNumber}thought`;
+  KEY_TODOLIST = `${weekNumber}todo`;
+}
+
+function isMobile() {
+  return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
