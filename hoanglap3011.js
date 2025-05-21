@@ -26,8 +26,8 @@ const URL_VIPASSANA = "https://www.youtube.com/watch?v=PmuFF36uIxk&list=PLpl9CTb
 const URL_METTA = "https://www.youtube.com/watch?v=8Unx4chbLl0&list=PLpl9CTbHHB9VnSnZ5yNLFBuDMp1g-P1Ti&index=1";
 const URL_ENGLISH = "";
 const URL_NHACTICHCUCDONGLUC = "https://music.youtube.com/playlist?list=PLpl9CTbHHB9Wy7WRZ8-28U0hcLATWA4OX";
-const URL_TINTONGHOP = "";
-const URL_TINTICHCUC = "";
+const URL_TINTONGHOP = "https://vnexpress.net/doi-song";
+const URL_TINTICHCUC = "https://baomoi.com/nang-luong-tich-cuc-top338.epi";
 const URL_MONHIEUAI = "";
 const URL_LICHTHIDAU = "https://www.24h.com.vn/bong-da/lich-thi-dau-bong-da-hom-nay-moi-nhat-c48a364371.html";
 const URL_GUITAR_EDUMALL = "https://www.edumall.vn/vn/course-player/hoc-guitar-dem-hat-cap-toc-trong-30-ngay";
@@ -244,7 +244,7 @@ function getISOWeekNumber() {
 }
 
 function fetchAndStoreLink(callback) {
-  const API_URL = "https://script.google.com/macros/s/AKfycbwI4Xjkkt1HrrGDL9dQsN8bsK6-s85r7Hu_t8mWG1Wr_ZILQpiiQf6bti7gj1r6TeQ_/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbwTEGtuCIQTkT3lX6tvdGmerE5OCYkuStcjpj9cPT5UPH-yuOgq16roDuRRyMnOCxCr/exec";
   fetch(API_URL)
     .then(response => {
       if (!response.ok) throw new Error("Lỗi khi gọi API");
