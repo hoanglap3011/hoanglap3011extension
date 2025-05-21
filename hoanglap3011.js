@@ -1,19 +1,23 @@
 const TEXT_DIARY = "🖊️ Nhật ký";
 const TEXT_DIARY_CHECKLIST = "✅ Checklist";
-const TEXT_THOUGHT = "💭 Suy nghĩ";
-const TEXT_TODO_LIST = "✔️ To Do List";
-const TEXT_WRITE = "Viết ra";
+const TEXT_THOUGHT = "💭 Viết ra";
+const TEXT_TODOLIST = "✔️ To Do List";
+const TEXT_THIS_WEEK = "This week";
 
 let KEY_DIARY;
 let KEY_DIARYCHECKLIST;
 let KEY_THOUGHT;
 let KEY_TODOLIST;
+let KEY_THIS_WEEK;
 
 let URL_DIARY = "";
 let URL_CHECKLIST = "";
 let URL_THOUGHT = "";
 let URL_TODOLIST = "";
+let URL_THIS_WEEK = "";
 
+const KEY_PASS = "pass";
+const URL_GAS_GETFILE = "https://script.google.com/macros/s/AKfycbwNJXhERxtETYs-YFvgKNA1ywl1zrKwXBnT7VczBbNzpEeMzDqnbHQCotEvXrYM-aKeUQ/exec";
 const URL_CALENDAR = "https://calendar.google.com/";
 const URL_PROBLEM = "https://docs.google.com/spreadsheets/d/1Ww9sdbQScZdNysDOvD8_1zCqxsi3r-K6FqIKLLoXSho/edit?gid=0#gid=0";
 const URL_SODSCD = "https://docs.google.com/document/d/12oVFyqe-yWjuwTW2YN74WPQl6N9xOcaR8KONvH81Ksg/edit?tab=t.0";
@@ -54,7 +58,34 @@ let nhacVuiIndex = 0;
 document.addEventListener("DOMContentLoaded", function () {
   hienThiNgayHienTai();
   getKeyCache();
+  showPass();
   capNhatURL();
+
+  document.getElementById("btnEnter").addEventListener("click", function () {
+    const divPassword = document.getElementById('divPassword');
+    if (divPassword.style.display === 'none') {
+      divPassword.style.display = 'block';
+      showPass();
+    } else {
+      divPassword.style.display = 'none';
+    }
+  });
+
+  document.getElementById("btnSavePass").addEventListener("click", function () {
+    const pass = document.getElementById('txtPass').value;
+    if (!pass || pass.length === 0) {
+      alert("Nhập pass");
+    } else {
+      if (isExtensionEnv()) {
+        chrome.storage.local.set({
+          [KEY_PASS]: pass,
+        });
+      } else {
+        localStorage.setItem(KEY_PASS, pass);
+      }
+      alert("Saved!");  
+    }
+  });
 
   // Handler for Diary button
   document.getElementById("btnDiary").addEventListener("click", function () {
@@ -85,6 +116,10 @@ document.addEventListener("DOMContentLoaded", function () {
   // Handler for To Do List button
   document.getElementById("btnToDoList").addEventListener("click", function () {
     window.open(URL_TODOLIST, '_blank');
+  });
+
+  document.getElementById("btnThisWeek").addEventListener("click", function () {
+    window.open(URL_THIS_WEEK, '_blank');
   });
 
   // Handler for Calendar button
@@ -244,20 +279,21 @@ function getISOWeekNumber() {
 }
 
 function fetchAndStoreLink(callback) {
-  const API_URL = "https://script.google.com/macros/s/AKfycbwTEGtuCIQTkT3lX6tvdGmerE5OCYkuStcjpj9cPT5UPH-yuOgq16roDuRRyMnOCxCr/exec";
-  fetch(API_URL)
+  const pass = document.getElementById("txtPass").value;
+  fetch(URL_GAS_GETFILE + "?password=" + pass)
     .then(response => {
       if (!response.ok) throw new Error("Lỗi khi gọi API");
       return response.json();
     })
     .then(json => {
-      const { diary, diaryChecklist, thought, toDoList } = json;
+      const { diary, diaryChecklist, thought, toDoList, thisWeek } = json;
       if (isExtensionEnv()) {
         chrome.storage.local.set({
           [KEY_DIARY]: diary.trim(),
           [KEY_DIARYCHECKLIST]: diaryChecklist.trim(),
           [KEY_THOUGHT]: thought.trim(),
-          [KEY_TODOLIST]: toDoList.trim()
+          [KEY_TODOLIST]: toDoList.trim(),
+          [KEY_THIS_WEEK]: thisWeek.trim(),
         }, () => {
           if (typeof callback === 'function') callback();
         });
@@ -266,6 +302,7 @@ function fetchAndStoreLink(callback) {
         localStorage.setItem(KEY_DIARYCHECKLIST, diaryChecklist.trim());
         localStorage.setItem(KEY_THOUGHT, thought.trim());
         localStorage.setItem(KEY_TODOLIST, toDoList.trim());
+        localStorage.setItem(KEY_THIS_WEEK, thisWeek.trim());
         if (typeof callback === 'function') callback();
       }
     })
@@ -287,14 +324,16 @@ function capNhatURL() {
   const diaryChecklistElement = document.getElementById("btnDiaryChecklist");
   const thoughtElement = document.getElementById("btnThought");
   const toDoListElement = document.getElementById("btnToDoList");
+  const thisWeekElement = document.getElementById("btnThisWeek");
 
   diaryElement.innerHTML = '<span class="spinner"></span>';
   diaryChecklistElement.innerHTML = '<span class="spinner"></span>';
   thoughtElement.innerHTML = '<span class="spinner"></span>';
   toDoListElement.innerHTML = '<span class="spinner"></span>';
+  thisWeekElement.innerHTML = '<span class="spinner"></span>';
 
   if (isExtensionEnv()) {
-    chrome.storage.local.get([KEY_DIARY, KEY_DIARYCHECKLIST, KEY_THOUGHT, KEY_TODOLIST], (result) => {
+    chrome.storage.local.get([KEY_DIARY, KEY_DIARYCHECKLIST, KEY_THOUGHT, KEY_TODOLIST, KEY_THIS_WEEK], (result) => {
       handleStorageResult(result);
     });
   } else {
@@ -302,7 +341,8 @@ function capNhatURL() {
       [KEY_DIARY]: localStorage.getItem(KEY_DIARY),
       [KEY_DIARYCHECKLIST]: localStorage.getItem(KEY_DIARYCHECKLIST),
       [KEY_THOUGHT]: localStorage.getItem(KEY_THOUGHT),
-      [KEY_TODOLIST]: localStorage.getItem(KEY_TODOLIST)
+      [KEY_TODOLIST]: localStorage.getItem(KEY_TODOLIST),
+      [KEY_THIS_WEEK]: localStorage.getItem(KEY_THIS_WEEK),
     };
     handleStorageResult(result);
   }
@@ -313,11 +353,13 @@ function handleStorageResult(result) {
   let diaryChecklist = result[KEY_DIARYCHECKLIST];
   let thought = result[KEY_THOUGHT];
   let toDoList = result[KEY_TODOLIST];
+  let thisWeek = result[KEY_THIS_WEEK];
 
   const diaryElement = document.getElementById("btnDiary");
   const diaryChecklistElement = document.getElementById("btnDiaryChecklist");
   const thoughtElement = document.getElementById("btnThought");
   const toDoListElement = document.getElementById("btnToDoList");
+  const thisWeekElement = document.getElementById("btnThisWeek");
 
   if (diary) {
     diaryElement.innerHTML = TEXT_DIARY;
@@ -332,14 +374,18 @@ function handleStorageResult(result) {
     URL_THOUGHT = thought;
   }
   if (toDoList) {
-    toDoListElement.innerHTML = TEXT_TODO_LIST;
+    toDoListElement.innerHTML = TEXT_TODOLIST;
     URL_TODOLIST = toDoList;
   }
+  if (thisWeek) {
+    thisWeekElement.innerHTML = TEXT_THIS_WEEK;
+    URL_THIS_WEEK = thisWeek;
+  }
 
-  if (!diary || !diaryChecklist || !thought || !toDoList) {
+  if (!diary || !diaryChecklist || !thought || !toDoList || !thisWeek) {
     fetchAndStoreLink(() => {
       if (isExtensionEnv()) {
-        chrome.storage.local.get([KEY_DIARY, KEY_DIARYCHECKLIST, KEY_THOUGHT, KEY_TODOLIST], (newResult) => {
+        chrome.storage.local.get([KEY_DIARY, KEY_DIARYCHECKLIST, KEY_THOUGHT, KEY_TODOLIST, KEY_THIS_WEEK], (newResult) => {
           handleStorageResult(newResult);
         });
       } else {
@@ -347,7 +393,8 @@ function handleStorageResult(result) {
           [KEY_DIARY]: localStorage.getItem(KEY_DIARY),
           [KEY_DIARYCHECKLIST]: localStorage.getItem(KEY_DIARYCHECKLIST),
           [KEY_THOUGHT]: localStorage.getItem(KEY_THOUGHT),
-          [KEY_TODOLIST]: localStorage.getItem(KEY_TODOLIST)
+          [KEY_TODOLIST]: localStorage.getItem(KEY_TODOLIST),
+          [KEY_THIS_WEEK]: localStorage.getItem(KEY_THIS_WEEK)
         };
         handleStorageResult(newResult);
       }
@@ -363,8 +410,22 @@ function getKeyCache() {
   KEY_DIARYCHECKLIST = `${toDayStr}diaryChecklist`;
   KEY_THOUGHT = `${weekNumber}thought`;
   KEY_TODOLIST = `${weekNumber}todo`;
+  KEY_THIS_WEEK = `${weekNumber}folder`;
 }
 
 function isMobile() {
   return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+function showPass() {
+  let pass;
+  if (isExtensionEnv()) {
+    chrome.storage.local.get([KEY_PASS], function(result) {
+      pass = result[KEY_PASS];
+      document.getElementById("txtPass").value = pass;
+    });
+  } else {
+    pass = localStorage.getItem(KEY_PASS);
+    document.getElementById("txtPass").value = pass;
+  }  
 }
