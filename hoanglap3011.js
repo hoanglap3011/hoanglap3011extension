@@ -262,6 +262,14 @@ document.addEventListener("DOMContentLoaded", function () {
     window.open(URL_KINDLE, '_blank');
   });
 
+  document.getElementById("btnRanh").addEventListener("click", function () {
+    window.open(URL_RANH, '_blank');
+  });
+
+  document.getElementById("btnMuctieu").addEventListener("click", function () {
+    window.open(URL_GOAL, '_blank');
+  });
+
 });
 
 function isExtensionEnv() {
