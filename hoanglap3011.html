@@ -55,6 +55,26 @@
     <br>
     Hôm nay là <span id="current-date"></span>.
   </div>
+  <div class="container mb-3" id="divQuote" style="max-width: 100%;">
+    <div class="mb-2 text-center">
+      <select id="quoteCategory" class="form-select w-auto d-inline-block">
+        <option value="funny">😂 Hài hước</option>
+        <option value="serious">🌱 Triết Lý</option>
+      </select>
+    </div>
+    <div class="row align-items-center">
+      <div class="col-auto">
+        <button class="btn btn-outline-secondary" id="btnPrevQuote">←</button>
+      </div>
+      <div class="col text-center">
+        <div class="text-muted fs-5" id="daily-quote"
+             style="min-height: 2em; white-space: normal; word-break: break-word;"></div>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-outline-secondary" id="btnNextQuote">→</button>
+      </div>
+    </div>
+  </div>
   <div class="container-fluid px-4 mb-4" id="divPassword" style="display: none;">
     <div class="row">
       <div class="col-4">
@@ -131,9 +151,7 @@
       <iframe id="iframeYoutube" width="100%" height="100%" src="https://www.youtube.com/embed/QhIxGtxIFF4?si=umecJ5wXItfUmMoA" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
     </div>
   </div>
-  
-  </script>
-  <script src="hoanglap3011.js"></script>
+  <script type="module" src="hoanglap3011.js"></script>
 </body>
 
 </html>

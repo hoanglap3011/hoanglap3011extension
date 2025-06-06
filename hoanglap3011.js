@@ -1,3 +1,5 @@
+import { quoteTrietLy , quoteHaiHuoc } from './quotes.js';
+
 const TEXT_DIARY = "🖊️ Nhật ký";
 const TEXT_DIARY_CHECKLIST = "✅ Checklist";
 const TEXT_THOUGHT = "💭 Viết ra";
@@ -55,11 +57,34 @@ const NHAC_VUI_URLS = [
 ];
 let nhacVuiIndex = 0;
 
+let currentQuoteList = quoteHaiHuoc;
+
+let currentIndex = 0;
+const today = new Date().toISOString().slice(0, 10);
+
 document.addEventListener("DOMContentLoaded", function () {
   hienThiNgayHienTai();
   getKeyCache();
   showPass();
   capNhatURL();
+
+  loadQuoteIndex();
+  updateQuoteDisplay();
+
+  document.getElementById("btnPrevQuote").addEventListener("click", () => shiftQuote(-1));
+  document.getElementById("btnNextQuote").addEventListener("click", () => shiftQuote(1));
+  // Handler for Doc Sach Kindle button
+  document.getElementById("btnDocSachKindle").addEventListener("click", function () {
+    window.open(URL_KINDLE, '_blank');
+  });
+
+  // Handler for category combobox
+  const categorySelect = document.getElementById("quoteCategory");
+  if (categorySelect) {
+    categorySelect.addEventListener("change", function () {
+      setQuoteCategory(this.value);
+    });
+  }
 
   document.getElementById("btnEnter").addEventListener("click", function () {
     const divPassword = document.getElementById('divPassword');
@@ -83,7 +108,7 @@ document.addEventListener("DOMContentLoaded", function () {
       } else {
         localStorage.setItem(KEY_PASS, pass);
       }
-      alert("Saved!");  
+      alert("Saved!");
     }
   });
 
@@ -166,7 +191,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const iframeContainer = document.getElementById('divIframeYoutube');
     if (iframeContainer.style.display === 'none') {
       iframeContainer.style.display = 'block';
-    } 
+    }
     const iframe = document.getElementById("iframeYoutube");
     if (iframe) {
       iframe.src = HIT_THO_URLS[hitThoIndex];
@@ -179,7 +204,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const iframeContainer = document.getElementById('divIframeYoutube');
     if (iframeContainer.style.display === 'none') {
       iframeContainer.style.display = 'block';
-    } 
+    }
     const iframe = document.getElementById("iframeYoutube");
     if (iframe) {
       iframe.src = NHAC_VUI_URLS[nhacVuiIndex];
@@ -420,12 +445,35 @@ function isMobile() {
 function showPass() {
   let pass;
   if (isExtensionEnv()) {
-    chrome.storage.local.get([KEY_PASS], function(result) {
+    chrome.storage.local.get([KEY_PASS], function (result) {
       pass = result[KEY_PASS];
       document.getElementById("txtPass").value = pass;
     });
   } else {
     pass = localStorage.getItem(KEY_PASS);
     document.getElementById("txtPass").value = pass;
-  }  
+  }
+}
+
+function loadQuoteIndex() {
+  currentIndex = Math.floor(Math.random() * currentQuoteList.length);
+  updateQuoteDisplay();
+}
+
+function updateQuoteDisplay() {
+  const quoteDiv = document.getElementById("daily-quote");
+  if (quoteDiv && currentQuoteList.length > 0) {
+    quoteDiv.textContent = currentQuoteList[currentIndex];
+  }
+}
+
+function shiftQuote(offset) {
+  currentIndex = (currentIndex + offset + currentQuoteList.length) % currentQuoteList.length;
+  updateQuoteDisplay();
+}
+
+function setQuoteCategory(category) {
+  currentQuoteList = category === "serious" ? quoteTrietLy : quoteHaiHuoc;
+  currentIndex = 0;
+  updateQuoteDisplay();
 }
