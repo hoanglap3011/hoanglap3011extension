@@ -42,6 +42,8 @@ const URL_NOTE_GIADINH = "https://docs.google.com/document/d/1Yn04JziVUUTyqUVNqK
 const URL_LAUGHT = "https://www.youtube.com/watch?v=e5e8RScN_dg&list=PLpl9CTbHHB9X2uQvoUN3Iwwo_QbKolgvM";
 const URL_DEEP = "https://www.youtube.com/watch?v=qX900P6POEU&list=PLpl9CTbHHB9UXfVctUpy4NzvNhsQ7s7dX";
 const URL_KINDLE = "kindle://";
+const URL_RANH = "https://docs.google.com/document/d/1ak5a0MpUnUpGpb42m_PFRkKtyvcsF1AohZJJ9dtqTUw/edit?usp=drivesdk";
+const URL_GOAL = "https://docs.google.com/document/d/1ZxRrvGoK_1EWzaDHj_nOQ0YXvfmjSQw-zTl258py2WU/edit?usp=drivesdk";
 
 const HIT_THO_URLS = [
   "https://www.youtube.com/embed/QhIxGtxIFF4?si=umecJ5wXItfUmMoA",
@@ -285,6 +287,14 @@ document.addEventListener("DOMContentLoaded", function () {
   // Handler for Doc Sach Kindle button
   document.getElementById("btnDocSachKindle").addEventListener("click", function () {
     window.open(URL_KINDLE, '_blank');
+  });
+
+  document.getElementById("btnRanh").addEventListener("click", function () {
+    window.open(URL_RANH, '_blank');
+  });
+
+  document.getElementById("btnMuctieu").addEventListener("click", function () {
+    window.open(URL_GOAL, '_blank');
   });
 
 });
