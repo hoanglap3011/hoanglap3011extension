@@ -43,7 +43,7 @@ const URL_LAUGHT = "https://www.youtube.com/watch?v=e5e8RScN_dg&list=PLpl9CTbHHB
 const URL_DEEP = "https://www.youtube.com/watch?v=qX900P6POEU&list=PLpl9CTbHHB9UXfVctUpy4NzvNhsQ7s7dX";
 const URL_KINDLE = "kindle://";
 const URL_RANH = "https://docs.google.com/document/d/1ak5a0MpUnUpGpb42m_PFRkKtyvcsF1AohZJJ9dtqTUw/edit?usp=drivesdk";
-const URL_GOAL = "https://docs.google.com/document/d/1ZxRrvGoK_1EWzaDHj_nOQ0YXvfmjSQw-zTl258py2WU/edit?usp=drivesdk";
+const URL_GOAL = "https://docs.google.com/spreadsheets/d/16IRD2vS0BO0UpRRkJHyVVXlBNqmw1qFd6n5G-0WvnkA/edit?gid=0#gid=0";
 
 const HIT_THO_URLS = [
   "https://www.youtube.com/embed/QhIxGtxIFF4?si=umecJ5wXItfUmMoA",

@@ -125,4 +125,5 @@ export const quoteHaiHuoc = [
   "Thanh xuân như một tách trà, yêu anh thêm nữa mới là thanh xuân.",
   "Mình đẹp là để mình vui, mình đẹp là để giải xui cho mình.",
   "Chị em bốn bể là nhà, sau lưng nói xấu vẫn là chị em.",
+  "Chó là bạn, không phải tôi"
 ];
