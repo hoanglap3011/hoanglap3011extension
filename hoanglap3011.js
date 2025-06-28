@@ -149,6 +149,10 @@ document.addEventListener("DOMContentLoaded", function () {
     window.open(URL_THIS_WEEK, '_blank');
   });
 
+  document.getElementById("btnNextWeek").addEventListener("click", function () {
+    window.open(URL_THIS_WEEK, '_blank');
+  });
+
   // Handler for Calendar button
   document.getElementById("btnCalendar").addEventListener("click", function () {
     window.open(URL_CALENDAR, '_blank');
@@ -251,7 +255,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Handler for Lich Thi Dau Bong Da button
   document.getElementById("btnLichThiDauBongDa").addEventListener("click", function () {
-    window.open(URL_LICHTHIDAU, '_blank');
+    window.open(URL_LICHTHIDAU, '_self');
   });
 
   // Handler for Guitar Edumall button
@@ -294,7 +298,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   document.getElementById("btnMuctieu").addEventListener("click", function () {
-    window.open(URL_GOAL, '_blank');
+    window.open(URL_GOAL, '_self');
   });
 
 });
