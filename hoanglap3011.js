@@ -77,7 +77,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("btnNextQuote").addEventListener("click", () => shiftQuote(1));
   // Handler for Doc Sach Kindle button
   document.getElementById("btnDocSachKindle").addEventListener("click", function () {
-    window.open(URL_KINDLE, '_blank');
+    window.open(URL_KINDLE, '_self');
   });
 
   // Handler for category combobox
@@ -116,18 +116,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Handler for Diary button
   document.getElementById("btnDiary").addEventListener("click", function () {
-    window.open(URL_DIARY, '_blank');
+    window.open(URL_DIARY, '_self');
   });
 
   // Handler for Diary Checklist button
   document.getElementById("btnDiaryChecklist").addEventListener("click", function () {
-    window.open(URL_CHECKLIST, '_blank');
+    window.open(URL_CHECKLIST, '_self');
   });
 
   // Handler for Thought button
   document.getElementById("btnThought").addEventListener("click", function () {
     if (isMobile()) {
-      window.open(URL_THOUGHT, '_blank');
+      window.open(URL_THOUGHT, '_self');
     } else {
       const iframe = document.getElementById("iframeThought");
       iframe.src = URL_THOUGHT;
@@ -142,46 +142,46 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Handler for To Do List button
   document.getElementById("btnToDoList").addEventListener("click", function () {
-    window.open(URL_TODOLIST, '_blank');
+    window.open(URL_TODOLIST, '_self');
   });
 
   document.getElementById("btnThisWeek").addEventListener("click", function () {
-    window.open(URL_THIS_WEEK, '_blank');
+    window.open(URL_THIS_WEEK, '_self');
   });
 
   document.getElementById("btnNextWeek").addEventListener("click", function () {
-    window.open(URL_THIS_WEEK, '_blank');
+    window.open(URL_THIS_WEEK, '_self');
   });
 
   // Handler for Calendar button
   document.getElementById("btnCalendar").addEventListener("click", function () {
-    window.open(URL_CALENDAR, '_blank');
+    window.open(URL_CALENDAR, '_self');
   });
 
   // Handler for Problem button
   document.getElementById("btnProblem").addEventListener("click", function () {
-    window.open(URL_PROBLEM, '_blank');
+    window.open(URL_PROBLEM, '_self');
   });
 
   // Handler for Sodscd button
   document.getElementById("btnSodscd").addEventListener("click", function () {
-    window.open(URL_SODSCD, '_blank');
+    window.open(URL_SODSCD, '_self');
   });
 
   // Handler for Tong Hop Nhat Ky Ngay button
   document.getElementById("btnTongHopNhatKyNgay").addEventListener("click", function () {
-    window.open(URL_TONGHOPNGAY, '_blank');
+    window.open(URL_TONGHOPNGAY, '_self');
   });
 
   // Handler for Tong Hop Nhat Ky Tuan button
   document.getElementById("btnTongHopNhatKyTuan").addEventListener("click", function () {
-    window.open(URL_TONGHOPTUAN, '_blank');
+    window.open(URL_TONGHOPTUAN, '_self');
   });
 
   // Handler for Pomodoro button
   document.getElementById("btnPomodoro").addEventListener("click", function () {
     if (isMobile()) {
-      window.open(URL_POMODORO, '_blank');
+      window.open(URL_POMODORO, '_self');
     } else {
       const iframeContainer = document.getElementById('divIframePomodoro');
       if (iframeContainer.style.display === 'none') {
@@ -220,37 +220,37 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Handler for Thien Vipassana button
   document.getElementById("btnThienVipassana").addEventListener("click", function () {
-    window.open(URL_VIPASSANA, '_blank');
+    window.open(URL_VIPASSANA, '_self');
   });
 
   // Handler for Thien Metta button
   document.getElementById("btnThienMetta").addEventListener("click", function () {
-    window.open(URL_METTA, '_blank');
+    window.open(URL_METTA, '_self');
   });
 
   // Handler for Luyen Tieng Anh button
   document.getElementById("btnLuyenTiengAnh").addEventListener("click", function () {
-    window.open(URL_ENGLISH, '_blank');
+    window.open(URL_ENGLISH, '_self');
   });
 
   // Handler for Nhac Tich Cuc button
   document.getElementById("btnNhacTichCuc").addEventListener("click", function () {
-    window.open(URL_NHACTICHCUCDONGLUC, '_blank');
+    window.open(URL_NHACTICHCUCDONGLUC, '_self');
   });
 
   // Handler for Tin Tong Hop button
   document.getElementById("btnTinTongHop").addEventListener("click", function () {
-    window.open(URL_TINTONGHOP, '_blank');
+    window.open(URL_TINTONGHOP, '_self');
   });
 
   // Handler for Tin Tich Cuc button
   document.getElementById("btnTinTichCuc").addEventListener("click", function () {
-    window.open(URL_TINTICHCUC, '_blank');
+    window.open(URL_TINTICHCUC, '_self');
   });
 
   // Handler for Mo Nhieu AI button
   document.getElementById("btnMoNhieuAi").addEventListener("click", function () {
-    window.open(URL_MONHIEUAI, '_blank');
+    window.open(URL_MONHIEUAI, '_self');
   });
 
   // Handler for Lich Thi Dau Bong Da button
@@ -260,41 +260,41 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Handler for Guitar Edumall button
   document.getElementById("btnGuitarEdumall").addEventListener("click", function () {
-    window.open(URL_GUITAR_EDUMALL, '_blank');
+    window.open(URL_GUITAR_EDUMALL, '_self');
   });
 
   // Handler for Gym Music button
   document.getElementById("btnGymMusic").addEventListener("click", function () {
-    window.open(URL_GYM_MUSIC, '_blank');
+    window.open(URL_GYM_MUSIC, '_self');
   });
 
   // Handler for Note Ve Gia Dinh button
   document.getElementById("btnNoteVeGiaDinh").addEventListener("click", function () {
-    window.open(URL_NOTE_GIADINH, '_blank');
+    window.open(URL_NOTE_GIADINH, '_self');
   });
 
   // Handler for Tin Tuc Thanh Podcast button
   document.getElementById("btnTinTucThanhPodcast").addEventListener("click", function () {
-    window.open("", '_blank');
+    window.open("", '_self');
   });
 
   // Handler for Playlist Cuoi button
   document.getElementById("btnPlaylistCuoi").addEventListener("click", function () {
-    window.open(URL_LAUGHT, '_blank');
+    window.open(URL_LAUGHT, '_self');
   });
 
   // Handler for Playlist Sau Sac button
   document.getElementById("btnPlaylistSauSac").addEventListener("click", function () {
-    window.open(URL_DEEP, '_blank');
+    window.open(URL_DEEP, '_self');
   });
 
   // Handler for Doc Sach Kindle button
   document.getElementById("btnDocSachKindle").addEventListener("click", function () {
-    window.open(URL_KINDLE, '_blank');
+    window.open(URL_KINDLE, '_self');
   });
 
   document.getElementById("btnRanh").addEventListener("click", function () {
-    window.open(URL_RANH, '_blank');
+    window.open(URL_RANH, '_self');
   });
 
   document.getElementById("btnMuctieu").addEventListener("click", function () {
