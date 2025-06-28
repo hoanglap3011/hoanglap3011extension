@@ -54,29 +54,31 @@ function addGoogleCalendar() {
     { id: "/m/02w64f", name: "Tây Ban Nha", stadium: "Sân vận động Santiago Bernabéu, Av. de Concha Espina, 1, Chamartín, 28036 Madrid, Tây Ban Nha" },
     { id: "/m/01l3vx", name: "Pháp", stadium: "Stade de France, 93200 Saint-Denis, Pháp" },
     { id: "/m/01l3wr", name: "Đức", stadium: "Sân vận động Allianz, Werner-Heisenberg-Allee 25, 80939 München, Đức" },
-    { id: "/m/02rqxc", name: "Bồ Đào Nha", stadium: "Estádio do Sport Lisboa e Benfica, Av. Eusébio da Silva Ferreira, 1500-313 Lisboa, Bồ Đào Nha"},
-    { id: "/m/01_1kk", name: "PSG", stadium: "Parc des Princes, 24 Rue du Commandant Guilbaud, 75016 Paris, Pháp"},
-    { id: "/m/03x6m", name: "Inter", stadium: "Sân vận động Giuseppe Meazza, Piazzale Angelo Moratti, 20151 Milano MI, Ý"}
+    { id: "/m/02rqxc", name: "Bồ Đào Nha", stadium: "Estádio do Sport Lisboa e Benfica, Av. Eusébio da Silva Ferreira, 1500-313 Lisboa, Bồ Đào Nha" },
+    { id: "/m/01_1kk", name: "PSG", stadium: "Parc des Princes, 24 Rue du Commandant Guilbaud, 75016 Paris, Pháp" },
+    { id: "/m/03x6m", name: "Inter", stadium: "Sân vận động Giuseppe Meazza, Piazzale Angelo Moratti, 20151 Milano MI, Ý" },
+    { id: "/m/0_ll3j7", name: "Inter Miami", stadium: "Sân vận động Lockhart, 1350 NW 55th St, Fort Lauderdale, FL 33309, Hoa Kỳ" },
+
   ];
-  
-  
+
+
   // trang danh sách trận đấu
   if (window.location.href.includes("google.com/search")) {
     themBieuTuongVaoDivTranDau();
     themBieuTuongCanhDivMuaVe();
-  
+
     // các trang có thể biến đổi mà không cần load lại nên xử lý qua click vùng trống
     document.addEventListener('click', function (event) {
       themBieuTuongVaoDivTranDau();
       themBieuTuongCanhDivMuaVe();
     });
   }
-  
+
   // trang thêm lịch
   if (window.location.href.includes("ofe=true")) {
     tinhChinhThem();
   }
-  
+
   function themBieuTuongVaoDivTranDau() {
     const divTranDaus = [...document.querySelectorAll('div[data-df-match-mid]')]
       .filter(div => !div.querySelector('.imspo_mt__t-sc'));
@@ -112,7 +114,7 @@ function addGoogleCalendar() {
       }
     });
   }
-  
+
   // chọn map, chọn Lịch thi đấu bóng đá
   function tinhChinhThem() {
     setTimeout(() => {
@@ -126,7 +128,7 @@ function addGoogleCalendar() {
           which: 40,
           bubbles: true
         });
-  
+
         const enterEvent = new KeyboardEvent('keydown', {
           key: 'Enter',
           code: 'Enter',
@@ -134,9 +136,9 @@ function addGoogleCalendar() {
           which: 13,
           bubbles: true
         });
-  
+
         inputElement.dispatchEvent(arrowDownEvent);
-  
+
         setTimeout(() => {
           inputElement.dispatchEvent(arrowDownEvent);
           inputElement.dispatchEvent(enterEvent);
@@ -165,9 +167,9 @@ function addGoogleCalendar() {
       }
     }, TIME_LOAD_PAGE_ADDCALENDAR);
   }
-  
+
   function themBieuTuongCanhDivMuaVe() {
-    const divMuaVes = document.querySelectorAll('div[jscontroller="NWQA9d"]:not(:has(img))'); // div mua vé
+    const divMuaVes = document.querySelectorAll('div[jsname="s2gQvd"]:not(:has(img))'); // div mua vé
     if (divMuaVes.length > 0) {
       const divMuaVe = divMuaVes[0];
       const img = document.createElement('img');
@@ -194,7 +196,7 @@ function addGoogleCalendar() {
       divMuaVe.appendChild(img);
     }
   }
-  
+
   function openGoogleCalendarAdding(text, dates, location, details) {
     let url = GOOGLE_CALENDAR_LINK;
     if (text) {
@@ -211,15 +213,15 @@ function addGoogleCalendar() {
     }
     window.open(url, '_blank');
   };
-  
+
   function convertISOToCompactFormat(dateString) {
     // Parse the input date string as a Date object in UTC
     const date = new Date(dateString);
-  
+
     // Convert the date to GMT+7 (UTC+7)
     const offset = 7 * 60 * 60 * 1000; // 7 hours in milliseconds
     const gmt7Date = new Date(date.getTime() + offset);
-  
+
     // Extract the components of the date
     const year = gmt7Date.getUTCFullYear();
     const month = String(gmt7Date.getUTCMonth() + 1).padStart(2, '0'); // Months are 0-based, so add 1
@@ -227,30 +229,41 @@ function addGoogleCalendar() {
     const hours = String(gmt7Date.getUTCHours()).padStart(2, '0');
     const minutes = String(gmt7Date.getUTCMinutes()).padStart(2, '0');
     const seconds = String(gmt7Date.getUTCSeconds()).padStart(2, '0');
-  
+
     const startDate = new Date(year, parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes));
     const endDate = new Date(startDate);
     endDate.setHours(endDate.getHours() + 2);
-  
+
     // Định dạng lại thành chuỗi "yyyyMMddThhmmssZ" (chuyển thành giờ UTC)
     const formattedStartDate = startDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     const formattedEndDate = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-  
+
     return `${formattedStartDate}/${formattedEndDate}`;
-  
+
   }
-  
+
   function convertToISOWithEndTime(thoiGian) {
     const parts = thoiGian.trim().split(', ');
     let datePart, timePart;
     if (parts.length === 3) {
-      // Trường hợp chuỗi bao gồm phần thứ, ngày/tháng và giờ
+      // Th 3, 1/7, 08:00
       datePart = parts[1];
       timePart = parts[2];
     } else if (parts.length === 2) {
-      // Trường hợp chuỗi chỉ bao gồm ngày/tháng và giờ
-      datePart = parts[0];
-      timePart = parts[1];
+      const firstPart = parts[0];
+      if (firstPart == "Hôm nay") {
+        // Hôm nay, 23:00
+        datePart = getHomNay();
+        timePart = parts[1];
+      } else if (firstPart == "Ngày mai") {
+        // Ngày mai, 23:00
+        datePart = getNgayMai();
+        timePart = parts[1];
+      } else {
+        // 23/8, 21:00
+        datePart = parts[0];
+        timePart = parts[1];
+      }
     } else {
       throw new Error("Định dạng không hợp lệ");
     }
@@ -265,7 +278,24 @@ function addGoogleCalendar() {
     const formattedEndDate = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     return `${formattedStartDate}/${formattedEndDate}`;
   }
-  
+
+  function getHomNay() {
+    const today = new Date();
+    const day = today.getDate();
+    const month = today.getMonth() + 1; // tháng bắt đầu từ 0 nên cần cộng thêm 1
+    return `${day}/${month}`;
+  }
+
+  function getNgayMai() {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    const day = tomorrow.getDate();
+    const month = tomorrow.getMonth() + 1; // months are 0-indexed
+    return `${day}/${month}`;
+  }
+
 }
 
 addGoogleCalendar();
