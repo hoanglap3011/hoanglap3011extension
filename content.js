@@ -305,60 +305,139 @@ function addGoogleCalendar() {
 
 addGoogleCalendar();
 
-// Kiểm tra nếu popup chưa được tạo
-if (!document.getElementById("my-floating-popup")) {
-  const iframe = document.createElement("iframe");
-  iframe.id = "my-floating-popup";
-  iframe.src = chrome.runtime.getURL("popup.html");
+function createPopupContainer(x = 0, y = 0, w = null, h = null) {
+  const existing = document.getElementById("my-floating-div");
+  if (existing) return;
 
-  chrome.storage.local.get(["popupLeft", "popupTop"], (result) => {
-    const left = result["popupLeft"] || "20px";
-    const top = result["popupTop"] || "20px";
-    iframe.style.position = "fixed";
-    iframe.style.left = left;
-    iframe.style.top = top;
-    iframe.style.width = "300px";
-    iframe.style.height = "150px";
-    iframe.style.zIndex = "999999";
-    iframe.style.border = "none";
-    iframe.style.borderRadius = "10px";
-    iframe.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
-    iframe.style.background = "white";
-    iframe.style.resize = "both";
-    iframe.style.overflow = "hidden";
+  const popup = document.createElement("div");
+  popup.id = "my-floating-div";
 
-    document.body.appendChild(iframe);
+  // Load CSS
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = chrome.runtime.getURL("popup.css");
+  document.head.appendChild(link);
+
+  const width = w || Math.round(window.innerWidth / 2);
+  const height = h || Math.round(window.innerHeight / 2);
+
+  Object.assign(popup.style, {
+    position: "fixed",
+    left: "0px",
+    top: "0px",
+    width: `${width}px`,
+    height: `${height}px`,
+    transform: `translate(${x}px, ${y}px)`,
+    zIndex: "999999",
+    resize: "both",
+    overflow: "auto",
+    border: "1px solid #ccc",
+    borderRadius: "8px",
+    background: "white",
+    boxShadow: "0 0 10px rgba(0,0,0,0.2)"
   });
 
+  popup.innerHTML = `
+    <div class="header" id="popup-drag-header">
+      <span>🌟 Floating DIV Popup</span>
+      <button id="popup-close-btn">×</button>
+    </div>
+    <div class="content">
+      <p>This popup can be resized natively like a textarea.</p>
+    </div>
+  `;
 
+  document.body.appendChild(popup);
 
-  // Nhận thông điệp từ iframe
-  window.addEventListener("message", (event) => {
-    if (event.source !== iframe.contentWindow) return;
-    if (!event.data || typeof event.data !== "object") return;
+  // Ghi nhớ resize bằng ResizeObserver
+  const ro = new ResizeObserver(() => {
+    chrome.storage.local.set({
+      popupWidth: popup.offsetWidth,
+      popupHeight: popup.offsetHeight
+    });
+  });
+  ro.observe(popup);
 
-    if (event.data.action === "close_popup") {
-      iframe.remove();
+  // Drag logic
+  let isDragging = false;
+  let offsetX = 0, offsetY = 0;
+  const header = popup.querySelector("#popup-drag-header");
+
+  header.addEventListener("mousedown", (e) => {
+    isDragging = true;
+    offsetX = e.clientX;
+    offsetY = e.clientY;
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (isDragging) {
+      const dx = e.clientX - offsetX;
+      const dy = e.clientY - offsetY;
+      offsetX = e.clientX;
+      offsetY = e.clientY;
+      x += dx;
+      y += dy;
+      popup.style.transform = `translate(${x}px, ${y}px)`;
+      chrome.storage.local.set({ popupTranslateX: x, popupTranslateY: y });
     }
+  });
 
-    if (event.data.action === "move_popup") {
-      const dx = event.data.dx;
-      const dy = event.data.dy;
+  document.addEventListener("mouseup", () => {
+    isDragging = false;
+  });
 
-      const currentLeft = parseInt(iframe.style.left, 10) || 0;
-      const currentTop = parseInt(iframe.style.top, 10) || 0;
-
-      const newLeft = currentLeft + dx;
-      const newTop = currentTop + dy;
-
-      iframe.style.left = `${newLeft}px`;
-      iframe.style.top = `${newTop}px`;
-
-      // Lưu lại
-      chrome.storage.local.set({
-        ["popupLeft"]: iframe.style.left,
-        ["popupTop"]: iframe.style.top
-      });
-    }
+  // Close button
+  popup.querySelector("#popup-close-btn").addEventListener("click", () => {
+    popup.remove();
+    chrome.storage.local.set({ popupHidden: true });
+    createRestoreButton();
   });
 }
+
+function createRestoreButton() {
+  if (document.getElementById("popup-restore-button")) return;
+
+  const btn = document.createElement("button");
+  btn.id = "popup-restore-button";
+  btn.textContent = "🔄";
+  Object.assign(btn.style, {
+    position: "fixed",
+    bottom: "20px",
+    left: "20px",
+    zIndex: "999999",
+    fontSize: "20px",
+    border: "none",
+    background: "#2196F3",
+    color: "white",
+    borderRadius: "50%",
+    width: "40px",
+    height: "40px",
+    cursor: "pointer",
+    boxShadow: "0 0 8px rgba(0,0,0,0.2)"
+  });
+
+  btn.onclick = () => {
+    chrome.storage.local.set({ popupHidden: false });
+    btn.remove();
+    createPopupContainer(lastX, lastY, lastW, lastH);
+  };
+
+  document.body.appendChild(btn);
+}
+
+let lastX = 0, lastY = 0, lastW = null, lastH = null;
+
+chrome.storage.local.get(["popupTranslateX", "popupTranslateY", "popupWidth", "popupHeight", "popupHidden"], (result) => {
+  lastX = result.popupTranslateX || 0;
+  lastY = result.popupTranslateY || 0;
+  lastW = result.popupWidth;
+  lastH = result.popupHeight;
+
+  const hidden = result.popupHidden || false;
+  if (!hidden) {
+    createPopupContainer(lastX, lastY, lastW, lastH);
+  } else {
+    createRestoreButton();
+  }
+});
