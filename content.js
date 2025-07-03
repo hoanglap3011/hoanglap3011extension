@@ -58,6 +58,11 @@ function addGoogleCalendar() {
     { id: "/m/01_1kk", name: "PSG", stadium: "Parc des Princes, 24 Rue du Commandant Guilbaud, 75016 Paris, Pháp" },
     { id: "/m/03x6m", name: "Inter", stadium: "Sân vận động Giuseppe Meazza, Piazzale Angelo Moratti, 20151 Milano MI, Ý" },
     { id: "/m/0_ll3j7", name: "Inter Miami", stadium: "Sân vận động Lockhart, 1350 NW 55th St, Fort Lauderdale, FL 33309, Hoa Kỳ" },
+    { id: "/m/042rlf", name: "Al Hilal", stadium: "KINGDOM ARENA, RRHB7787، 7787، 3168 Akkah, حي حطين، Riyadh 13516, Ả Rập Xê-út" },
+    { id: "/m/045xx", name: "Juventus", stadium: "Sân vận động Juventus, Corso Gaetano Scirea, 50, 10151 Torino TO, Ý" },
+    { id: "/m/0196bp", name: "Sunderland", stadium: "Sân vận động Ánh sáng, Monkwearmouth, Sunderland SR5 1SU, Vương Quốc Anh" },
+    { id: "/m/0212mp", name: "Burnley", stadium: "Turf Moor Stadium, 56 Yorkshire St, Burnley BB11 3BN, Vương Quốc Anh" },
+    { id: "/m/01xn7x1", name: "Leeds", stadium: "Elland Road, Elland Rd, Beeston, Leeds LS11 0ES, Vương Quốc Anh" },
 
   ];
 
@@ -299,3 +304,61 @@ function addGoogleCalendar() {
 }
 
 addGoogleCalendar();
+
+// Kiểm tra nếu popup chưa được tạo
+if (!document.getElementById("my-floating-popup")) {
+  const iframe = document.createElement("iframe");
+  iframe.id = "my-floating-popup";
+  iframe.src = chrome.runtime.getURL("popup.html");
+
+  chrome.storage.local.get(["popupLeft", "popupTop"], (result) => {
+    const left = result["popupLeft"] || "20px";
+    const top = result["popupTop"] || "20px";
+    iframe.style.position = "fixed";
+    iframe.style.left = left;
+    iframe.style.top = top;
+    iframe.style.width = "300px";
+    iframe.style.height = "150px";
+    iframe.style.zIndex = "999999";
+    iframe.style.border = "none";
+    iframe.style.borderRadius = "10px";
+    iframe.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
+    iframe.style.background = "white";
+    iframe.style.resize = "both";
+    iframe.style.overflow = "hidden";
+
+    document.body.appendChild(iframe);
+  });
+
+
+
+  // Nhận thông điệp từ iframe
+  window.addEventListener("message", (event) => {
+    if (event.source !== iframe.contentWindow) return;
+    if (!event.data || typeof event.data !== "object") return;
+
+    if (event.data.action === "close_popup") {
+      iframe.remove();
+    }
+
+    if (event.data.action === "move_popup") {
+      const dx = event.data.dx;
+      const dy = event.data.dy;
+
+      const currentLeft = parseInt(iframe.style.left, 10) || 0;
+      const currentTop = parseInt(iframe.style.top, 10) || 0;
+
+      const newLeft = currentLeft + dx;
+      const newTop = currentTop + dy;
+
+      iframe.style.left = `${newLeft}px`;
+      iframe.style.top = `${newTop}px`;
+
+      // Lưu lại
+      chrome.storage.local.set({
+        ["popupLeft"]: iframe.style.left,
+        ["popupTop"]: iframe.style.top
+      });
+    }
+  });
+}

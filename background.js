@@ -14,8 +14,8 @@ async function handleTabCreated(tab) {
     // Lấy tất cả các tab trong cùng cửa sổ với tab vừa được tạo
     const tabs = await chrome.tabs.query({ windowId: tab.windowId });
 
-    // Nếu số lượng tab trong cửa sổ vượt quá 3, chuyển tab này sang cửa sổ mới
-    if (tabs.length > 3) {
+    // Nếu số lượng tab trong cửa sổ vượt quá 5, chuyển tab này sang cửa sổ mới
+    if (tabs.length > 5) {
         chrome.windows.create({ tabId: tab.id });
     }
 }
@@ -24,7 +24,7 @@ async function handleTabCreated(tab) {
 async function checkMaxWindows(newWindow) {
     const windows = await chrome.windows.getAll();
 
-    if (windows.length > 3 && newWindow.type === "normal") {
+    if (windows.length > 2 && newWindow.type === "normal") {
         chrome.windows.remove(newWindow.id);
         alertMaxWindows();
     }
