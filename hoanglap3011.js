@@ -1,5 +1,9 @@
+
+// Import các danh ngôn triết lý và hài hước
 import { quoteTrietLy , quoteHaiHuoc } from './quotes.js';
 
+
+// Các text hiển thị cho các nút chức năng chính
 const TEXT_DIARY = "🖊️ Nhật ký";
 const TEXT_DIARY_CHECKLIST = "✅ Checklist";
 const TEXT_THOUGHT = "💭 Viết ra";
@@ -70,23 +74,23 @@ let currentQuoteList = quoteHaiHuoc;
 let currentIndex = 0;
 const today = new Date().toISOString().slice(0, 10);
 
+
+/**
+ * Khởi tạo giao diện và đăng ký các sự kiện cho các nút chức năng chính
+ * Bao gồm: hiển thị ngày, quote, các nút truy cập nhanh, lưu pass, v.v.
+ */
 document.addEventListener("DOMContentLoaded", function () {
   hienThiNgayHienTai();
   getKeyCache();
   showPass();
   capNhatURL();
-
   loadQuoteIndex();
-  updateQuoteDisplay();
 
-  document.getElementById("btnPrevQuote").addEventListener("click", () => shiftQuote(-1));
-  document.getElementById("btnNextQuote").addEventListener("click", () => shiftQuote(1));
-  // Handler for Doc Sach Kindle button
-  document.getElementById("btnDocSachKindle").addEventListener("click", function () {
-    window.open(URL_KINDLE, '_self');
-  });
+  // Đăng ký sự kiện chuyển quote
+  addClick("btnPrevQuote", () => shiftQuote(-1));
+  addClick("btnNextQuote", () => shiftQuote(1));
 
-  // Handler for category combobox
+  // Đăng ký sự kiện chọn loại quote
   const categorySelect = document.getElementById("quoteCategory");
   if (categorySelect) {
     categorySelect.addEventListener("change", function () {
@@ -94,25 +98,22 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  document.getElementById("btnEnter").addEventListener("click", function () {
+  // Đăng ký sự kiện hiển thị/ẩn ô nhập pass
+  addClick("btnEnter", function () {
     const divPassword = document.getElementById('divPassword');
-    if (divPassword.style.display === 'none') {
-      divPassword.style.display = 'block';
-      showPass();
-    } else {
-      divPassword.style.display = 'none';
-    }
+    divPassword.style.display = (divPassword.style.display === 'none') ? 'block' : 'none';
+    if (divPassword.style.display === 'block') showPass();
   });
 
-  document.getElementById("btnSavePass").addEventListener("click", function () {
+
+  // Lưu mật khẩu vào storage
+  addClick("btnSavePass", function () {
     const pass = document.getElementById('txtPass').value;
     if (!pass || pass.length === 0) {
       alert("Nhập pass");
     } else {
       if (isExtensionEnv()) {
-        chrome.storage.local.set({
-          [KEY_PASS]: pass,
-        });
+        chrome.storage.local.set({ [KEY_PASS]: pass });
       } else {
         localStorage.setItem(KEY_PASS, pass);
       }
@@ -120,90 +121,44 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Handler for Diary button
-  document.getElementById("btnDiary").addEventListener("click", function () {
-    window.open(URL_DIARY, '_self');
-  });
 
-  // Handler for Diary Checklist button
-  document.getElementById("btnDiaryChecklist").addEventListener("click", function () {
-    window.open(URL_CHECKLIST, '_self');
-  });
-
-  // Handler for Thought button
-  document.getElementById("btnThought").addEventListener("click", function () {
+  // Đăng ký sự kiện cho các nút truy cập nhanh (Diary, Checklist, Thought, ToDo, v.v.)
+  addClick("btnDiary", () => window.open(URL_DIARY, '_self'));
+  addClick("btnDiaryChecklist", () => window.open(URL_CHECKLIST, '_self'));
+  addClick("btnThought", function () {
     if (isMobile()) {
       window.open(URL_THOUGHT, '_self');
     } else {
       const iframe = document.getElementById("iframeThought");
       iframe.src = URL_THOUGHT;
       const iframeContainer = document.getElementById('divIframeThought');
-      if (iframeContainer.style.display === 'none') {
-        iframeContainer.style.display = 'block';
-      } else {
-        iframeContainer.style.display = 'none';
-      }
+      iframeContainer.style.display = (iframeContainer.style.display === 'none') ? 'block' : 'none';
     }
   });
+  addClick("btnToDoList", () => window.open(URL_TODOLIST, '_self'));
+  addClick("btnThisWeek", () => window.open(URL_THIS_WEEK, '_self'));
+  addClick("btnPreviousWeek", () => window.open(URL_PREVIOUS_WEEK, '_self'));
+  addClick("btnToDoListNextWeek", () => window.open(URL_TODOLIST_NEXTWEEK, '_self'));
 
-  // Handler for To Do List button
-  document.getElementById("btnToDoList").addEventListener("click", function () {
-    window.open(URL_TODOLIST, '_self');
-  });
 
-  document.getElementById("btnThisWeek").addEventListener("click", function () {
-    window.open(URL_THIS_WEEK, '_self');
-  });
+  // Đăng ký sự kiện cho các nút truy cập nhanh khác (Calendar, Problem, v.v.)
+  addClick("btnCalendar", () => window.open(URL_CALENDAR, '_self'));
+  addClick("btnProblem", () => window.open(URL_PROBLEM, '_self'));
+  addClick("btnSodscd", () => window.open(URL_SODSCD, '_self'));
+  addClick("btnTongHopNhatKyNgay", () => window.open(URL_TONGHOPNGAY, '_self'));
+  addClick("btnTongHopNhatKyTuan", () => window.open(URL_TONGHOPTUAN, '_self'));
 
-  document.getElementById("btnPreviousWeek").addEventListener("click", function () {
-    window.open(URL_PREVIOUS_WEEK, '_self');
-  });
 
-  document.getElementById("btnToDoListNextWeek").addEventListener("click", function () {
-    window.open(URL_TODOLIST_NEXTWEEK, '_self');
-  });
-
-  // Handler for Calendar button
-  document.getElementById("btnCalendar").addEventListener("click", function () {
-    window.open(URL_CALENDAR, '_self');
-  });
-
-  // Handler for Problem button
-  document.getElementById("btnProblem").addEventListener("click", function () {
-    window.open(URL_PROBLEM, '_self');
-  });
-
-  // Handler for Sodscd button
-  document.getElementById("btnSodscd").addEventListener("click", function () {
-    window.open(URL_SODSCD, '_self');
-  });
-
-  // Handler for Tong Hop Nhat Ky Ngay button
-  document.getElementById("btnTongHopNhatKyNgay").addEventListener("click", function () {
-    window.open(URL_TONGHOPNGAY, '_self');
-  });
-
-  // Handler for Tong Hop Nhat Ky Tuan button
-  document.getElementById("btnTongHopNhatKyTuan").addEventListener("click", function () {
-    window.open(URL_TONGHOPTUAN, '_self');
-  });
-
-  // Handler for Pomodoro button
-  document.getElementById("btnPomodoro").addEventListener("click", function () {
+  // Đăng ký sự kiện cho các nút nhạc, pomodoro, youtube, v.v.
+  addClick("btnPomodoro", function () {
     if (isMobile()) {
       window.open(URL_POMODORO, '_self');
     } else {
       const iframeContainer = document.getElementById('divIframePomodoro');
-      if (iframeContainer.style.display === 'none') {
-        iframeContainer.style.display = 'block';
-      } else {
-        iframeContainer.style.display = 'none';
-      }
+      iframeContainer.style.display = (iframeContainer.style.display === 'none') ? 'block' : 'none';
     }
   });
-
-  // Handler for Hit Tho button
-  document.getElementById("btnHitTho").addEventListener("click", function () {
+  addClick("btnHitTho", function () {
     const iframeContainer = document.getElementById('divIframeYoutube');
     if (iframeContainer.style.display === 'none') {
       iframeContainer.style.display = 'block';
@@ -214,9 +169,7 @@ document.addEventListener("DOMContentLoaded", function () {
       hitThoIndex = (hitThoIndex + 1) % HIT_THO_URLS.length;
     }
   });
-
-  // Handler for Nhac Hoc Tap button
-  document.getElementById("btnNhacHocTap").addEventListener("click", function () {
+  addClick("btnNhacHocTap", function () {
     const iframeContainer = document.getElementById('divIframeYoutube');
     if (iframeContainer.style.display === 'none') {
       iframeContainer.style.display = 'block';
@@ -227,96 +180,49 @@ document.addEventListener("DOMContentLoaded", function () {
       nhacVuiIndex = (nhacVuiIndex + 1) % NHAC_VUI_URLS.length;
     }
   });
-
-  // Handler for Thien Vipassana button
-  document.getElementById("btnThienVipassana").addEventListener("click", function () {
-    window.open(URL_VIPASSANA, '_self');
-  });
-
-  // Handler for Thien Metta button
-  document.getElementById("btnThienMetta").addEventListener("click", function () {
-    window.open(URL_METTA, '_self');
-  });
-
-  // Handler for Luyen Tieng Anh button
-  document.getElementById("btnLuyenTiengAnh").addEventListener("click", function () {
-    window.open(URL_ENGLISH, '_self');
-  });
-
-  // Handler for Nhac Tich Cuc button
-  document.getElementById("btnNhacTichCuc").addEventListener("click", function () {
-    window.open(URL_NHACTICHCUCDONGLUC, '_self');
-  });
-
-  // Handler for Tin Tong Hop button
-  document.getElementById("btnTinTongHop").addEventListener("click", function () {
-    window.open(URL_TINTONGHOP, '_self');
-  });
-
-  // Handler for Tin Tich Cuc button
-  document.getElementById("btnTinTichCuc").addEventListener("click", function () {
-    window.open(URL_TINTICHCUC, '_self');
-  });
-
-  // Handler for Mo Nhieu AI button
-  document.getElementById("btnMoNhieuAi").addEventListener("click", function () {
-    window.open(URL_MONHIEUAI, '_self');
-  });
-
-  // Handler for Lich Thi Dau Bong Da button
-  document.getElementById("btnLichThiDauBongDa").addEventListener("click", function () {
-    window.open(URL_LICHTHIDAU, '_self');
-  });
-
-  // Handler for Guitar Edumall button
-  document.getElementById("btnGuitarEdumall").addEventListener("click", function () {
-    window.open(URL_GUITAR_EDUMALL, '_self');
-  });
-
-  // Handler for Gym Music button
-  document.getElementById("btnGymMusic").addEventListener("click", function () {
-    window.open(URL_GYM_MUSIC, '_self');
-  });
-
-  // Handler for Note Ve Gia Dinh button
-  document.getElementById("btnNoteVeGiaDinh").addEventListener("click", function () {
-    window.open(URL_NOTE_GIADINH, '_self');
-  });
-
-  // Handler for Tin Tuc Thanh Podcast button
-  document.getElementById("btnTinTucThanhPodcast").addEventListener("click", function () {
-    window.open("", '_self');
-  });
-
-  // Handler for Playlist Cuoi button
-  document.getElementById("btnPlaylistCuoi").addEventListener("click", function () {
-    window.open(URL_LAUGHT, '_self');
-  });
-
-  // Handler for Playlist Sau Sac button
-  document.getElementById("btnPlaylistSauSac").addEventListener("click", function () {
-    window.open(URL_DEEP, '_self');
-  });
-
-  // Handler for Doc Sach Kindle button
-  document.getElementById("btnDocSachKindle").addEventListener("click", function () {
-    window.open(URL_KINDLE, '_self');
-  });
-
-  document.getElementById("btnRanh").addEventListener("click", function () {
-    window.open(URL_RANH, '_self');
-  });
-
-  document.getElementById("btnMuctieu").addEventListener("click", function () {
-    window.open(URL_GOAL, '_self');
-  });
-
+  addClick("btnThienVipassana", () => window.open(URL_VIPASSANA, '_self'));
+  addClick("btnThienMetta", () => window.open(URL_METTA, '_self'));
+  addClick("btnLuyenTiengAnh", () => window.open(URL_ENGLISH, '_self'));
+  addClick("btnNhacTichCuc", () => window.open(URL_NHACTICHCUCDONGLUC, '_self'));
+  addClick("btnTinTongHop", () => window.open(URL_TINTONGHOP, '_self'));
+  addClick("btnTinTichCuc", () => window.open(URL_TINTICHCUC, '_self'));
+  addClick("btnMoNhieuAi", () => window.open(URL_MONHIEUAI, '_self'));
+  addClick("btnLichThiDauBongDa", () => window.open(URL_LICHTHIDAU, '_self'));
+  addClick("btnGuitarEdumall", () => window.open(URL_GUITAR_EDUMALL, '_self'));
+  addClick("btnGymMusic", () => window.open(URL_GYM_MUSIC, '_self'));
+  addClick("btnNoteVeGiaDinh", () => window.open(URL_NOTE_GIADINH, '_self'));
+  addClick("btnTinTucThanhPodcast", () => window.open("", '_self'));
+  addClick("btnPlaylistCuoi", () => window.open(URL_LAUGHT, '_self'));
+  addClick("btnPlaylistSauSac", () => window.open(URL_DEEP, '_self'));
+  addClick("btnDocSachKindle", () => window.open(URL_KINDLE, '_self'));
+  addClick("btnRanh", () => window.open(URL_RANH, '_self'));
+  addClick("btnMuctieu", () => window.open(URL_GOAL, '_self'));
 });
 
+/**
+ * Hàm tiện ích: Đăng ký sự kiện click cho phần tử theo id
+ * @param {string} id - id của phần tử
+ * @param {Function} handler - hàm xử lý khi click
+ */
+function addClick(id, handler) {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', handler);
+}
+
+
+/**
+ * Kiểm tra môi trường đang chạy là extension hay web thông thường
+ * @returns {boolean}
+ */
 function isExtensionEnv() {
   return typeof chrome !== "undefined" && chrome.storage && chrome.storage.local;
 }
 
+
+/**
+ * Tính số tuần hiện tại trong năm theo chuẩn ISO
+ * @returns {number} Số tuần ISO
+ */
 function getISOWeekNumber() {
   var date = new Date();
   var target = new Date(date.valueOf());
@@ -327,6 +233,11 @@ function getISOWeekNumber() {
   return weekNumber;
 }
 
+
+/**
+ * Gọi API lấy link các tài nguyên (nhật ký, checklist, thought, todo, ...) và lưu vào storage
+ * @param {Function} callback - Hàm callback sau khi lưu xong
+ */
 function fetchAndStoreLink(callback) {
   const pass = document.getElementById("txtPass").value;
   fetch(URL_GAS_GETFILE + "?password=" + pass)
@@ -364,6 +275,10 @@ function fetchAndStoreLink(callback) {
     });
 }
 
+
+/**
+ * Hiển thị ngày hiện tại lên giao diện
+ */
 function hienThiNgayHienTai() {
   const today = new Date();
   const formattedDate = today.toLocaleDateString('vi-VN', {
@@ -372,6 +287,10 @@ function hienThiNgayHienTai() {
   document.getElementById("current-date").textContent = formattedDate;
 }
 
+
+/**
+ * Cập nhật URL cho các nút truy cập nhanh, hiển thị loading khi đang lấy dữ liệu
+ */
 function capNhatURL() {
   const diaryElement = document.getElementById("btnDiary");
   const diaryChecklistElement = document.getElementById("btnDiaryChecklist");
@@ -407,6 +326,10 @@ function capNhatURL() {
   }
 }
 
+/**
+ * Xử lý kết quả lấy từ storage, cập nhật giao diện và cache URL
+ * @param {Object} result - Kết quả lấy từ storage/localStorage
+ */
 function handleStorageResult(result) {
   let diary = result[KEY_DIARY];
   let diaryChecklist = result[KEY_DIARYCHECKLIST];
@@ -475,6 +398,9 @@ function handleStorageResult(result) {
   }
 }
 
+/**
+ * Sinh các key cache cho từng loại tài nguyên theo ngày/tuần
+ */
 function getKeyCache() {
   const weekNumber = getISOWeekNumber();
   const today = new Date();
@@ -488,10 +414,17 @@ function getKeyCache() {
   KEY_PREVIOUS_WEEK = `${weekNumber - 1}folder`;
 }
 
+/**
+ * Kiểm tra thiết bị có phải là mobile không
+ * @returns {boolean}
+ */
 function isMobile() {
   return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
+/**
+ * Hiển thị mật khẩu đã lưu lên ô nhập
+ */
 function showPass() {
   let pass;
   if (isExtensionEnv()) {
@@ -505,11 +438,17 @@ function showPass() {
   }
 }
 
+/**
+ * Chọn quote ngẫu nhiên ban đầu
+ */
 function loadQuoteIndex() {
   currentIndex = Math.floor(Math.random() * currentQuoteList.length);
   updateQuoteDisplay();
 }
 
+/**
+ * Hiển thị quote hiện tại lên giao diện
+ */
 function updateQuoteDisplay() {
   const quoteDiv = document.getElementById("daily-quote");
   if (quoteDiv && currentQuoteList.length > 0) {
@@ -517,11 +456,19 @@ function updateQuoteDisplay() {
   }
 }
 
+/**
+ * Chuyển quote sang trái/phải
+ * @param {number} offset - Số lượng dịch chuyển (âm: lùi, dương: tiến)
+ */
 function shiftQuote(offset) {
   currentIndex = (currentIndex + offset + currentQuoteList.length) % currentQuoteList.length;
   updateQuoteDisplay();
 }
 
+/**
+ * Đổi loại quote (triết lý/hài hước)
+ * @param {string} category - "serious" hoặc "funny"
+ */
 function setQuoteCategory(category) {
   currentQuoteList = category === "serious" ? quoteTrietLy : quoteHaiHuoc;
   currentIndex = 0;

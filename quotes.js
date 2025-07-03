@@ -1,3 +1,6 @@
+/**
+ * Danh sách các câu trích dẫn triết lý truyền cảm hứng
+ */
 export const quoteTrietLy = [
   "Hãy là chính mình, mọi người khác đã có người đóng rồi. – Oscar Wilde",
   "Bạn trở thành điều bạn nghĩ đến nhiều nhất. – Earl Nightingale",
@@ -6,6 +9,9 @@ export const quoteTrietLy = [
   "Không gì là không thể, chính từ đó cũng nói rằng: 'I'm possible!' – Audrey Hepburn",
 ];
 
+/**
+ * Danh sách các câu trích dẫn hài hước, vui vẻ
+ */
 export const quoteHaiHuoc = [
   "Người ta giận dỗi thì bỏ cơm, còn tôi giận dỗi thì bỏ đầy 2 bát liền!",
   "Tôi rửa mặt xong bị xước hết cả tay, đúng thật là hoa hồng đẹp luôn có gai.",

@@ -29,8 +29,7 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "run_at": "document_idle",
-      "type": "module"
+      "run_at": "document_idle"
     }
   ],
   "host_permissions": [
@@ -38,7 +37,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["add.png","hoanglap3011.html", "popup.html", "popup.css"],
+      "resources": ["add.png", "hoanglap3011.html", "popup.html", "popup.css", "teams.js"],
       "matches": ["<all_urls>"]
     }
   ],
