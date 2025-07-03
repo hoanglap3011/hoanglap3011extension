@@ -305,51 +305,56 @@ function addGoogleCalendar() {
 
 addGoogleCalendar();
 
-function createPopupContainer(x = 0, y = 0, w = null, h = null) {
-  const existing = document.getElementById("my-floating-div");
+function createPopupShadow(x = 0, y = 0, w = null, h = null) {
+  const existing = document.getElementById("popup-host");
   if (existing) return;
 
-  const popup = document.createElement("div");
-  popup.id = "my-floating-div";
+  const host = document.createElement("div");
+  host.id = "popup-host";
+  Object.assign(host.style, {
+    position: "fixed",
+    left: "0",
+    top: "0",
+    zIndex: "999999"
+  });
 
-  // Load CSS
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.href = chrome.runtime.getURL("popup.css");
-  document.head.appendChild(link);
+  const shadow = host.attachShadow({ mode: "open" });
+  const styleURL = chrome.runtime.getURL("popup.css");
 
   const width = w || Math.round(window.innerWidth / 2);
   const height = h || Math.round(window.innerHeight / 2);
 
-  Object.assign(popup.style, {
-    position: "fixed",
-    left: "0px",
-    top: "0px",
-    width: `${width}px`,
-    height: `${height}px`,
-    transform: `translate(${x}px, ${y}px)`,
-    zIndex: "999999",
-    resize: "both",
-    overflow: "auto",
-    border: "1px solid #ccc",
-    borderRadius: "8px",
-    background: "white",
-    boxShadow: "0 0 10px rgba(0,0,0,0.2)"
-  });
-
-  popup.innerHTML = `
-    <div class="header" id="popup-drag-header">
-      <span>🌟 Floating DIV Popup</span>
-      <button id="popup-close-btn">×</button>
-    </div>
-    <div class="content">
-      <p>This popup can be resized natively like a textarea.</p>
+  shadow.innerHTML = `
+    <link rel="stylesheet" href="${styleURL}">
+    <div id="popup-box" style="
+      width: ${width}px;
+      height: ${height}px;
+      transform: translate(${x}px, ${y}px);
+      resize: both;
+      overflow: auto;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      position: fixed;
+    ">
+      <div class="header" id="popup-drag-header">
+        <span>🌟 Floating Shadow Popup</span>
+        <button id="popup-close-btn">×</button>
+      </div>
+      <div class="content">
+        <p>This popup is completely isolated using Shadow DOM.</p>
+      </div>
     </div>
   `;
 
-  document.body.appendChild(popup);
+  document.body.appendChild(host);
 
-  // Ghi nhớ resize bằng ResizeObserver
+  const popup = shadow.getElementById("popup-box");
+  const header = shadow.getElementById("popup-drag-header");
+  const closeBtn = shadow.getElementById("popup-close-btn");
+
+  // Resize observer
   const ro = new ResizeObserver(() => {
     chrome.storage.local.set({
       popupWidth: popup.offsetWidth,
@@ -358,10 +363,9 @@ function createPopupContainer(x = 0, y = 0, w = null, h = null) {
   });
   ro.observe(popup);
 
-  // Drag logic
+  // Drag
   let isDragging = false;
   let offsetX = 0, offsetY = 0;
-  const header = popup.querySelector("#popup-drag-header");
 
   header.addEventListener("mousedown", (e) => {
     isDragging = true;
@@ -388,8 +392,8 @@ function createPopupContainer(x = 0, y = 0, w = null, h = null) {
   });
 
   // Close button
-  popup.querySelector("#popup-close-btn").addEventListener("click", () => {
-    popup.remove();
+  closeBtn.addEventListener("click", () => {
+    host.remove();
     chrome.storage.local.set({ popupHidden: true });
     createRestoreButton();
   });
@@ -420,7 +424,7 @@ function createRestoreButton() {
   btn.onclick = () => {
     chrome.storage.local.set({ popupHidden: false });
     btn.remove();
-    createPopupContainer(lastX, lastY, lastW, lastH);
+    createPopupShadow(lastX, lastY, lastW, lastH);
   };
 
   document.body.appendChild(btn);
@@ -436,7 +440,7 @@ chrome.storage.local.get(["popupTranslateX", "popupTranslateY", "popupWidth", "p
 
   const hidden = result.popupHidden || false;
   if (!hidden) {
-    createPopupContainer(lastX, lastY, lastW, lastH);
+    createPopupShadow(lastX, lastY, lastW, lastH);
   } else {
     createRestoreButton();
   }
