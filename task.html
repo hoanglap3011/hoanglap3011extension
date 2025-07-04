@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pomodoro Task</title>
     <link rel="stylesheet" href="task.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body>
     <div class="container">
@@ -13,17 +14,19 @@
             <input id="taskInput" type="text" placeholder="xin mời nhập nội dung công việc">
         </div>
         <!-- Hàng 2: Pomodoro -->
-        <div class="row row-2">
-            <select id="pomodoroSelect">
+        <div class="row">
+            <select id="pomodoroSelect" class="w-auto ps-0" style="margin-left:0;">
                 <option value="0">15</option>
                 <option value="1">30</option>
                 <option value="2">45</option>
             </select>
-            <div class="progress-container">
+            <button id="startBtn" style="margin-left:8px;">
+                <span class="bi bi-play-fill"></span>
+            </button>
+            <div class="progress-container" style="margin-left:auto; margin-right:0">
                 <div id="progressBar" class="progress-bar"></div>
                 <span id="progressTime" class="progress-time"></span>
             </div>
-            <button id="startBtn">Bắt đầu</button>
         </div>
         <!-- Hàng 3: Text khích lệ -->
         <div class="row row-3">

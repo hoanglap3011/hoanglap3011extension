@@ -27,10 +27,14 @@ body {
     padding: 10px 12px;
     outline: none;
     font-weight: bold;
+    animation: blinkText 1s linear infinite;
 }
-.row-2 {
-    gap: 10px;
+
+@keyframes blinkText {
+    0%, 49% { color: #e53935; }
+    50%, 100% { color: transparent; }
 }
+
 #pomodoroSelect {
     font-size: 1rem;
     padding: 6px 10px;

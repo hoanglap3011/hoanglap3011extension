@@ -3,7 +3,7 @@
 // shortBreak: thời gian nghỉ ngắn (phút)
 // longBreak: thời gian nghỉ dài (phút)
 const pomodoroOptions = [
-    { work: 15, shortBreak: 2, longBreak: 10 },
+    { work: 0.1, shortBreak: 0.1, longBreak: 0.1 },
     { work: 30, shortBreak: 5, longBreak: 15 },
     { work: 45, shortBreak: 10, longBreak: 20 }
 ];
@@ -55,9 +55,23 @@ function setProgress(percent, color) {
 
 // Cập nhật giao diện progressbar và thời gian còn lại
 function updateProgressBar() {
-    let total = isBreak ? (breakType === 'long' ? pomodoroOptions[currentOption].longBreak : pomodoroOptions[currentOption].shortBreak) * 60 : pomodoroOptions[currentOption].work * 60;
+    let total;
+    let color;
+    if (!isBreak) {
+        // Đang làm việc: màu xanh dương
+        total = pomodoroOptions[currentOption].work * 60;
+        color = '#1976d2'; // xanh dương
+    } else if (breakType === 'long') {
+        // Nghỉ dài: màu vàng
+        total = pomodoroOptions[currentOption].longBreak * 60;
+        color = '#ffd600'; // vàng
+    } else {
+        // Nghỉ ngắn: màu xanh lá cây
+        total = pomodoroOptions[currentOption].shortBreak * 60;
+        color = '#43a047'; // xanh lá cây
+    }
     let percent = (timeLeft / total) * 100;
-    setProgress(percent, isBreak ? '#e53935' : '#43a047');
+    setProgress(percent, color);
     progressTime.textContent = formatTime(timeLeft);
 }
 
@@ -66,7 +80,7 @@ function resetPomodoro() {
     clearInterval(timer);
     isBreak = false;
     timeLeft = pomodoroOptions[currentOption].work * 60;
-    setProgress(100, '#43a047');
+    setProgress(100, '#1976d2'); // xanh dương khi làm việc
     progressTime.textContent = formatTime(timeLeft);
     startBtn.disabled = false;
 }
@@ -92,7 +106,7 @@ function startPomodoro() {
     startBtn.disabled = true;
     isBreak = false;
     timeLeft = pomodoroOptions[currentOption].work * 60;
-    setProgress(100, '#43a047');
+    setProgress(100, '#1976d2'); // xanh dương khi làm việc
     progressTime.textContent = formatTime(timeLeft);
     timer = setInterval(() => {
         timeLeft--;
@@ -107,7 +121,7 @@ function startPomodoro() {
             isBreak = true;
             breakType = 'short';
             timeLeft = pomodoroOptions[currentOption].shortBreak * 60;
-            setProgress(100, '#e53935');
+            setProgress(100, '#43a047'); // xanh lá cây khi nghỉ ngắn
             progressTime.textContent = formatTime(timeLeft);
             timer = setInterval(() => {
                 timeLeft--;
