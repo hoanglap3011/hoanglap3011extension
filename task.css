@@ -1,0 +1,113 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #f7f7f7;
+    margin: 0;
+    padding: 0;
+}
+.container {
+    max-width: 420px;
+    margin: 40px auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    padding: 24px 18px 32px 18px;
+}
+.row {
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.row-1 input {
+    width: 100%;
+    font-size: 1.3rem;
+    color: #e53935;
+    border: 1.5px solid #e53935;
+    border-radius: 6px;
+    padding: 10px 12px;
+    outline: none;
+    font-weight: bold;
+}
+.row-2 {
+    gap: 10px;
+}
+#pomodoroSelect {
+    font-size: 1rem;
+    padding: 6px 10px;
+    border-radius: 5px;
+    border: 1px solid #bdbdbd;
+}
+.progress-container {
+    flex: 1;
+    margin: 0 10px;
+    background: #e0e0e0;
+    border-radius: 8px;
+    height: 28px;
+    position: relative;
+    min-width: 120px;
+    max-width: 180px;
+    display: flex;
+    align-items: center;
+}
+.progress-bar {
+    background: #43a047;
+    height: 100%;
+    border-radius: 8px 0 0 8px;
+    transition: width 0.2s linear, background 0.2s;
+    width: 0;
+}
+.progress-time {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1rem;
+    color: #222;
+    font-weight: bold;
+    pointer-events: none;
+}
+#startBtn {
+    background: #43a047;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 18px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+#startBtn:active {
+    background: #2e7031;
+}
+.motivation-box {
+    width: 100%;
+    min-height: 48px;
+    background: #e3f2fd;
+    border-radius: 8px;
+    padding: 12px 10px;
+    font-size: 1.1rem;
+    color: #1976d2;
+    text-align: center;
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(25, 118, 210, 0.07);
+    margin: 0 8px;
+}
+.motivation-nav {
+    background: #1976d2;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.motivation-nav:active {
+    background: #0d47a1;
+}

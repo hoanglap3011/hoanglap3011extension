@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Task</title>
+    <link rel="stylesheet" href="task.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Hàng 1: Nhập nội dung công việc -->
+        <div class="row row-1">
+            <input id="taskInput" type="text" placeholder="xin mời nhập nội dung công việc">
+        </div>
+        <!-- Hàng 2: Pomodoro -->
+        <div class="row row-2">
+            <select id="pomodoroSelect">
+                <option value="0">15</option>
+                <option value="1">30</option>
+                <option value="2">45</option>
+            </select>
+            <div class="progress-container">
+                <div id="progressBar" class="progress-bar"></div>
+                <span id="progressTime" class="progress-time"></span>
+            </div>
+            <button id="startBtn">Bắt đầu</button>
+        </div>
+        <!-- Hàng 3: Text khích lệ -->
+        <div class="row row-3">
+            <button id="prevMotivation" class="motivation-nav">&#8592;</button>
+            <div id="motivationBox" class="motivation-box"></div>
+            <button id="nextMotivation" class="motivation-nav">&#8594;</button>
+        </div>
+    </div>
+    <audio id="breakSound" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124bfa1c82.mp3"></audio>
+    <script src="task.js"></script>
+</body>
+</html>
