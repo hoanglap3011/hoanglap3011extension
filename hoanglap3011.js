@@ -29,7 +29,9 @@ let URL_TODOLIST_NEXTWEEK = "";
 let URL_PREVIOUS_WEEK = "";
 
 const KEY_PASS = "pass";
-const URL_GAS_GETFILE = "https://script.google.com/macros/s/AKfycbyZyzpin5psuFiALRTYT4joSQtwkV0aa9dlBzyvsY22vxLHGt-oME8pGlhMc3GQKP7EVQ/exec";
+const URL_GET_DAY_LINK = "https://script.google.com/macros/s/AKfycbyaOZZDckZlMMMWMlchO0Vb5E04bPTaDGLAC5HEQdc9uJEwmQYq7_O_qW13BJMs-whqFQ/exec";
+const URL_GET_WEEK_LINK = "https://script.google.com/macros/s/AKfycbzzDGFPCjS3PZB40vO6NJ3jbSHaIzuhCB64tglm_krc2e5nA10zMigOP8LTtWw9gpEksg/exec";
+
 const URL_CALENDAR = "https://calendar.google.com/";
 const URL_PROBLEM = "https://docs.google.com/spreadsheets/d/1Ww9sdbQScZdNysDOvD8_1zCqxsi3r-K6FqIKLLoXSho/edit?gid=0#gid=0";
 const URL_SODSCD = "https://docs.google.com/document/d/12oVFyqe-yWjuwTW2YN74WPQl6N9xOcaR8KONvH81Ksg/edit?tab=t.0";
@@ -234,23 +236,45 @@ function getISOWeekNumber() {
 }
 
 
-/**
- * Gọi API lấy link các tài nguyên (nhật ký, checklist, thought, todo, ...) và lưu vào storage
- * @param {Function} callback - Hàm callback sau khi lưu xong
- */
-function fetchAndStoreLink(callback) {
+
+function fetchDayLinkAndStore(callback) {
   const pass = document.getElementById("txtPass").value;
-  fetch(URL_GAS_GETFILE + "?password=" + pass)
+  fetch(URL_GET_DAY_LINK + "?password=" + pass)
     .then(response => {
       if (!response.ok) throw new Error("Lỗi khi gọi API");
       return response.json();
     })
     .then(json => {
-      const { diary, diaryChecklist, thought, toDoList, thisWeek, toDoListNextWeek, previousWeek } = json;
+      const { diary, diaryChecklist } = json;
       if (isExtensionEnv()) {
         chrome.storage.local.set({
           [KEY_DIARY]: diary.trim(),
           [KEY_DIARYCHECKLIST]: diaryChecklist.trim(),
+        }, () => {
+          if (typeof callback === 'function') callback();
+        });
+      } else {
+        localStorage.setItem(KEY_DIARY, diary.trim());
+        localStorage.setItem(KEY_DIARYCHECKLIST, diaryChecklist.trim());
+        if (typeof callback === 'function') callback();
+      }
+    })
+    .catch(error => {
+      console.error("Lỗi khi gọi API và lưu cache:", error);
+    });
+}
+
+function fetchWeekLinkAndStore(callback) {
+  const pass = document.getElementById("txtPass").value;
+  fetch(URL_GET_WEEK_LINK + "?password=" + pass)
+    .then(response => {
+      if (!response.ok) throw new Error("Lỗi khi gọi API");
+      return response.json();
+    })
+    .then(json => {
+      const { thought, toDoList, thisWeek, toDoListNextWeek, previousWeek } = json;
+      if (isExtensionEnv()) {
+        chrome.storage.local.set({
           [KEY_THOUGHT]: thought.trim(),
           [KEY_TODOLIST]: toDoList.trim(),
           [KEY_THIS_WEEK]: thisWeek.trim(),
@@ -260,8 +284,6 @@ function fetchAndStoreLink(callback) {
           if (typeof callback === 'function') callback();
         });
       } else {
-        localStorage.setItem(KEY_DIARY, diary.trim());
-        localStorage.setItem(KEY_DIARYCHECKLIST, diaryChecklist.trim());
         localStorage.setItem(KEY_THOUGHT, thought.trim());
         localStorage.setItem(KEY_TODOLIST, toDoList.trim());
         localStorage.setItem(KEY_THIS_WEEK, thisWeek.trim());
@@ -274,7 +296,6 @@ function fetchAndStoreLink(callback) {
       console.error("Lỗi khi gọi API và lưu cache:", error);
     });
 }
-
 
 /**
  * Hiển thị ngày hiện tại lên giao diện
@@ -326,10 +347,54 @@ function capNhatURL() {
   }
 }
 
-/**
- * Xử lý kết quả lấy từ storage, cập nhật giao diện và cache URL
- * @param {Object} result - Kết quả lấy từ storage/localStorage
- */
+function handleStorageDayLinkResult(result) {
+  let diary = result[KEY_DIARY];
+  let diaryChecklist = result[KEY_DIARYCHECKLIST];
+  const diaryElement = document.getElementById("btnDiary");
+  const diaryChecklistElement = document.getElementById("btnDiaryChecklist");
+  if (diary) {
+    diaryElement.innerHTML = TEXT_DIARY;
+    URL_DIARY = diary;
+  }
+  if (diaryChecklist) {
+    diaryChecklistElement.innerHTML = TEXT_DIARY_CHECKLIST;
+    URL_CHECKLIST = diaryChecklist;
+  }
+}
+
+function handleStorageWeekLinkResult(result) {
+  let thought = result[KEY_THOUGHT];
+  let toDoList = result[KEY_TODOLIST];
+  let thisWeek = result[KEY_THIS_WEEK];
+  let toDoListNextWeek = result[KEY_TODOLIST_NEXTWEEK];
+  let previousWeek = result[KEY_PREVIOUS_WEEK];
+  const thoughtElement = document.getElementById("btnThought");
+  const toDoListElement = document.getElementById("btnToDoList");
+  const thisWeekElement = document.getElementById("btnThisWeek");
+  const toDoListNextWeekElement = document.getElementById("btnToDoListNextWeek");
+  const previousWeekElement = document.getElementById("btnPreviousWeek");
+  if (thought) {
+    thoughtElement.innerHTML = TEXT_THOUGHT;
+    URL_THOUGHT = thought;
+  }
+  if (toDoList) {
+    toDoListElement.innerHTML = TEXT_TODOLIST;
+    URL_TODOLIST = toDoList;
+  }
+  if (thisWeek) {
+    thisWeekElement.innerHTML = TEXT_THIS_WEEK;
+    URL_THIS_WEEK = thisWeek;
+  }
+  if (toDoListNextWeek) {
+    toDoListNextWeekElement.innerHTML = TEXT_TODOLIST_NEXTWEEK;
+    URL_TODOLIST_NEXTWEEK = toDoListNextWeek;
+  }
+  if (previousWeek) {
+    previousWeekElement.innerHTML = TEXT_PREVIOUS_WEEK;
+    URL_PREVIOUS_WEEK = previousWeek;
+  }
+}
+
 function handleStorageResult(result) {
   let diary = result[KEY_DIARY];
   let diaryChecklist = result[KEY_DIARYCHECKLIST];
@@ -376,23 +441,37 @@ function handleStorageResult(result) {
     URL_PREVIOUS_WEEK = previousWeek;
   }
 
-  if (!diary || !diaryChecklist || !thought || !toDoList || !thisWeek || !toDoListNextWeek) {
-    fetchAndStoreLink(() => {
+  if (!diary || !diaryChecklist) {
+    fetchDayLinkAndStore(() => {
       if (isExtensionEnv()) {
-        chrome.storage.local.get([KEY_DIARY, KEY_DIARYCHECKLIST, KEY_THOUGHT, KEY_TODOLIST, KEY_THIS_WEEK, KEY_TODOLIST_NEXTWEEK, KEY_PREVIOUS_WEEK], (newResult) => {
-          handleStorageResult(newResult);
+        chrome.storage.local.get([KEY_DIARY, KEY_DIARYCHECKLIST], (newResult) => {
+          handleStorageDayLinkResult(newResult);
         });
       } else {
         const newResult = {
           [KEY_DIARY]: localStorage.getItem(KEY_DIARY),
-          [KEY_DIARYCHECKLIST]: localStorage.getItem(KEY_DIARYCHECKLIST),
+          [KEY_DIARYCHECKLIST]: localStorage.getItem(KEY_DIARYCHECKLIST)
+        };
+        handleStorageDayLinkResult(newResult);
+      }
+    });
+  }
+
+  if (!thought || !toDoList || !thisWeek || !toDoListNextWeek || !previousWeek) {
+    fetchWeekLinkAndStore(() => {
+      if (isExtensionEnv()) {
+        chrome.storage.local.get([KEY_THOUGHT, KEY_TODOLIST, KEY_THIS_WEEK, KEY_TODOLIST_NEXTWEEK, KEY_PREVIOUS_WEEK], (newResult) => {
+          handleStorageWeekLinkResult(newResult);
+        });
+      } else {
+        const newResult = {
           [KEY_THOUGHT]: localStorage.getItem(KEY_THOUGHT),
           [KEY_TODOLIST]: localStorage.getItem(KEY_TODOLIST),
           [KEY_THIS_WEEK]: localStorage.getItem(KEY_THIS_WEEK),
           [KEY_TODOLIST_NEXTWEEK]: localStorage.getItem(KEY_TODOLIST_NEXTWEEK),
           [KEY_PREVIOUS_WEEK]: localStorage.getItem(KEY_PREVIOUS_WEEK),
         };
-        handleStorageResult(newResult);
+        handleStorageWeekLinkResult(newResult);
       }
     });
   }

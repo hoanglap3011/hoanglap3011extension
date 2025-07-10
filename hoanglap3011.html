@@ -69,7 +69,7 @@
       </div>
       <div class="col text-center">
         <div class="text-muted fs-5" id="daily-quote"
-             style="min-height: 2em; white-space: normal; word-break: break-word;"></div>
+          style="min-height: 2em; white-space: normal; word-break: break-word;"></div>
       </div>
       <div class="col-auto">
         <button class="btn btn-outline-secondary" id="btnNextQuote">→</button>
@@ -88,19 +88,26 @@
   </div>
   <div id="link-container" class="container-fluid px-4">
     <div class="row">
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnMuctieu">🎯 Goal</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnRanh"> 🛋️ Rảnh</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTamLy">❤️ Trauma</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnDiary">🖊️ Nhật ký</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnDiaryChecklist">✅ Checklist ngày</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnThought">💭 Suy nghĩ</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnDiaryChecklist">✅ Checklist</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnToDoList">✅ To Do List</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnThisWeek">📒 This week</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnPreviousWeek">📁 Previous Week</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnToDoListNextWeek">Plan Next week</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnCalendar"><img
             src="https://ssl.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_24_2x.png" alt="Google Calendar"
             style="vertical-align: text-bottom; height: 1.2em;"> Lịch</button></div>
+
+      <div class="col-6 col-md-3 mb-3">
+        <select class="form-select a-like" id="comboCustom"
+          style="padding: 12px 16px; font-size: clamp(16px, 4vw, 22px);">
+          <option value="option1">Chọn Nhật ký</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnMuctieu">🎯 Goal</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnRanh"> 🛋️ Rảnh</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnThought">💭 Suy nghĩ</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnThisWeek">📒 This week</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnPreviousWeek">📁 Previous Week</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnToDoListNextWeek">Plan Next week</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnProblem">❗ Vấn đề</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnSodscd">🛠️ SODSCD</button></div>
 
@@ -127,16 +134,22 @@
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnDocSachKindle">📖 Kindle</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTamLy">Nếu tôi chết</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTamLy">Mất thiết bị</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTamLy">Đánh thẳng vào Điểm yếu hiện tại</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTamLy">Đánh thẳng vào Điểm yếu hiện tại</button>
+      </div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTamLy">Kiểm tra quyền Google đã cấp</button></div>
 
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnNhatKyHomQua">Nhật ký ngày hôm qua</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">Nhật ký tuần trước</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">Nhật ký tháng trước</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">Nhật ký tuần trước</button>
+      </div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">Nhật ký tháng trước</button>
+      </div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">Nhật ký năm trước</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">Nhật ký quãng đời đã qua</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">Nhập ngày cụ thể xem nhật ký</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">Nhật ký quãng đời đã
+          qua</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">Nhập ngày cụ thể xem nhật
+          ký</button></div>
 
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTamLy">❤️ Trauma</button></div>
 
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnEnter">Enter</button></div>
 
@@ -154,7 +167,10 @@
   </div>
   <div class="container-fluid px-4 mt-4">
     <div id="divIframeYoutube" style="height: 150px; border: 1px solid #010628; display: none">
-      <iframe id="iframeYoutube" width="100%" height="100%" src="https://www.youtube.com/embed/QhIxGtxIFF4?si=umecJ5wXItfUmMoA" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      <iframe id="iframeYoutube" width="100%" height="100%"
+        src="https://www.youtube.com/embed/QhIxGtxIFF4?si=umecJ5wXItfUmMoA" title="YouTube video player" frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
     </div>
   </div>
   <script type="module" src="hoanglap3011.js"></script>
