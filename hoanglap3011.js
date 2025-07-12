@@ -33,7 +33,7 @@ let URLS = {
 };
 
 const KEY_PASS = "pass";
-const URL_GET_DAY_LINK = "https://script.google.com/macros/s/AKfycbyTVnxsqUqFvtmlNDVMWAPS69zlOX6xKKQ0334odi9pg4277GjriiJTfVRq089FMgACEQ/exec";
+const URL_GET_DAY_LINK = "https://script.google.com/macros/s/AKfycbyVL6DB3ZSXjc4ouKC3EphButqGemznE1Crihj0QhCNYurYsLz0IHCYKIqjE9tvzvE/exec";
 const URL_GET_WEEK_LINK = "https://script.google.com/macros/s/AKfycbwf8ClbSRQ565JWGl3FKL5c5Khn9QvuhwADnvKRVSkKE0FFPbWcw05x8-LcdVk2UBIIRA/exec";
 
 const QUICK_URLS = {
@@ -304,7 +304,7 @@ function handleStorageResult(result) {
 
 function setKeyCache() {
   const dStr = getCurrentDateFormatted();
-  const weekAndMonth = getWeekAndStartMonth(dStr);
+  const weekAndMonth = getInfoWeek(dStr);
   const week = weekAndMonth.week;
   KEYS = {
     DIARY: `diary.${dStr}`,
@@ -413,35 +413,58 @@ function chooseDayDiary(dStr) {
       const urlDiary = result[keyDiary];
       const urlChecklist = result[keyChecklist];
       if (urlDiary) {
-        window.open(urlDiary, '_self');
+        window.open(urlDiary, '_blank');
       }
     } else {
       fetchDayLinkAndStore(dStr, () => getStorage(keys, (result2) => {
-        window.open(result2[keyDiary], '_self')
+        window.open(result2[keyDiary], '_blank')
       }))
     }
   });
 }
 
-function getWeekAndStartMonth(dateStr) {
-  const [day, month, year] = dateStr.split('.').map(Number);
-  const inputDate = new Date(year, month - 1, day);
-  const dayOfWeek = inputDate.getDay(); // Sunday = 0
-  const diffToMonday = (dayOfWeek + 6) % 7;
-  const monday = new Date(inputDate);
-  monday.setDate(inputDate.getDate() - diffToMonday);
-  const firstThursday = new Date(monday.getFullYear(), 0, 1);
-  while (firstThursday.getDay() !== 4) {
-      firstThursday.setDate(firstThursday.getDate() + 1);
-  }
-  const weekNumber = Math.ceil(
-      ((monday - firstThursday) / (1000 * 60 * 60 * 24) + 4) / 7
-  );
-  const monthStr = String(monday.getMonth() + 1).padStart(2, '0');
-  return {
-      week: weekNumber,
-      month: monthStr
-  };
+function getInfoWeek(dateStr) {
+    const [day, month, year] = dateStr.split('.').map(Number);
+    const inputDate = new Date(year, month - 1, day);
+
+    // Calculate Monday
+    const dayOfWeek = (inputDate.getDay() + 6) % 7; // 0 = Monday
+    const monday = new Date(inputDate);
+    monday.setDate(inputDate.getDate() - dayOfWeek);
+
+    // Calculate Sunday
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    // Determine ISO week year by checking Thursday of that week
+    const tempDate = new Date(monday);
+    tempDate.setDate(tempDate.getDate() + 3); // Thursday
+    const weekYear = tempDate.getFullYear();
+
+    // Find the Thursday of the first ISO week of the year
+    const firstThursday = new Date(weekYear, 0, 4);
+    const firstThursdayDay = (firstThursday.getDay() + 6) % 7;
+    firstThursday.setDate(firstThursday.getDate() - firstThursdayDay + 3);
+
+    // Calculate week number
+    const diffInDays = (monday - firstThursday) / (1000 * 60 * 60 * 24);
+    const weekNumber = 1 + Math.round(diffInDays / 7);
+
+    // Now month comes from Sunday (end of week)
+    const monthStr = String(sunday.getMonth() + 1).padStart(2, '0');
+
+    const formatDate = (d) =>
+        String(d.getDate()).padStart(2, '0') + '.' +
+        String(d.getMonth() + 1).padStart(2, '0') + '.' +
+        d.getFullYear();
+
+    return {
+        week: weekNumber,
+        month: monthStr,
+        startOfWeek: formatDate(monday),
+        endOfWeek: formatDate(sunday),
+        weekYear: weekYear
+    };
 }
 
 function getCurrentDateFormatted() {
