@@ -71,8 +71,9 @@ function playAudio(id) {
 }
 function setProgressBar(percent, text, phase) {
   const bar = document.getElementById('progressbar');
+  const barText = document.getElementById('progressbar-text');
   bar.style.width = percent + '%';
-  bar.textContent = text;
+  if (barText) barText.textContent = text;
   bar.classList.remove('short-rest', 'long-rest');
   if (phase === 'short') bar.classList.add('short-rest');
   else if (phase === 'long') bar.classList.add('long-rest');
@@ -96,8 +97,6 @@ function stopPomodoro() {
   pomodoroState = null;
   blinkTaskInput(false);
   setProgressBar(0, '00:00');
-  const bar = document.getElementById('progressbar');
-  bar.classList.remove('paddingleft');
 }
 function startPomodoro() {
   stopPomodoro();
@@ -110,10 +109,6 @@ function startPomodoro() {
   }
   document.getElementById('task-input').classList.remove('is-invalid');
   blinkTaskInput(true);
-  
-  const bar = document.getElementById('progressbar');
-  bar.classList.add('paddingleft');
-
   if (!isNaN(custom) && custom > 0) {
     // Custom single phase
     runPhase('work', custom * 60, () => {

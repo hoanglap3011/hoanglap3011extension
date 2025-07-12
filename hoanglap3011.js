@@ -104,7 +104,7 @@ document.addEventListener("DOMContentLoaded", function () {
     ["btnSodscd", () => window.open(QUICK_URLS.SODSCD, '_self')],
     ["btnTongHopNhatKyNgay", () => window.open(QUICK_URLS.TONGHOPNGAY, '_self')],
     ["btnTongHopNhatKyTuan", () => window.open(QUICK_URLS.TONGHOPTUAN, '_self')],
-    ["btnPomodoro", openPomodoro],
+    ["btnPanel", openPanel],
     ["btnHitTho", playHitTho],
     ["btnNhacHocTap", playNhacVui],
     ["btnThienVipassana", () => window.open(QUICK_URLS.VIPASSANA, '_self')],
@@ -162,13 +162,18 @@ function openThought() {
   }
 }
 
-function openPomodoro() {
-  if (isMobile()) {
-    window.open(QUICK_URLS.POMODORO, '_self');
-  } else {
-    const iframeContainer = document.getElementById('divIframePomodoro');
-    iframeContainer.style.display = (iframeContainer.style.display === 'none') ? 'block' : 'none';
-  }
+function openPanel() {
+  const mainWidth = window.screen.availWidth;
+  const mainHeight = window.screen.availHeight;
+  const width = Math.floor(mainWidth * 0.3);
+  const height = Math.floor(mainHeight * 0.9);
+  const left = 0;
+  const top = Math.floor((mainHeight - height) / 2);
+  window.open(
+    "panel.html",
+    'panelWindow',
+    `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+  );
 }
 
 function playHitTho() {
