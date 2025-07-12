@@ -96,6 +96,8 @@ function stopPomodoro() {
   pomodoroState = null;
   blinkTaskInput(false);
   setProgressBar(0, '00:00');
+  const bar = document.getElementById('progressbar');
+  bar.classList.remove('paddingleft');
 }
 function startPomodoro() {
   stopPomodoro();
@@ -108,6 +110,10 @@ function startPomodoro() {
   }
   document.getElementById('task-input').classList.remove('is-invalid');
   blinkTaskInput(true);
+  
+  const bar = document.getElementById('progressbar');
+  bar.classList.add('paddingleft');
+
   if (!isNaN(custom) && custom > 0) {
     // Custom single phase
     runPhase('work', custom * 60, () => {

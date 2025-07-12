@@ -42,6 +42,11 @@
   transition: width 0.5s linear, background 0.3s;
   color: #222;
   background: #2196f3;
+  text-align: left;
+  /* padding-left: 5px; */
+}
+#progressbar.paddingleft {
+  padding-left: 5px;
 }
 #progressbar.short-rest {
   background: #43a047;
