@@ -7,12 +7,21 @@ const TEXTS = {
   CHECKLIST: "✅ Checklist",
   THOUGHT: "💭 Viết ra",
   TODOLIST: "✔️ To Do List",
-  THIS_WEEK: "📒 This week",
-  TODOLIST_NEXTWEEK: "✔️ To Do List Next week",
-  PREVIOUS_WEEK: "📘 Previous week"
+  THIS_WEEK: "📒 This Week",
+  TODOLIST_NEXTWEEK: "✔️ To Do List Next Week",
+  PREVIOUS_WEEK: "📘 Previous Week"
 };
 
-let KEYS = {};
+let KEYS = {
+  DIARY: null,
+  CHECKLIST: null,
+  THOUGHT: null,
+  TODOLIST: null,
+  THIS_WEEK: null,
+  TODOLIST_NEXTWEEK: null,
+  PREVIOUS_WEEK: null
+};
+
 let URLS = {
   DIARY: "",
   CHECKLIST: "",
@@ -24,8 +33,8 @@ let URLS = {
 };
 
 const KEY_PASS = "pass";
-const URL_GET_DAY_LINK = "https://script.google.com/macros/s/AKfycbyaOZZDckZlMMMWMlchO0Vb5E04bPTaDGLAC5HEQdc9uJEwmQYq7_O_qW13BJMs-whqFQ/exec";
-const URL_GET_WEEK_LINK = "https://script.google.com/macros/s/AKfycbzzDGFPCjS3PZB40vO6NJ3jbSHaIzuhCB64tglm_krc2e5nA10zMigOP8LTtWw9gpEksg/exec";
+const URL_GET_DAY_LINK = "https://script.google.com/macros/s/AKfycbyTVnxsqUqFvtmlNDVMWAPS69zlOX6xKKQ0334odi9pg4277GjriiJTfVRq089FMgACEQ/exec";
+const URL_GET_WEEK_LINK = "https://script.google.com/macros/s/AKfycbwf8ClbSRQ565JWGl3FKL5c5Khn9QvuhwADnvKRVSkKE0FFPbWcw05x8-LcdVk2UBIIRA/exec";
 
 const QUICK_URLS = {
   CALENDAR: "https://calendar.google.com/",
@@ -70,7 +79,6 @@ let nhacVuiIndex = 0;
 
 let currentQuoteList = quoteHaiHuoc;
 let currentIndex = 0;
-const today = new Date().toISOString().slice(0, 10);
 
 document.addEventListener("DOMContentLoaded", function () {
   hienThiNgayHienTai();
@@ -78,6 +86,7 @@ document.addEventListener("DOMContentLoaded", function () {
   showPass();
   updateQuickLinks();
   loadQuoteIndex();
+  addDayOption();
   [
     ["btnPrevQuote", () => shiftQuote(-1)],
     ["btnNextQuote", () => shiftQuote(1)],
@@ -116,10 +125,19 @@ document.addEventListener("DOMContentLoaded", function () {
     ["btnRanh", () => window.open(QUICK_URLS.RANH, '_self')],
     ["btnMuctieu", () => window.open(QUICK_URLS.GOAL, '_self')],
   ].forEach(([id, handler]) => addClick(id, handler));
+
   const categorySelect = document.getElementById("quoteCategory");
   if (categorySelect) {
     categorySelect.addEventListener("change", function () {
       setQuoteCategory(this.value);
+    });
+  }
+
+  const diarySelect = document.getElementById("dayDiary");
+  if (diarySelect) {
+    diarySelect.addEventListener("change", function () {
+      if (this.value === "none") return;
+      chooseDayDiary(this.value);
     });
   }
 });
@@ -203,33 +221,23 @@ function isExtensionEnv() {
 }
 
 
-function getISOWeekNumber() {
-  const date = new Date();
-  const target = new Date(date.valueOf());
-  target.setDate(target.getDate() + 3 - (target.getDay() + 6) % 7);
-  const firstThursday = new Date(target.getFullYear(), 0, 4);
-  firstThursday.setDate(firstThursday.getDate() + 3 - (firstThursday.getDay() + 6) % 7);
-  return 1 + Math.round(((target - firstThursday) / 86400000 - 3 + ((firstThursday.getDay() + 6) % 7)) / 7);
-}
 
-
-
-function fetchDayLinkAndStore(callback) {
+function fetchDayLinkAndStore(dStr, callback) {
   const pass = document.getElementById("txtPass").value;
-  fetch(`${URL_GET_DAY_LINK}?password=${pass}`)
+  fetch(`${URL_GET_DAY_LINK}?password=${pass}&day=${dStr}`)
     .then(r => r.ok ? r.json() : Promise.reject("Lỗi khi gọi API"))
     .then(({ diary, diaryChecklist }) => {
       setStorage({
-        [KEYS.DIARY]: diary.trim(),
-        [KEYS.DIARYCHECKLIST]: diaryChecklist.trim(),
+        [`diary.${dStr}`]: diary.trim(),
+        [`checklist.${dStr}`]: diaryChecklist.trim(),
       }, callback);
     })
     .catch(console.error);
 }
 
-function fetchWeekLinkAndStore(callback) {
+function fetchWeekLinkAndStore(dStr, callback) {
   const pass = document.getElementById("txtPass").value;
-  fetch(`${URL_GET_WEEK_LINK}?password=${pass}`)
+  fetch(`${URL_GET_WEEK_LINK}?password=${pass}&day=${dStr}`)
     .then(r => r.ok ? r.json() : Promise.reject("Lỗi khi gọi API"))
     .then(({ thought, toDoList, thisWeek, toDoListNextWeek, previousWeek }) => {
       setStorage({
@@ -263,7 +271,7 @@ function updateQuickLinks() {
 
 function handleStorageDayLinkResult(result) {
   setBtnAndUrl("DIARY", result[KEYS.DIARY]);
-  setBtnAndUrl("CHECKLIST", result[KEYS.DIARYCHECKLIST]);
+  setBtnAndUrl("CHECKLIST", result[KEYS.CHECKLIST]);
 }
 
 function handleStorageWeekLinkResult(result) {
@@ -276,34 +284,36 @@ function handleStorageWeekLinkResult(result) {
 
 function handleStorageResult(result) {
   setBtnAndUrl("DIARY", result[KEYS.DIARY]);
-  setBtnAndUrl("CHECKLIST", result[KEYS.DIARYCHECKLIST]);
+  setBtnAndUrl("CHECKLIST", result[KEYS.CHECKLIST]);
   setBtnAndUrl("THOUGHT", result[KEYS.THOUGHT]);
   setBtnAndUrl("TODOLIST", result[KEYS.TODOLIST]);
   setBtnAndUrl("THIS_WEEK", result[KEYS.THIS_WEEK]);
   setBtnAndUrl("TODOLIST_NEXTWEEK", result[KEYS.TODOLIST_NEXTWEEK]);
   setBtnAndUrl("PREVIOUS_WEEK", result[KEYS.PREVIOUS_WEEK]);
-  if (!result[KEYS.DIARY] || !result[KEYS.DIARYCHECKLIST]) {
-    fetchDayLinkAndStore(() => getStorage([KEYS.DIARY, KEYS.DIARYCHECKLIST], handleStorageDayLinkResult));
+  if (!result[KEYS.DIARY] || !result[KEYS.CHECKLIST]) {
+    const dStr = getCurrentDateFormatted();
+    fetchDayLinkAndStore(dStr, () => getStorage([KEYS.DIARY, KEYS.CHECKLIST], handleStorageDayLinkResult));
   }
   if (!result[KEYS.THOUGHT] || !result[KEYS.TODOLIST] || !result[KEYS.THIS_WEEK] || !result[KEYS.TODOLIST_NEXTWEEK] || !result[KEYS.PREVIOUS_WEEK]) {
-    fetchWeekLinkAndStore(() => getStorage([
+    const dStr = getCurrentDateFormatted();
+    fetchWeekLinkAndStore(dStr, () => getStorage([
       KEYS.THOUGHT, KEYS.TODOLIST, KEYS.THIS_WEEK, KEYS.TODOLIST_NEXTWEEK, KEYS.PREVIOUS_WEEK
     ], handleStorageWeekLinkResult));
   }
 }
 
 function setKeyCache() {
-  const week = getISOWeekNumber();
-  const today = new Date();
-  const dStr = `${String(today.getDate()).padStart(2, '0')}${String(today.getMonth() + 1).padStart(2, '0')}${today.getFullYear()}`;
+  const dStr = getCurrentDateFormatted();
+  const weekAndMonth = getWeekAndStartMonth(dStr);
+  const week = weekAndMonth.week;
   KEYS = {
-    DIARY: `${dStr}diary`,
-    DIARYCHECKLIST: `${dStr}diaryChecklist`,
-    THOUGHT: `${week}thought`,
-    TODOLIST: `${week}todo`,
-    THIS_WEEK: `${week}folder`,
-    TODOLIST_NEXTWEEK: `${week + 1}todo`,
-    PREVIOUS_WEEK: `${week - 1}folder`
+    DIARY: `diary.${dStr}`,
+    CHECKLIST: `checklist.${dStr}`,
+    THOUGHT: `thought.week.${week}`,
+    TODOLIST: `todo.week.${week}`,
+    THIS_WEEK: `folder.week.${week}`,
+    TODOLIST_NEXTWEEK: `todo.week.${week + 1}`,
+    PREVIOUS_WEEK: `folder.week.${week - 1}`
   };
 }
 
@@ -373,4 +383,71 @@ function setBtnAndUrl(key, url) {
     const el = document.getElementById(btnMap[key]);
     if (el) el.innerHTML = TEXTS[key];
   }
+}
+// Thêm 7 option cho selectbox dayDiary, là 7 ngày trước đó tính từ ngày hiện tại
+function addDayOption() {
+  const select = document.getElementById('dayDiary');
+  if (!select) return;
+  const today = new Date();
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const day = d.getDate();
+    const month = d.getMonth() + 1;
+    const year = d.getFullYear();
+    const weekday = d.getDay();
+    const weekdayMap = ['chủ nhật', 'thứ 2', 'thứ 3', 'thứ 4', 'thứ 5', 'thứ 6', 'thứ 7'];
+    const option = document.createElement('option');
+    option.value = `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.${year}`;
+    option.textContent = `${option.value} - ${weekdayMap[weekday]}`;
+    select.appendChild(option);
+  }
+}
+
+function chooseDayDiary(dStr) {
+  const keyDiary = `diary.${dStr}`;
+  const keyChecklist = `checklist.${dStr}`;
+  const keys = [keyDiary, keyChecklist];
+  getStorage(keys, (result) => {
+    if (result[keyDiary]) {
+      const urlDiary = result[keyDiary];
+      const urlChecklist = result[keyChecklist];
+      if (urlDiary) {
+        window.open(urlDiary, '_self');
+      }
+    } else {
+      fetchDayLinkAndStore(dStr, () => getStorage(keys, (result2) => {
+        window.open(result2[keyDiary], '_self')
+      }))
+    }
+  });
+}
+
+function getWeekAndStartMonth(dateStr) {
+  const [day, month, year] = dateStr.split('.').map(Number);
+  const inputDate = new Date(year, month - 1, day);
+  const dayOfWeek = inputDate.getDay(); // Sunday = 0
+  const diffToMonday = (dayOfWeek + 6) % 7;
+  const monday = new Date(inputDate);
+  monday.setDate(inputDate.getDate() - diffToMonday);
+  const firstThursday = new Date(monday.getFullYear(), 0, 1);
+  while (firstThursday.getDay() !== 4) {
+      firstThursday.setDate(firstThursday.getDate() + 1);
+  }
+  const weekNumber = Math.ceil(
+      ((monday - firstThursday) / (1000 * 60 * 60 * 24) + 4) / 7
+  );
+  const monthStr = String(monday.getMonth() + 1).padStart(2, '0');
+  return {
+      week: weekNumber,
+      month: monthStr
+  };
+}
+
+function getCurrentDateFormatted() {
+  const today = new Date();
+  const day = String(today.getDate()).padStart(2, '0');
+  const month = String(today.getMonth() + 1).padStart(2, '0'); // tháng bắt đầu từ 0
+  const year = today.getFullYear();
+  return `${day}.${month}.${year}`;
 }
