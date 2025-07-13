@@ -432,7 +432,14 @@ function chooseDayDiary(dStr) {
       if (urlDiary) {
         // window.open(urlDiary, '_self');
         const id = urlDiary.match(/\/d\/([a-zA-Z0-9-_]+)/)[1];
-        window.open("googledocs://document/" + id, '_self'); // For mobile, ensure it opens in the same tab
+        const test = document.getElementById('txtTest').value;
+        if (test == "1") {
+            window.open("googledocs://" + urlDiary, '_self'); // For mobile, ensure it opens in the same tab
+        } else if (test == "2") {
+            window.open("googledocs://document/d/" + id + '/edit', '_self'); // For mobile, ensure it opens in the same tab
+        } else if (test == "3") {
+            window.open("googledocs://" + id + '/edit', '_self'); // For mobile, ensure it opens in the same tab
+        }
       }
     } else {
       fetchDayLinkAndStore(dStr, () => getStorage(keys, (result2) => {
