@@ -427,33 +427,24 @@ function chooseDayDiary(dStr) {
   const keys = [keyDiary, keyChecklist];
   getStorage(keys, (result) => {
     if (result[keyDiary]) {
-      const urlDiary = result[keyDiary];
-      const urlChecklist = result[keyChecklist];
-      if (urlDiary) {
-        // window.open(urlDiary, '_self');
-        const id = urlDiary.match(/\/d\/([a-zA-Z0-9-_]+)/)[1];
-        const test = document.getElementById('txtTest').value;
-        if (test == "1") {
-            window.open("googledocs://" + urlDiary, '_self'); // For mobile, ensure it opens in the same tab
-        } else if (test == "2") {
-            window.open("googledocs://document/d/" + id + '/edit', '_self'); // For mobile, ensure it opens in the same tab
-        } else if (test == "3") {
-            window.open("googledocs://" + id + '/edit', '_self'); // For mobile, ensure it opens in the same tab
-        } else if (test == "4") {
-            window.open("googledocs://document/" + id, '_self'); // For mobile, ensure it opens in the same tab
-        } else if (test == "5") {
-            window.open("googledocs://document/" + id + '/edit', '_self'); // For mobile, ensure it opens in the same tab
-        }
-      }
+      openViaATag(result[keyDiary]);
     } else {
       fetchDayLinkAndStore(dStr, () => getStorage(keys, (result2) => {
-        // window.open(result2[keyDiary], '_self');
-        const urlDiary = result2[keyDiary];
-        const id = urlDiary.match(/\/d\/([a-zA-Z0-9-_]+)/)[1];
-        window.open("googledocs://document/" + id, '_self'); 
+        openViaATag(result2[keyDiary]);
       }))
     }
   });
+}
+
+// ✅ Hàm hỗ trợ: dùng thẻ <a> để mở link
+function openViaATag(url) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank'; // để tăng cơ hội mở bằng app
+  a.rel = 'noopener'; // tránh các rủi ro bảo mật
+  document.body.appendChild(a); // cần thêm vào DOM nếu Safari
+  a.click();
+  document.body.removeChild(a); // dọn dẹp
 }
 
 function chooseDayChecklist(dStr) {
