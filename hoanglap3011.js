@@ -427,24 +427,17 @@ function chooseDayDiary(dStr) {
   const keys = [keyDiary, keyChecklist];
   getStorage(keys, (result) => {
     if (result[keyDiary]) {
-      openViaATag(result[keyDiary]);
+      const urlDiary = result[keyDiary];
+      const urlChecklist = result[keyChecklist];
+      if (urlDiary) {
+        window.open(urlDiary, '_self');
+      }
     } else {
       fetchDayLinkAndStore(dStr, () => getStorage(keys, (result2) => {
-        openViaATag(result2[keyDiary]);
+        window.open(result2[keyDiary], '_self')
       }))
     }
   });
-}
-
-// ✅ Hàm hỗ trợ: dùng thẻ <a> để mở link
-function openViaATag(url) {
-  const a = document.createElement('a');
-  a.href = url;
-  a.target = '_blank'; // để tăng cơ hội mở bằng app
-  a.rel = 'noopener'; // tránh các rủi ro bảo mật
-  document.body.appendChild(a); // cần thêm vào DOM nếu Safari
-  a.click();
-  document.body.removeChild(a); // dọn dẹp
 }
 
 function chooseDayChecklist(dStr) {
@@ -456,11 +449,11 @@ function chooseDayChecklist(dStr) {
       const urlDiary = result[keyDiary];
       const urlChecklist = result[keyChecklist];
       if (urlChecklist) {
-        window.open(urlChecklist, '_blank');
+        window.open(urlChecklist, '_self');
       }
     } else {
       fetchDayLinkAndStore(dStr, () => getStorage(keys, (result2) => {
-        window.open(result2[keyChecklist], '_blank')
+        window.open(result2[keyChecklist], '_self')
       }))
     }
   });
