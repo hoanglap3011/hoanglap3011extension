@@ -431,13 +431,12 @@ function chooseDayDiary(dStr) {
       const urlChecklist = result[keyChecklist];
       if (urlDiary) {
         // window.open(urlDiary, '_self');
-        // window.open("googlesheets://" + urlDiary, '_self');
-        window.location.href = urlDiary;
+        window.location.href = urlDiary; // For mobile, ensure it opens in the same tab
       }
     } else {
       fetchDayLinkAndStore(dStr, () => getStorage(keys, (result2) => {
         // window.open(result2[keyDiary], '_self');
-        window.open("googlesheets://" + urlDiary, '_self');
+        window.location.href = result2[keyDiary]; // For mobile, ensure it opens in the same tab
       }))
     }
   });
