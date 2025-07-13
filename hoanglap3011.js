@@ -140,6 +140,14 @@ document.addEventListener("DOMContentLoaded", function () {
       chooseDayDiary(this.value);
     });
   }
+
+  const checklistSelect = document.getElementById("dayChecklist");
+  if (checklistSelect) {
+    checklistSelect.addEventListener("change", function () {
+      if (this.value === "none") return;
+      chooseDayChecklist(this.value);
+    });
+  }
 });
 
 function addClick(id, handler) {
@@ -391,8 +399,10 @@ function setBtnAndUrl(key, url) {
 }
 // Thêm 7 option cho selectbox dayDiary, là 7 ngày trước đó tính từ ngày hiện tại
 function addDayOption() {
-  const select = document.getElementById('dayDiary');
-  if (!select) return;
+  const selectDiary = document.getElementById('dayDiary');
+  const selectChecklist = document.getElementById('dayChecklist');
+  if (!selectDiary) return;
+  if (!selectChecklist) return;
   const today = new Date();
   for (let i = 1; i <= 7; i++) {
     const d = new Date(today);
@@ -405,7 +415,9 @@ function addDayOption() {
     const option = document.createElement('option');
     option.value = `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.${year}`;
     option.textContent = `${option.value} - ${weekdayMap[weekday]}`;
-    select.appendChild(option);
+    const optionChecklist = option.cloneNode(true);
+    selectDiary.appendChild(option);
+    selectChecklist.appendChild(optionChecklist);
   }
 }
 
@@ -423,6 +435,25 @@ function chooseDayDiary(dStr) {
     } else {
       fetchDayLinkAndStore(dStr, () => getStorage(keys, (result2) => {
         window.open(result2[keyDiary], '_blank')
+      }))
+    }
+  });
+}
+
+function chooseDayChecklist(dStr) {
+  const keyDiary = `diary.${dStr}`;
+  const keyChecklist = `checklist.${dStr}`;
+  const keys = [keyDiary, keyChecklist];
+  getStorage(keys, (result) => {
+    if (result[keyDiary]) {
+      const urlDiary = result[keyDiary];
+      const urlChecklist = result[keyChecklist];
+      if (urlChecklist) {
+        window.open(urlChecklist, '_blank');
+      }
+    } else {
+      fetchDayLinkAndStore(dStr, () => getStorage(keys, (result2) => {
+        window.open(result2[keyChecklist], '_blank')
       }))
     }
   });
