@@ -431,12 +431,15 @@ function chooseDayDiary(dStr) {
       const urlChecklist = result[keyChecklist];
       if (urlDiary) {
         // window.open(urlDiary, '_self');
-        window.location.href = urlDiary; // For mobile, ensure it opens in the same tab
+        const id = urlDiary.match(/\/d\/([a-zA-Z0-9-_]+)/)[1];
+        window.open("googledocs://document/" + id, '_self'); // For mobile, ensure it opens in the same tab
       }
     } else {
       fetchDayLinkAndStore(dStr, () => getStorage(keys, (result2) => {
         // window.open(result2[keyDiary], '_self');
-        window.location.href = result2[keyDiary]; // For mobile, ensure it opens in the same tab
+        const urlDiary = result2[keyDiary];
+        const id = urlDiary.match(/\/d\/([a-zA-Z0-9-_]+)/)[1];
+        window.open("googledocs://document/" + id, '_self'); 
       }))
     }
   });
