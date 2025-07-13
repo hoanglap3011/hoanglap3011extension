@@ -439,6 +439,10 @@ function chooseDayDiary(dStr) {
             window.open("googledocs://document/d/" + id + '/edit', '_self'); // For mobile, ensure it opens in the same tab
         } else if (test == "3") {
             window.open("googledocs://" + id + '/edit', '_self'); // For mobile, ensure it opens in the same tab
+        } else if (test == "4") {
+            window.open("googledocs://document/" + id, '_self'); // For mobile, ensure it opens in the same tab
+        } else if (test == "5") {
+            window.open("googledocs://document/" + id + '/edit', '_self'); // For mobile, ensure it opens in the same tab
         }
       }
     } else {
