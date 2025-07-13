@@ -430,11 +430,14 @@ function chooseDayDiary(dStr) {
       const urlDiary = result[keyDiary];
       const urlChecklist = result[keyChecklist];
       if (urlDiary) {
-        window.open(urlDiary, '_blank');
+        // window.open(urlDiary, '_self');
+        // window.open("googlesheets://" + urlDiary, '_self');
+        window.location.href = urlDiary;
       }
     } else {
       fetchDayLinkAndStore(dStr, () => getStorage(keys, (result2) => {
-        window.open(result2[keyDiary], '_blank')
+        // window.open(result2[keyDiary], '_self');
+        window.open("googlesheets://" + urlDiary, '_self');
       }))
     }
   });
