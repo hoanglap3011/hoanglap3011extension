@@ -5,7 +5,7 @@ import { quoteTrietLy, quoteHaiHuoc } from './quotes.js';
 const TEXTS = {
   DIARY: "🖊️ Nhật ký",
   CHECKLIST: "✅ Checklist",
-  THOUGHT: "💭 Viết ra",
+  NOTE: "💭 Viết ra",
   TODOLIST: "✔️ To Do List",
   THIS_WEEK: "📒 This Week",
   TODOLIST_NEXTWEEK: "✔️ To Do List Next Week",
@@ -15,7 +15,7 @@ const TEXTS = {
 let KEYS = {
   DIARY: null,
   CHECKLIST: null,
-  THOUGHT: null,
+  NOTE: null,
   TODOLIST: null,
   THIS_WEEK: null,
   TODOLIST_NEXTWEEK: null,
@@ -25,7 +25,7 @@ let KEYS = {
 let URLS = {
   DIARY: "",
   CHECKLIST: "",
-  THOUGHT: "",
+  NOTE: "",
   TODOLIST: "",
   THIS_WEEK: "",
   TODOLIST_NEXTWEEK: "",
@@ -33,8 +33,8 @@ let URLS = {
 };
 
 const KEY_PASS = "pass";
-const URL_GET_DAY_LINK = "https://script.google.com/macros/s/AKfycbzyeYfS-yNLfffRp37Z74nvfPpD_2JlTEOE8DeD-lQXM-bm1h3zlcQD5EWhpsLM3ggaVQ/exec";
-const URL_GET_WEEK_LINK = "https://script.google.com/macros/s/AKfycbybPB6FByUkp_LMtp4WVF4iz5RfDY2M6PgOMRtJ6_eExKmYZ3bKrnF4mHNV4-z8_QQtrw/exec";
+const URL_GET_DAY_LINK = "https://script.google.com/macros/s/AKfycbyvVJTYUFD765x_L6PB1pE64EJaP8xOibsVOCGTQ8w9I4bhI9nvuFuXWZkwbA2m_qyuVg/exec";
+const URL_GET_WEEK_LINK = "https://script.google.com/macros/s/AKfycbyuPHAutPXeoQTT2R97DhRsSwqb3R4XS6YvGDO5c3CNhaj79O8Ap2_c4M7i7Bbyqv4Gkg/exec";
 
 const QUICK_URLS = {
   CALENDAR: "https://calendar.google.com/",
@@ -93,8 +93,8 @@ document.addEventListener("DOMContentLoaded", function () {
     ["btnEnter", togglePasswordInput],
     ["btnSavePass", savePass],
     ["btnDiary", () => openUrl("DIARY")],
-    ["btnDiaryChecklist", () => openUrl("CHECKLIST")],
-    ["btnThought", openThought],
+    ["btnChecklist", () => openUrl("CHECKLIST")],
+    ["btnNote", openNote],
     ["btnToDoList", () => openUrl("TODOLIST")],
     ["btnThisWeek", () => openUrl("THIS_WEEK")],
     ["btnPreviousWeek", () => openUrl("PREVIOUS_WEEK")],
@@ -159,13 +159,13 @@ function openUrl(key) {
   if (URLS[key]) window.open(URLS[key], '_self');
 }
 
-function openThought() {
+function openNote() {
   if (isMobile()) {
-    openUrl("THOUGHT");
+    openUrl("NOTE");
   } else {
-    const iframe = document.getElementById("iframeThought");
-    iframe.src = URLS.THOUGHT;
-    const iframeContainer = document.getElementById('divIframeThought');
+    const iframe = document.getElementById("iframeNote");
+    iframe.src = URLS.NOTE;
+    const iframeContainer = document.getElementById('divIframeNote');
     iframeContainer.style.display = (iframeContainer.style.display === 'none') ? 'block' : 'none';
   }
 }
@@ -239,10 +239,10 @@ function fetchDayLinkAndStore(dStr, callback) {
   const pass = document.getElementById("txtPass").value;
   fetch(`${URL_GET_DAY_LINK}?password=${pass}&day=${dStr}`)
     .then(r => r.ok ? r.json() : Promise.reject("Lỗi khi gọi API"))
-    .then(({ diary, diaryChecklist }) => {
+    .then(({ diary, checklist }) => {
       setStorage({
         [`diary.${dStr}`]: diary.trim(),
-        [`checklist.${dStr}`]: diaryChecklist.trim(),
+        [`checklist.${dStr}`]: checklist.trim(),
       }, callback);
     })
     .catch(console.error);
@@ -252,9 +252,9 @@ function fetchWeekLinkAndStore(dStr, callback) {
   const pass = document.getElementById("txtPass").value;
   fetch(`${URL_GET_WEEK_LINK}?password=${pass}&day=${dStr}`)
     .then(r => r.ok ? r.json() : Promise.reject("Lỗi khi gọi API"))
-    .then(({ thought, toDoList, thisWeek, toDoListNextWeek, previousWeek }) => {
+    .then(({ note, toDoList, thisWeek, toDoListNextWeek, previousWeek }) => {
       setStorage({
-        [KEYS.THOUGHT]: thought.trim(),
+        [KEYS.NOTE]: note.trim(),
         [KEYS.TODOLIST]: toDoList.trim(),
         [KEYS.THIS_WEEK]: thisWeek.trim(),
         [KEYS.TODOLIST_NEXTWEEK]: toDoListNextWeek.trim(),
@@ -273,7 +273,7 @@ function hienThiNgayHienTai() {
 
 
 function updateQuickLinks() {
-  const ids = ["btnDiary", "btnDiaryChecklist", "btnThought", "btnToDoList", "btnThisWeek", "btnToDoListNextWeek", "btnPreviousWeek"];
+  const ids = ["btnDiary", "btnChecklist", "btnNote", "btnToDoList", "btnThisWeek", "btnToDoListNextWeek", "btnPreviousWeek"];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '<span class="spinner"></span>';
@@ -288,7 +288,7 @@ function handleStorageDayLinkResult(result) {
 }
 
 function handleStorageWeekLinkResult(result) {
-  setBtnAndUrl("THOUGHT", result[KEYS.THOUGHT]);
+  setBtnAndUrl("NOTE", result[KEYS.NOTE]);
   setBtnAndUrl("TODOLIST", result[KEYS.TODOLIST]);
   setBtnAndUrl("THIS_WEEK", result[KEYS.THIS_WEEK]);
   setBtnAndUrl("TODOLIST_NEXTWEEK", result[KEYS.TODOLIST_NEXTWEEK]);
@@ -298,7 +298,7 @@ function handleStorageWeekLinkResult(result) {
 function handleStorageResult(result) {
   setBtnAndUrl("DIARY", result[KEYS.DIARY]);
   setBtnAndUrl("CHECKLIST", result[KEYS.CHECKLIST]);
-  setBtnAndUrl("THOUGHT", result[KEYS.THOUGHT]);
+  setBtnAndUrl("NOTE", result[KEYS.NOTE]);
   setBtnAndUrl("TODOLIST", result[KEYS.TODOLIST]);
   setBtnAndUrl("THIS_WEEK", result[KEYS.THIS_WEEK]);
   setBtnAndUrl("TODOLIST_NEXTWEEK", result[KEYS.TODOLIST_NEXTWEEK]);
@@ -307,10 +307,10 @@ function handleStorageResult(result) {
     const dStr = getCurrentDateFormatted();
     fetchDayLinkAndStore(dStr, () => getStorage([KEYS.DIARY, KEYS.CHECKLIST], handleStorageDayLinkResult));
   }
-  if (!result[KEYS.THOUGHT] || !result[KEYS.TODOLIST] || !result[KEYS.THIS_WEEK] || !result[KEYS.TODOLIST_NEXTWEEK] || !result[KEYS.PREVIOUS_WEEK]) {
+  if (!result[KEYS.NOTE] || !result[KEYS.TODOLIST] || !result[KEYS.THIS_WEEK] || !result[KEYS.TODOLIST_NEXTWEEK] || !result[KEYS.PREVIOUS_WEEK]) {
     const dStr = getCurrentDateFormatted();
     fetchWeekLinkAndStore(dStr, () => getStorage([
-      KEYS.THOUGHT, KEYS.TODOLIST, KEYS.THIS_WEEK, KEYS.TODOLIST_NEXTWEEK, KEYS.PREVIOUS_WEEK
+      KEYS.NOTE, KEYS.TODOLIST, KEYS.THIS_WEEK, KEYS.TODOLIST_NEXTWEEK, KEYS.PREVIOUS_WEEK
     ], handleStorageWeekLinkResult));
   }
 }
@@ -322,7 +322,7 @@ function setKeyCache() {
   KEYS = {
     DIARY: `diary.${dStr}`,
     CHECKLIST: `checklist.${dStr}`,
-    THOUGHT: `thought.week.${week}`,
+    NOTE: `note.week.${week}`,
     TODOLIST: `todo.week.${week}`,
     THIS_WEEK: `folder.week.${week}`,
     TODOLIST_NEXTWEEK: `todo.week.${week + 1}`,
@@ -384,8 +384,8 @@ function getStorage(keys, cb) {
 function setBtnAndUrl(key, url) {
   const btnMap = {
     DIARY: "btnDiary",
-    CHECKLIST: "btnDiaryChecklist",
-    THOUGHT: "btnThought",
+    CHECKLIST: "btnChecklist",
+    NOTE: "btnNote",
     TODOLIST: "btnToDoList",
     THIS_WEEK: "btnThisWeek",
     TODOLIST_NEXTWEEK: "btnToDoListNextWeek",
