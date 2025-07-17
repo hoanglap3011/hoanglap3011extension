@@ -33,8 +33,8 @@ let URLS = {
 };
 
 const KEY_PASS = "pass";
-const URL_GET_DAY_LINK = "https://script.google.com/macros/s/AKfycbyVL6DB3ZSXjc4ouKC3EphButqGemznE1Crihj0QhCNYurYsLz0IHCYKIqjE9tvzvE/exec";
-const URL_GET_WEEK_LINK = "https://script.google.com/macros/s/AKfycbwf8ClbSRQ565JWGl3FKL5c5Khn9QvuhwADnvKRVSkKE0FFPbWcw05x8-LcdVk2UBIIRA/exec";
+const URL_GET_DAY_LINK = "https://script.google.com/macros/s/AKfycbzyeYfS-yNLfffRp37Z74nvfPpD_2JlTEOE8DeD-lQXM-bm1h3zlcQD5EWhpsLM3ggaVQ/exec";
+const URL_GET_WEEK_LINK = "https://script.google.com/macros/s/AKfycbybPB6FByUkp_LMtp4WVF4iz5RfDY2M6PgOMRtJ6_eExKmYZ3bKrnF4mHNV4-z8_QQtrw/exec";
 
 const QUICK_URLS = {
   CALENDAR: "https://calendar.google.com/",
