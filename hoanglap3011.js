@@ -1,41 +1,18 @@
 
 import { quoteTrietLy, quoteHaiHuoc } from './quotes.js';
 
-
-const TEXTS = {
-  DIARY: "🖊️ Nhật ký",
-  CHECKLIST: "✅ Checklist",
-  NOTE: "💭 Viết ra",
-  TODOLIST: "✔️ To Do List",
-  THIS_WEEK: "📒 This Week",
-  TODOLIST_NEXTWEEK: "✔️ To Do List Next Week",
-  PREVIOUS_WEEK: "📘 Previous Week"
+const DATA = {
+  diary: { keyCache: null, url: "" },
+  checklist: { keyCache: null, url: "" },
+  note: { keyCache: null, url: "" },
+  toDoList: { keyCache: null, url: "" },
+  thisWeek: { keyCache: null, url: "" },
+  toDoListNextWeek: { keyCache: null, url: "" },
+  previousWeek: { keyCache: null, url: "" }
 };
 
-let KEYS = {
-  DIARY: null,
-  CHECKLIST: null,
-  NOTE: null,
-  TODOLIST: null,
-  THIS_WEEK: null,
-  TODOLIST_NEXTWEEK: null,
-  PREVIOUS_WEEK: null
-};
-
-let URLS = {
-  DIARY: "",
-  CHECKLIST: "",
-  NOTE: "",
-  TODOLIST: "",
-  THIS_WEEK: "",
-  TODOLIST_NEXTWEEK: "",
-  PREVIOUS_WEEK: ""
-};
-
-const KEY_PASS = "pass";
-const URL_GET_DAY_LINK = "https://script.google.com/macros/s/AKfycbyvVJTYUFD765x_L6PB1pE64EJaP8xOibsVOCGTQ8w9I4bhI9nvuFuXWZkwbA2m_qyuVg/exec";
-const URL_GET_WEEK_LINK = "https://script.google.com/macros/s/AKfycbyuPHAutPXeoQTT2R97DhRsSwqb3R4XS6YvGDO5c3CNhaj79O8Ap2_c4M7i7Bbyqv4Gkg/exec";
-
+const KEY_PASS = "key";
+const URL_GET_LINK = "https://script.google.com/macros/s/AKfycbw12YIV-Xr53lFPMbb2at7CP50jOHiCkPWA8ZMqbvbSti93BQZVOrJNzKNNisdPoIwWvw/exec";
 const QUICK_URLS = {
   CALENDAR: "https://calendar.google.com/",
   PROBLEM: "https://docs.google.com/spreadsheets/d/1Ww9sdbQScZdNysDOvD8_1zCqxsi3r-K6FqIKLLoXSho/edit?gid=0#gid=0",
@@ -84,21 +61,14 @@ document.addEventListener("DOMContentLoaded", function () {
   hienThiNgayHienTai();
   setKeyCache();
   showPass();
-  updateQuickLinks();
+  // updateQuickLinks();
+  updateQuickLinksFromCache();
   loadQuoteIndex();
-  addDayOption();
-  [
+  const clickHandlers = [
     ["btnPrevQuote", () => shiftQuote(-1)],
     ["btnNextQuote", () => shiftQuote(1)],
     ["btnEnter", togglePasswordInput],
     ["btnSavePass", savePass],
-    ["btnDiary", () => openUrl("DIARY")],
-    ["btnChecklist", () => openUrl("CHECKLIST")],
-    ["btnNote", openNote],
-    ["btnToDoList", () => openUrl("TODOLIST")],
-    ["btnThisWeek", () => openUrl("THIS_WEEK")],
-    ["btnPreviousWeek", () => openUrl("PREVIOUS_WEEK")],
-    ["btnToDoListNextWeek", () => openUrl("TODOLIST_NEXTWEEK")],
     ["btnCalendar", () => window.open(QUICK_URLS.CALENDAR, '_self')],
     ["btnProblem", () => window.open(QUICK_URLS.PROBLEM, '_self')],
     ["btnSodscd", () => window.open(QUICK_URLS.SODSCD, '_self')],
@@ -124,7 +94,15 @@ document.addEventListener("DOMContentLoaded", function () {
     ["btnDocSachKindle", () => window.open(QUICK_URLS.KINDLE, '_self')],
     ["btnRanh", () => window.open(QUICK_URLS.RANH, '_self')],
     ["btnMuctieu", () => window.open(QUICK_URLS.GOAL, '_self')],
-  ].forEach(([id, handler]) => addClick(id, handler));
+    ["btnDiaryDay", chonNgayDiary],
+    ["btnChecklistDay", chonNgayChecklist],
+  ];
+  // Tạo handler động cho các nút tương ứng với DATA
+  Object.keys(DATA).forEach(type => {
+    const id = "btn" + type.charAt(0).toUpperCase() + type.slice(1);
+    clickHandlers.push([id, () => openUrl(type)]);
+  });
+  clickHandlers.forEach(([id, handler]) => addClick(id, handler));
 
   const categorySelect = document.getElementById("quoteCategory");
   if (categorySelect) {
@@ -133,21 +111,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  const diarySelect = document.getElementById("dayDiary");
-  if (diarySelect) {
-    diarySelect.addEventListener("change", function () {
-      if (this.value === "none") return;
-      chooseDayDiary(this.value);
-    });
-  }
-
-  const checklistSelect = document.getElementById("dayChecklist");
-  if (checklistSelect) {
-    checklistSelect.addEventListener("change", function () {
-      if (this.value === "none") return;
-      chooseDayChecklist(this.value);
-    });
-  }
 });
 
 function addClick(id, handler) {
@@ -155,20 +118,80 @@ function addClick(id, handler) {
   if (el) el.addEventListener('click', handler);
 }
 
-function openUrl(key) {
-  if (URLS[key]) window.open(URLS[key], '_self');
+function chonNgayDiary() {
+  flatpickr("#datepicker", {
+    defaultDate: new Date(),
+    dateFormat: "d.m.Y",
+    locale: "vn",
+    position: "below",
+    onChange: function (selectedDates, dateStr, instance) {
+      const keyCache = "diary." + dateStr;
+      getStorage([keyCache], (obj) => {
+        if (obj[keyCache]) {
+          window.open(obj[keyCache], '_self');   
+        } else {
+          const el = document.getElementById("btnDiaryDay");
+          let text = el.innerHTML;
+          el.innerHTML = '<span class="spinner"></span>';
+          el.disabled = true;
+          fetchLinkAndStore(dateStr, "diary", () => getStorage([keyCache], (obj2) => {
+            window.open(obj2[keyCache], '_self');   
+            el.innerHTML = text;     
+            el.disabled = false;
+          }));
+        }     
+      })
+    }
+  }).open();
 }
 
-function openNote() {
-  if (isMobile()) {
-    openUrl("NOTE");
+function chonNgayChecklist(){
+  flatpickr("#datepicker", {
+    defaultDate: new Date(),
+    dateFormat: "d.m.Y",
+    locale: "vn",
+    position: "below",
+    onChange: function (selectedDates, dateStr, instance) {
+      const keyCache = "checklist." + dateStr;
+      getStorage([keyCache], (obj) => {
+        if (obj[keyCache]) {
+          window.open(obj[keyCache], '_self');   
+        } else {
+          const el = document.getElementById("btnChecklistDay");
+          let text = el.innerHTML;
+          el.innerHTML = '<span class="spinner"></span>';
+          el.disabled = true;
+          fetchLinkAndStore(dateStr, "checklist", () => getStorage([keyCache], (obj2) => {
+            window.open(obj2[keyCache], '_self');   
+            el.innerHTML = text;     
+            el.disabled = false;
+          }));
+        }     
+      })
+    }
+  }).open();
+}
+
+
+function openUrl(type) {
+  if (DATA[type].url) {
+    window.open(DATA[type].url, '_self');
   } else {
-    const iframe = document.getElementById("iframeNote");
-    iframe.src = URLS.NOTE;
-    const iframeContainer = document.getElementById('divIframeNote');
-    iframeContainer.style.display = (iframeContainer.style.display === 'none') ? 'block' : 'none';
+    const id = "btn" + type.charAt(0).toUpperCase() + type.slice(1);
+    const el = document.getElementById(id);
+    let text = el.innerHTML;
+    el.innerHTML = '<span class="spinner"></span>';
+    el.disabled = true;
+    const dStr = getCurrentDateFormatted();
+    fetchLinkAndStore(dStr, type, () => getStorage([DATA[type].keyCache], (obj) => {
+      DATA[type].url = obj[DATA[type].keyCache];
+      window.open(DATA[type].url, '_self');
+      el.innerHTML = text;
+      el.disabled = false;
+    }));
   }
 }
+
 
 function openPanel() {
   const mainWidth = window.screen.availWidth;
@@ -233,36 +256,25 @@ function isExtensionEnv() {
   return typeof chrome !== "undefined" && chrome.storage && chrome.storage.local;
 }
 
-
-
-function fetchDayLinkAndStore(dStr, callback) {
+function fetchLinkAndStore(dStr, type, callback) {
   const pass = document.getElementById("txtPass").value;
-  fetch(`${URL_GET_DAY_LINK}?password=${pass}&day=${dStr}`)
+  fetch(`${URL_GET_LINK}?key=${pass}&day=${dStr}&type=${type}`)
     .then(r => r.ok ? r.json() : Promise.reject("Lỗi khi gọi API"))
-    .then(({ diary, checklist }) => {
-      setStorage({
-        [`diary.${dStr}`]: diary.trim(),
-        [`checklist.${dStr}`]: checklist.trim(),
-      }, callback);
+    .then(data => {
+      const url = data[type];
+      let keyCache;
+      if (type === 'diary' || type === 'checklist') {
+        keyCache = `${type}.${dStr}`;
+      } else {
+        const infoWeek = getInfoWeek(dStr);
+        const week = infoWeek.week;
+        keyCache = `${type}.week.${week}`;
+      }
+      setStorage({ [keyCache]: url }, callback);
     })
     .catch(console.error);
 }
 
-function fetchWeekLinkAndStore(dStr, callback) {
-  const pass = document.getElementById("txtPass").value;
-  fetch(`${URL_GET_WEEK_LINK}?password=${pass}&day=${dStr}`)
-    .then(r => r.ok ? r.json() : Promise.reject("Lỗi khi gọi API"))
-    .then(({ note, toDoList, thisWeek, toDoListNextWeek, previousWeek }) => {
-      setStorage({
-        [KEYS.NOTE]: note.trim(),
-        [KEYS.TODOLIST]: toDoList.trim(),
-        [KEYS.THIS_WEEK]: thisWeek.trim(),
-        [KEYS.TODOLIST_NEXTWEEK]: toDoListNextWeek.trim(),
-        [KEYS.PREVIOUS_WEEK]: previousWeek.trim(),
-      }, callback);
-    })
-    .catch(console.error);
-}
 
 function hienThiNgayHienTai() {
   const today = new Date();
@@ -272,62 +284,30 @@ function hienThiNgayHienTai() {
 }
 
 
-function updateQuickLinks() {
-  const ids = ["btnDiary", "btnChecklist", "btnNote", "btnToDoList", "btnThisWeek", "btnToDoListNextWeek", "btnPreviousWeek"];
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = '<span class="spinner"></span>';
+function updateQuickLinksFromCache() {
+  const keys = Object.values(DATA).map(item => item.keyCache);
+  getStorage(keys, (result) => {
+    Object.entries(result).forEach(([key, url]) => {
+      const type = key.split('.')[0]; // lấy phần trước dấu chấm
+      if (DATA[type]) {
+        DATA[type].url = url;
+      }
+    });
   });
-  const keys = Object.values(KEYS);
-  getStorage(keys, handleStorageResult);
 }
 
-function handleStorageDayLinkResult(result) {
-  setBtnAndUrl("DIARY", result[KEYS.DIARY]);
-  setBtnAndUrl("CHECKLIST", result[KEYS.CHECKLIST]);
-}
-
-function handleStorageWeekLinkResult(result) {
-  setBtnAndUrl("NOTE", result[KEYS.NOTE]);
-  setBtnAndUrl("TODOLIST", result[KEYS.TODOLIST]);
-  setBtnAndUrl("THIS_WEEK", result[KEYS.THIS_WEEK]);
-  setBtnAndUrl("TODOLIST_NEXTWEEK", result[KEYS.TODOLIST_NEXTWEEK]);
-  setBtnAndUrl("PREVIOUS_WEEK", result[KEYS.PREVIOUS_WEEK]);
-}
-
-function handleStorageResult(result) {
-  setBtnAndUrl("DIARY", result[KEYS.DIARY]);
-  setBtnAndUrl("CHECKLIST", result[KEYS.CHECKLIST]);
-  setBtnAndUrl("NOTE", result[KEYS.NOTE]);
-  setBtnAndUrl("TODOLIST", result[KEYS.TODOLIST]);
-  setBtnAndUrl("THIS_WEEK", result[KEYS.THIS_WEEK]);
-  setBtnAndUrl("TODOLIST_NEXTWEEK", result[KEYS.TODOLIST_NEXTWEEK]);
-  setBtnAndUrl("PREVIOUS_WEEK", result[KEYS.PREVIOUS_WEEK]);
-  if (!result[KEYS.DIARY] || !result[KEYS.CHECKLIST]) {
-    const dStr = getCurrentDateFormatted();
-    fetchDayLinkAndStore(dStr, () => getStorage([KEYS.DIARY, KEYS.CHECKLIST], handleStorageDayLinkResult));
-  }
-  if (!result[KEYS.NOTE] || !result[KEYS.TODOLIST] || !result[KEYS.THIS_WEEK] || !result[KEYS.TODOLIST_NEXTWEEK] || !result[KEYS.PREVIOUS_WEEK]) {
-    const dStr = getCurrentDateFormatted();
-    fetchWeekLinkAndStore(dStr, () => getStorage([
-      KEYS.NOTE, KEYS.TODOLIST, KEYS.THIS_WEEK, KEYS.TODOLIST_NEXTWEEK, KEYS.PREVIOUS_WEEK
-    ], handleStorageWeekLinkResult));
-  }
-}
 
 function setKeyCache() {
   const dStr = getCurrentDateFormatted();
-  const weekAndMonth = getInfoWeek(dStr);
-  const week = weekAndMonth.week;
-  KEYS = {
-    DIARY: `diary.${dStr}`,
-    CHECKLIST: `checklist.${dStr}`,
-    NOTE: `note.week.${week}`,
-    TODOLIST: `todo.week.${week}`,
-    THIS_WEEK: `folder.week.${week}`,
-    TODOLIST_NEXTWEEK: `todo.week.${week + 1}`,
-    PREVIOUS_WEEK: `folder.week.${week - 1}`
-  };
+  const infoWeek = getInfoWeek(dStr);
+  const week = infoWeek.week;
+  Object.keys(DATA).forEach(key => {
+    if (key === 'diary' || key === 'checklist') {
+      DATA[key].keyCache = `${key}.${dStr}`;
+    } else {
+      DATA[key].keyCache = `${key}.week.${week}`;
+    }
+  });
 }
 
 function isMobile() {
@@ -363,7 +343,6 @@ function setQuoteCategory(category) {
   updateQuoteDisplay();
 }
 
-// Storage helpers
 function setStorage(obj, cb) {
   if (isExtensionEnv()) {
     chrome.storage.local.set(obj, cb);
@@ -381,119 +360,29 @@ function getStorage(keys, cb) {
     cb(result);
   }
 }
-function setBtnAndUrl(key, url) {
-  const btnMap = {
-    DIARY: "btnDiary",
-    CHECKLIST: "btnChecklist",
-    NOTE: "btnNote",
-    TODOLIST: "btnToDoList",
-    THIS_WEEK: "btnThisWeek",
-    TODOLIST_NEXTWEEK: "btnToDoListNextWeek",
-    PREVIOUS_WEEK: "btnPreviousWeek"
-  };
-  if (url) {
-    URLS[key] = url;
-    const el = document.getElementById(btnMap[key]);
-    if (el) el.innerHTML = TEXTS[key];
-  }
-}
-// Thêm 7 option cho selectbox dayDiary, là 7 ngày trước đó tính từ ngày hiện tại
-function addDayOption() {
-  const selectDiary = document.getElementById('dayDiary');
-  const selectChecklist = document.getElementById('dayChecklist');
-  if (!selectDiary) return;
-  if (!selectChecklist) return;
-  const today = new Date();
-  for (let i = 1; i <= 7; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const day = d.getDate();
-    const month = d.getMonth() + 1;
-    const year = d.getFullYear();
-    const weekday = d.getDay();
-    const weekdayMap = ['chủ nhật', 'thứ 2', 'thứ 3', 'thứ 4', 'thứ 5', 'thứ 6', 'thứ 7'];
-    const option = document.createElement('option');
-    option.value = `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.${year}`;
-    option.textContent = `${option.value} - ${weekdayMap[weekday]}`;
-    const optionChecklist = option.cloneNode(true);
-    selectDiary.appendChild(option);
-    selectChecklist.appendChild(optionChecklist);
-  }
-}
 
-function chooseDayDiary(dStr) {
-  const keyDiary = `diary.${dStr}`;
-  const keyChecklist = `checklist.${dStr}`;
-  const keys = [keyDiary, keyChecklist];
-  getStorage(keys, (result) => {
-    if (result[keyDiary]) {
-      const urlDiary = result[keyDiary];
-      const urlChecklist = result[keyChecklist];
-      if (urlDiary) {
-        window.open(urlDiary, '_self');
-      }
-    } else {
-      fetchDayLinkAndStore(dStr, () => getStorage(keys, (result2) => {
-        window.open(result2[keyDiary], '_self')
-      }))
-    }
-  });
-}
-
-function chooseDayChecklist(dStr) {
-  const keyDiary = `diary.${dStr}`;
-  const keyChecklist = `checklist.${dStr}`;
-  const keys = [keyDiary, keyChecklist];
-  getStorage(keys, (result) => {
-    if (result[keyDiary]) {
-      const urlDiary = result[keyDiary];
-      const urlChecklist = result[keyChecklist];
-      if (urlChecklist) {
-        window.open(urlChecklist, '_self');
-      }
-    } else {
-      fetchDayLinkAndStore(dStr, () => getStorage(keys, (result2) => {
-        window.open(result2[keyChecklist], '_self')
-      }))
-    }
-  });
-}
 
 function getInfoWeek(dateStr) {
     const [day, month, year] = dateStr.split('.').map(Number);
     const inputDate = new Date(year, month - 1, day);
-
-    // Calculate Monday
     const dayOfWeek = (inputDate.getDay() + 6) % 7; // 0 = Monday
     const monday = new Date(inputDate);
     monday.setDate(inputDate.getDate() - dayOfWeek);
-
-    // Calculate Sunday
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
-
-    // Determine ISO week year by checking Thursday of that week
     const tempDate = new Date(monday);
     tempDate.setDate(tempDate.getDate() + 3); // Thursday
     const weekYear = tempDate.getFullYear();
-
-    // Find the Thursday of the first ISO week of the year
     const firstThursday = new Date(weekYear, 0, 4);
     const firstThursdayDay = (firstThursday.getDay() + 6) % 7;
     firstThursday.setDate(firstThursday.getDate() - firstThursdayDay + 3);
-
-    // Calculate week number
     const diffInDays = (monday - firstThursday) / (1000 * 60 * 60 * 24);
     const weekNumber = 1 + Math.round(diffInDays / 7);
-
-    // Now month comes from Sunday (end of week)
     const monthStr = String(sunday.getMonth() + 1).padStart(2, '0');
-
     const formatDate = (d) =>
         String(d.getDate()).padStart(2, '0') + '.' +
         String(d.getMonth() + 1).padStart(2, '0') + '.' +
         d.getFullYear();
-
     return {
         week: weekNumber,
         month: monthStr,
