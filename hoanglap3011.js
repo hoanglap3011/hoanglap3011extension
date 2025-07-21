@@ -11,6 +11,8 @@ const DATA = {
   previousWeek: { keyCache: null, url: "" }
 };
 
+let urlToOpen = "";
+
 const KEY_PASS = "key";
 const URL_GET_LINK = "https://script.google.com/macros/s/AKfycbw12YIV-Xr53lFPMbb2at7CP50jOHiCkPWA8ZMqbvbSti93BQZVOrJNzKNNisdPoIwWvw/exec";
 const QUICK_URLS = {
@@ -128,14 +130,16 @@ function chonNgayDiary() {
       const keyCache = "diary." + dateStr;
       getStorage([keyCache], (obj) => {
         if (obj[keyCache]) {
-          window.open(obj[keyCache], '_self');   
+          urlToOpen = obj[keyCache];
+          window.open(urlToOpen, '_self');   
         } else {
           const el = document.getElementById("btnDiaryDay");
           let text = el.innerHTML;
           el.innerHTML = '<span class="spinner"></span>';
           el.disabled = true;
           fetchLinkAndStore(dateStr, "diary", () => getStorage([keyCache], (obj2) => {
-            window.open(obj2[keyCache], '_self');   
+            urlToOpen = obj2[keyCache];
+            window.open(urlToOpen, '_self');   
             el.innerHTML = text;     
             el.disabled = false;
           }));
