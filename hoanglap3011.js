@@ -60,7 +60,7 @@ let currentQuoteList = quoteHaiHuoc;
 let currentIndex = 0;
 
 document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById('versionJS').innerHTML = '9';
+  document.getElementById('versionJS').innerHTML = '10';
   hienThiNgayHienTai();
   setKeyCache();
   showPass();
@@ -430,7 +430,7 @@ function showChecklistOpenButton() {
 
   popup.innerHTML = `
     <p style="margin-bottom: 1em;">✅ Tài liệu đã sẵn sàng</p>
-    <a href="${urlToOpen}" target="_blank" style="display:inline-block; padding:10px 20px; background:#007bff; color:white; text-decoration:none; border-radius:5px;">👉 Mở tài liệu Checklist</a><br><br>
+    <a href="${urlToOpen}" target="_blank" style="display:inline-block; padding:10px 20px; background:#007bff; color:white; text-decoration:none; border-radius:5px;">👉 Mở tài liệu</a><br><br>
     <button id="btnClosePopupChecklist" style="margin-top:10px;">Đóng</button>
   `;
 
