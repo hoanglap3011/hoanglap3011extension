@@ -60,7 +60,7 @@ let currentQuoteList = quoteHaiHuoc;
 let currentIndex = 0;
 
 document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById('versionJS').innerHTML = '5';
+  document.getElementById('versionJS').innerHTML = '6';
   hienThiNgayHienTai();
   setKeyCache();
   showPass();
@@ -158,39 +158,23 @@ function chonNgayChecklist() {
     position: "below",
     onChange: function (selectedDates, dateStr, instance) {
       const keyCache = "checklist." + dateStr;
-      getStorage([keyCache], (obj) => {
-        const normalUrl = obj[keyCache];
-        if (normalUrl) {
-          const docId = extractGoogleDocId(normalUrl);
-          if (docId) {
-            if (isIOSChrome()) {
-              showManualLink(normalUrl);
-            } else {
-              openGoogleDocInApp(docId);
-            }
-          } else {
-            window.open(normalUrl, '_self');
-          }
-        } else {
-          const el = document.getElementById("btnChecklistDay");
-          let text = el.innerHTML;
-          el.innerHTML = '<span class="spinner"></span>';
-          el.disabled = true;
+      const el = document.getElementById("btnChecklistDay");
+      let text = el.innerHTML;
+      el.innerHTML = '<span class="spinner"></span>';
+      el.disabled = true;
 
+      getStorage([keyCache], (obj) => {
+        if (obj[keyCache]) {
+          urlToOpen = obj[keyCache];
+          showChecklistOpenButton();
+          el.innerHTML = text;
+          el.disabled = false;
+        } else {
           fetchLinkAndStore(dateStr, "checklist", () => getStorage([keyCache], (obj2) => {
-            const url = obj2[keyCache];
-            const docId = extractGoogleDocId(url);
+            urlToOpen = obj2[keyCache];
+            showChecklistOpenButton();
             el.innerHTML = text;
             el.disabled = false;
-            if (docId) {
-              if (isIOSChrome()) {
-                showManualLink(url);
-              } else {
-                openGoogleDocInApp(docId);
-              }
-            } else {
-              window.open(url, '_self');
-            }
           }));
         }
       });
@@ -454,5 +438,19 @@ function showManualLink(url) {
     container.style.display = "block";
   } else {
     alert("Link tài liệu: " + url);
+  }
+}
+
+function showChecklistOpenButton() {
+  const container = document.getElementById("manualLinkContainer");
+  if (container) {
+    container.innerHTML = `<button id="btnOpenChecklistNow">👉 Mở tài liệu Checklist</button>`;
+    container.style.display = "block";
+    const btn = document.getElementById("btnOpenChecklistNow");
+    btn.addEventListener("click", () => {
+      window.open(urlToOpen, '_self');
+    });
+  } else {
+    alert("Link tài liệu: " + urlToOpen);
   }
 }
