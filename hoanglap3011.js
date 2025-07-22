@@ -60,7 +60,7 @@ let currentQuoteList = quoteHaiHuoc;
 let currentIndex = 0;
 
 document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById('versionJS').innerHTML = '2';
+  document.getElementById('versionJS').innerHTML = '3';
   hienThiNgayHienTai();
   setKeyCache();
   showPass();
@@ -163,8 +163,7 @@ function chonNgayChecklist() {
         if (normalUrl) {
           const docId = extractGoogleDocId(normalUrl);
           if (docId) {
-            const intentLink = `intent://docs.google.com/document/d/${docId}/edit#Intent;package=com.google.android.apps.docs.editors.docs;scheme=https;end`;
-            window.location.href = intentLink;
+            openGoogleDocInApp(docId);
           } else {
             window.open(normalUrl, '_self');
           }
@@ -180,8 +179,7 @@ function chonNgayChecklist() {
             el.innerHTML = text;
             el.disabled = false;
             if (docId) {
-              const intentLink = `intent://docs.google.com/document/d/${docId}/edit#Intent;package=com.google.android.apps.docs.editors.docs;scheme=https;end`;
-              window.location.href = intentLink;
+              openGoogleDocInApp(docId);
             } else {
               window.open(url, '_self');
             }
@@ -422,4 +420,13 @@ function getCurrentDateFormatted() {
   const month = String(today.getMonth() + 1).padStart(2, '0'); // tháng bắt đầu từ 0
   const year = today.getFullYear();
   return `${day}.${month}.${year}`;
+}
+
+function openGoogleDocInApp(docId) {
+  const a = document.createElement('a');
+  a.href = `https://docs.google.com/document/d/${docId}/edit`;
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
