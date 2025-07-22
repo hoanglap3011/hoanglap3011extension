@@ -60,7 +60,7 @@ let currentQuoteList = quoteHaiHuoc;
 let currentIndex = 0;
 
 document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById('versionJS').innerHTML = '8';
+  document.getElementById('versionJS').innerHTML = '9';
   hienThiNgayHienTai();
   setKeyCache();
   showPass();
@@ -129,23 +129,25 @@ function chonNgayDiary() {
     position: "below",
     onChange: function (selectedDates, dateStr, instance) {
       const keyCache = "diary." + dateStr;
+      const el = document.getElementById("btnDiaryDay");
+      let text = el.innerHTML;
+      el.innerHTML = '<span class="spinner"></span>';
+      el.disabled = true;
       getStorage([keyCache], (obj) => {
         if (obj[keyCache]) {
           urlToOpen = obj[keyCache];
-          window.open(urlToOpen, '_self');   
+          showChecklistOpenButton();
+          el.innerHTML = text;
+          el.disabled = false;
         } else {
-          const el = document.getElementById("btnDiaryDay");
-          let text = el.innerHTML;
-          el.innerHTML = '<span class="spinner"></span>';
-          el.disabled = true;
           fetchLinkAndStore(dateStr, "diary", () => getStorage([keyCache], (obj2) => {
             urlToOpen = obj2[keyCache];
-            window.open(urlToOpen, '_self');   
-            el.innerHTML = text;     
+            showChecklistOpenButton();
+            el.innerHTML = text;
             el.disabled = false;
           }));
-        }     
-      })
+        }
+      });
     }
   }).open();
 }
@@ -162,7 +164,6 @@ function chonNgayChecklist() {
       let text = el.innerHTML;
       el.innerHTML = '<span class="spinner"></span>';
       el.disabled = true;
-
       getStorage([keyCache], (obj) => {
         if (obj[keyCache]) {
           urlToOpen = obj[keyCache];
@@ -180,10 +181,6 @@ function chonNgayChecklist() {
       });
     }
   }).open();
-}
-function extractGoogleDocId(url) {
-  const match = url.match(/\/document\/d\/([a-zA-Z0-9-_]+)/);
-  return match ? match[1] : null;
 }
 
 
@@ -412,33 +409,6 @@ function getCurrentDateFormatted() {
   const month = String(today.getMonth() + 1).padStart(2, '0'); // tháng bắt đầu từ 0
   const year = today.getFullYear();
   return `${day}.${month}.${year}`;
-}
-
-function openGoogleDocInApp(docId) {
-  const a = document.createElement('a');
-  a.href = `https://docs.google.com/document/d/${docId}/edit`;
-  a.target = '_blank';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
-
-function isIOSChrome() {
-  const ua = navigator.userAgent;
-  return /CriOS/.test(ua) && /iPhone|iPad|iPod/.test(ua);
-}
-
-function showManualLink(url) {
-  const container = document.getElementById("manualLinkContainer");
-  if (container) {
-    container.innerHTML = `
-      <strong>⚠️ Trình duyệt Chrome trên iPhone không hỗ trợ mở ứng dụng Google Docs tự động.</strong><br>
-      👉 Vui lòng <a href="${url}" target="_blank" style="color:blue; text-decoration:underline;">bấm vào đây để mở tài liệu</a> bằng tay.
-    `;
-    container.style.display = "block";
-  } else {
-    alert("Link tài liệu: " + url);
-  }
 }
 
 function showChecklistOpenButton() {
