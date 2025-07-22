@@ -60,7 +60,7 @@ let currentQuoteList = quoteHaiHuoc;
 let currentIndex = 0;
 
 document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById('versionJS').innerHTML = '6';
+  document.getElementById('versionJS').innerHTML = '1';
   hienThiNgayHienTai();
   setKeyCache();
   showPass();
@@ -158,23 +158,33 @@ function chonNgayChecklist() {
     position: "below",
     onChange: function (selectedDates, dateStr, instance) {
       const keyCache = "checklist." + dateStr;
-      const el = document.getElementById("btnChecklistDay");
-      let text = el.innerHTML;
-      el.innerHTML = '<span class="spinner"></span>';
-      el.disabled = true;
-
       getStorage([keyCache], (obj) => {
-        if (obj[keyCache]) {
-          urlToOpen = obj[keyCache];
-          showChecklistOpenButton();
-          el.innerHTML = text;
-          el.disabled = false;
+        const normalUrl = obj[keyCache];
+        if (normalUrl) {
+          const docId = extractGoogleDocId(normalUrl);
+          if (docId) {
+            const deepLink = `googledocs://document/${docId}`;
+            window.location.href = deepLink;
+          } else {
+            window.open(normalUrl, '_self');
+          }
         } else {
+          const el = document.getElementById("btnChecklistDay");
+          let text = el.innerHTML;
+          el.innerHTML = '<span class="spinner"></span>';
+          el.disabled = true;
+
           fetchLinkAndStore(dateStr, "checklist", () => getStorage([keyCache], (obj2) => {
-            urlToOpen = obj2[keyCache];
-            showChecklistOpenButton();
+            const url = obj2[keyCache];
+            const docId = extractGoogleDocId(url);
             el.innerHTML = text;
             el.disabled = false;
+            if (docId) {
+              const deepLink = `googledocs://document/${docId}`;
+              window.location.href = deepLink;
+            } else {
+              window.open(url, '_self');
+            }
           }));
         }
       });
@@ -412,45 +422,4 @@ function getCurrentDateFormatted() {
   const month = String(today.getMonth() + 1).padStart(2, '0'); // tháng bắt đầu từ 0
   const year = today.getFullYear();
   return `${day}.${month}.${year}`;
-}
-
-function openGoogleDocInApp(docId) {
-  const a = document.createElement('a');
-  a.href = `https://docs.google.com/document/d/${docId}/edit`;
-  a.target = '_blank';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
-
-function isIOSChrome() {
-  const ua = navigator.userAgent;
-  return /CriOS/.test(ua) && /iPhone|iPad|iPod/.test(ua);
-}
-
-function showManualLink(url) {
-  const container = document.getElementById("manualLinkContainer");
-  if (container) {
-    container.innerHTML = `
-      <strong>⚠️ Trình duyệt Chrome trên iPhone không hỗ trợ mở ứng dụng Google Docs tự động.</strong><br>
-      👉 Vui lòng <a href="${url}" target="_blank" style="color:blue; text-decoration:underline;">bấm vào đây để mở tài liệu</a> bằng tay.
-    `;
-    container.style.display = "block";
-  } else {
-    alert("Link tài liệu: " + url);
-  }
-}
-
-function showChecklistOpenButton() {
-  const container = document.getElementById("manualLinkContainer");
-  if (container) {
-    container.innerHTML = `<button id="btnOpenChecklistNow">👉 Mở tài liệu Checklist</button>`;
-    container.style.display = "block";
-    const btn = document.getElementById("btnOpenChecklistNow");
-    btn.addEventListener("click", () => {
-      window.open(urlToOpen, '_self');
-    });
-  } else {
-    alert("Link tài liệu: " + urlToOpen);
-  }
 }
