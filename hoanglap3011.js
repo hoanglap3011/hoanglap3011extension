@@ -60,7 +60,7 @@ let currentQuoteList = quoteHaiHuoc;
 let currentIndex = 0;
 
 document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById('versionJS').innerHTML = '6';
+  document.getElementById('versionJS').innerHTML = '7';
   hienThiNgayHienTai();
   setKeyCache();
   showPass();
@@ -442,15 +442,8 @@ function showManualLink(url) {
 }
 
 function showChecklistOpenButton() {
-  const container = document.getElementById("manualLinkContainer");
-  if (container) {
-    container.innerHTML = `<button id="btnOpenChecklistNow">👉 Mở tài liệu Checklist</button>`;
-    container.style.display = "block";
-    const btn = document.getElementById("btnOpenChecklistNow");
-    btn.addEventListener("click", () => {
-      window.open(urlToOpen, '_self');
-    });
-  } else {
-    alert("Link tài liệu: " + urlToOpen);
+  const confirmed = window.confirm("✅ Tài liệu đã sẵn sàng.\nBạn có muốn mở ngay bây giờ?");
+  if (confirmed) {
+    window.open(urlToOpen, '_self');
   }
 }
