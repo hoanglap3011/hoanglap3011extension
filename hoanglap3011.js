@@ -60,7 +60,7 @@ let currentQuoteList = quoteHaiHuoc;
 let currentIndex = 0;
 
 document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById('versionJS').innerHTML = '1';
+  document.getElementById('versionJS').innerHTML = '2';
   hienThiNgayHienTai();
   setKeyCache();
   showPass();
@@ -163,8 +163,8 @@ function chonNgayChecklist() {
         if (normalUrl) {
           const docId = extractGoogleDocId(normalUrl);
           if (docId) {
-            const deepLink = `googledocs://document/${docId}`;
-            window.location.href = deepLink;
+            const intentLink = `intent://docs.google.com/document/d/${docId}/edit#Intent;package=com.google.android.apps.docs.editors.docs;scheme=https;end`;
+            window.location.href = intentLink;
           } else {
             window.open(normalUrl, '_self');
           }
@@ -180,8 +180,8 @@ function chonNgayChecklist() {
             el.innerHTML = text;
             el.disabled = false;
             if (docId) {
-              const deepLink = `googledocs://document/${docId}`;
-              window.location.href = deepLink;
+              const intentLink = `intent://docs.google.com/document/d/${docId}/edit#Intent;package=com.google.android.apps.docs.editors.docs;scheme=https;end`;
+              window.location.href = intentLink;
             } else {
               window.open(url, '_self');
             }
