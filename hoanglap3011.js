@@ -60,6 +60,7 @@ let currentQuoteList = quoteHaiHuoc;
 let currentIndex = 0;
 
 document.addEventListener("DOMContentLoaded", function () {
+  document.getElementById('versionJS').innerHTML = '1';
   hienThiNgayHienTai();
   setKeyCache();
   showPass();
@@ -149,7 +150,7 @@ function chonNgayDiary() {
   }).open();
 }
 
-function chonNgayChecklist(){
+function chonNgayChecklist() {
   flatpickr("#datepicker", {
     defaultDate: new Date(),
     dateFormat: "d.m.Y",
@@ -158,22 +159,41 @@ function chonNgayChecklist(){
     onChange: function (selectedDates, dateStr, instance) {
       const keyCache = "checklist." + dateStr;
       getStorage([keyCache], (obj) => {
-        if (obj[keyCache]) {
-          window.open(obj[keyCache], '_self');   
+        const normalUrl = obj[keyCache];
+        if (normalUrl) {
+          const docId = extractGoogleDocId(normalUrl);
+          if (docId) {
+            const deepLink = `googledocs://document/${docId}`;
+            window.location.href = deepLink;
+          } else {
+            window.open(normalUrl, '_self');
+          }
         } else {
           const el = document.getElementById("btnChecklistDay");
           let text = el.innerHTML;
           el.innerHTML = '<span class="spinner"></span>';
           el.disabled = true;
+
           fetchLinkAndStore(dateStr, "checklist", () => getStorage([keyCache], (obj2) => {
-            window.open(obj2[keyCache], '_self');   
-            el.innerHTML = text;     
+            const url = obj2[keyCache];
+            const docId = extractGoogleDocId(url);
+            el.innerHTML = text;
             el.disabled = false;
+            if (docId) {
+              const deepLink = `googledocs://document/${docId}`;
+              window.location.href = deepLink;
+            } else {
+              window.open(url, '_self');
+            }
           }));
-        }     
-      })
+        }
+      });
     }
   }).open();
+}
+function extractGoogleDocId(url) {
+  const match = url.match(/\/document\/d\/([a-zA-Z0-9-_]+)/);
+  return match ? match[1] : null;
 }
 
 
