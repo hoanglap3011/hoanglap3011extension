@@ -60,7 +60,7 @@ let currentQuoteList = quoteHaiHuoc;
 let currentIndex = 0;
 
 document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById('versionJS').innerHTML = '7';
+  document.getElementById('versionJS').innerHTML = '8';
   hienThiNgayHienTai();
   setKeyCache();
   showPass();
@@ -442,8 +442,31 @@ function showManualLink(url) {
 }
 
 function showChecklistOpenButton() {
-  const confirmed = window.confirm("✅ Tài liệu đã sẵn sàng.\nBạn có muốn mở ngay bây giờ?");
-  if (confirmed) {
-    window.open(urlToOpen, '_self');
-  }
+  // Nếu popup đã tồn tại thì không tạo nữa
+  if (document.getElementById("popupChecklistLink")) return;
+
+  const popup = document.createElement("div");
+  popup.id = "popupChecklistLink";
+  popup.style.position = "fixed";
+  popup.style.top = "50%";
+  popup.style.left = "50%";
+  popup.style.transform = "translate(-50%, -50%)";
+  popup.style.backgroundColor = "white";
+  popup.style.padding = "20px";
+  popup.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
+  popup.style.zIndex = "10000";
+  popup.style.textAlign = "center";
+  popup.style.borderRadius = "8px";
+
+  popup.innerHTML = `
+    <p style="margin-bottom: 1em;">✅ Tài liệu đã sẵn sàng</p>
+    <a href="${urlToOpen}" target="_blank" style="display:inline-block; padding:10px 20px; background:#007bff; color:white; text-decoration:none; border-radius:5px;">👉 Mở tài liệu Checklist</a><br><br>
+    <button id="btnClosePopupChecklist" style="margin-top:10px;">Đóng</button>
+  `;
+
+  document.body.appendChild(popup);
+
+  document.getElementById("btnClosePopupChecklist").addEventListener("click", () => {
+    popup.remove();
+  });
 }
