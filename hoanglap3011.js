@@ -60,7 +60,7 @@ let currentQuoteList = quoteHaiHuoc;
 let currentIndex = 0;
 
 document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById('versionJS').innerHTML = '3';
+  document.getElementById('versionJS').innerHTML = '4';
   hienThiNgayHienTai();
   setKeyCache();
   showPass();
@@ -163,7 +163,11 @@ function chonNgayChecklist() {
         if (normalUrl) {
           const docId = extractGoogleDocId(normalUrl);
           if (docId) {
-            openGoogleDocInApp(docId);
+            if (isIOSChrome()) {
+              showManualLink(normalUrl);
+            } else {
+              openGoogleDocInApp(docId);
+            }
           } else {
             window.open(normalUrl, '_self');
           }
@@ -179,7 +183,11 @@ function chonNgayChecklist() {
             el.innerHTML = text;
             el.disabled = false;
             if (docId) {
-              openGoogleDocInApp(docId);
+              if (isIOSChrome()) {
+                showManualLink(url);
+              } else {
+                openGoogleDocInApp(docId);
+              }
             } else {
               window.open(url, '_self');
             }
@@ -429,4 +437,19 @@ function openGoogleDocInApp(docId) {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+}
+
+function isIOSChrome() {
+  const ua = navigator.userAgent;
+  return /CriOS/.test(ua) && /iPhone|iPad|iPod/.test(ua);
+}
+
+function showManualLink(url) {
+  const container = document.getElementById("manualLinkContainer");
+  if (container) {
+    container.innerHTML = `<a href="${url}" target="_blank">👉 Bấm vào đây để mở Google Docs</a>`;
+    container.style.display = "block";
+  } else {
+    alert("Link tài liệu: " + url);
+  }
 }
