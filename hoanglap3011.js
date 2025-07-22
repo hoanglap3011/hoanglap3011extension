@@ -60,7 +60,7 @@ let currentQuoteList = quoteHaiHuoc;
 let currentIndex = 0;
 
 document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById('versionJS').innerHTML = '4';
+  document.getElementById('versionJS').innerHTML = '5';
   hienThiNgayHienTai();
   setKeyCache();
   showPass();
