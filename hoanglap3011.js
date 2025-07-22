@@ -60,7 +60,7 @@ let currentQuoteList = quoteHaiHuoc;
 let currentIndex = 0;
 
 document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById('versionJS').innerHTML = '4';
+  document.getElementById('versionJS').innerHTML = '5';
   hienThiNgayHienTai();
   setKeyCache();
   showPass();
@@ -447,7 +447,10 @@ function isIOSChrome() {
 function showManualLink(url) {
   const container = document.getElementById("manualLinkContainer");
   if (container) {
-    container.innerHTML = `<a href="${url}" target="_blank">👉 Bấm vào đây để mở Google Docs</a>`;
+    container.innerHTML = `
+      <strong>⚠️ Trình duyệt Chrome trên iPhone không hỗ trợ mở ứng dụng Google Docs tự động.</strong><br>
+      👉 Vui lòng <a href="${url}" target="_blank" style="color:blue; text-decoration:underline;">bấm vào đây để mở tài liệu</a> bằng tay.
+    `;
     container.style.display = "block";
   } else {
     alert("Link tài liệu: " + url);
