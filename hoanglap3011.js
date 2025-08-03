@@ -1,6 +1,4 @@
 
-import { quoteTrietLy, quoteHaiHuoc } from './quotes.js';
-
 const DATA = {
   diary: { keyCache: null, url: "" },
   checklist: { keyCache: null, url: "" },
@@ -56,8 +54,8 @@ const NHAC_VUI_URLS = [
 let nhacVuiIndex = 0;
 
 
-let currentQuoteList = quoteHaiHuoc;
-let currentIndex = 0;
+let quoteArray = [];
+let quoteIndex = 0;
 
 document.addEventListener("DOMContentLoaded", function () {
   document.getElementById('versionJS').innerHTML = '10';
@@ -66,10 +64,7 @@ document.addEventListener("DOMContentLoaded", function () {
   showPass();
   // updateQuickLinks();
   updateQuickLinksFromCache();
-  loadQuoteIndex();
   const clickHandlers = [
-    ["btnPrevQuote", () => shiftQuote(-1)],
-    ["btnNextQuote", () => shiftQuote(1)],
     ["btnEnter", togglePasswordInput],
     ["btnSavePass", savePass],
     ["btnCalendar", () => window.open(QUICK_URLS.CALENDAR, '_self')],
@@ -77,7 +72,7 @@ document.addEventListener("DOMContentLoaded", function () {
     ["btnSodscd", () => window.open(QUICK_URLS.SODSCD, '_self')],
     ["btnTongHopNhatKyNgay", () => window.open(QUICK_URLS.TONGHOPNGAY, '_self')],
     ["btnTongHopNhatKyTuan", () => window.open(QUICK_URLS.TONGHOPTUAN, '_self')],
-    ["btnPanel", openPanel],
+    ["btnPanel", () => window.open('panel.html', '_bank')],
     ["btnHitTho", playHitTho],
     ["btnNhacHocTap", playNhacVui],
     ["btnThienVipassana", () => window.open(QUICK_URLS.VIPASSANA, '_self')],
@@ -99,6 +94,8 @@ document.addEventListener("DOMContentLoaded", function () {
     ["btnMuctieu", () => window.open(QUICK_URLS.GOAL, '_self')],
     ["btnDiaryDay", chonNgayDiary],
     ["btnChecklistDay", chonNgayChecklist],
+    ["btnPrevQuote", showPrevQuote],
+    ["btnNextQuote", showNextQuote],
   ];
   // Tạo handler động cho các nút tương ứng với DATA
   Object.keys(DATA).forEach(type => {
@@ -107,13 +104,30 @@ document.addEventListener("DOMContentLoaded", function () {
   });
   clickHandlers.forEach(([id, handler]) => addClick(id, handler));
 
+
+  // Dynamically populate quote category options (no need to import quotes.js here)
+  const categories = [
+    { id: "cauToan", label: "Cầu Toàn" },
+    { id: "baySuyNghi", label: "Bẫy Suy Nghĩ" },
+    { id: "loiKyLuat", label: "Lời Kỷ Luật" },
+    { id: "trietLy", label: "Triết lý" },
+    { id: "haiHuoc", label: "Hài hước" }
+  ];
   const categorySelect = document.getElementById("quoteCategory");
   if (categorySelect) {
+    categorySelect.innerHTML = "";
+    categories.forEach(cat => {
+      const option = document.createElement("option");
+      option.value = cat.id;
+      option.textContent = cat.label;
+      categorySelect.appendChild(option);
+    });
     categorySelect.addEventListener("change", function () {
       setQuoteCategory(this.value);
     });
+    categorySelect.value = "cauToan";
+    setQuoteCategory("cauToan");
   }
-
 });
 
 function addClick(id, handler) {
@@ -331,27 +345,95 @@ function showPass() {
   });
 }
 
-function loadQuoteIndex() {
-  currentIndex = Math.floor(Math.random() * currentQuoteList.length);
-  updateQuoteDisplay();
-}
 
 function updateQuoteDisplay() {
   const quoteDiv = document.getElementById("daily-quote");
-  if (quoteDiv && currentQuoteList.length > 0) {
-    quoteDiv.textContent = currentQuoteList[currentIndex];
+  const btnPrev = document.getElementById("btnPrevQuote");
+  const btnNext = document.getElementById("btnNextQuote");
+
+  if (quoteDiv && quoteArray.length > 0) {
+    // Thêm hiệu ứng chuyển đổi mượt khi thay đổi nội dung
+    quoteDiv.style.transition = "opacity 0.3s";
+    quoteDiv.style.opacity = 0;
+
+    setTimeout(() => {
+      quoteDiv.textContent = quoteArray[quoteIndex];
+      quoteDiv.style.opacity = 1;
+    }, 200);
+
+    if (btnPrev) btnPrev.disabled = quoteIndex === 0;
+    if (btnNext) btnNext.disabled = quoteIndex === quoteArray.length - 1;
   }
 }
 
-function shiftQuote(offset) {
-  currentIndex = (currentIndex + offset + currentQuoteList.length) % currentQuoteList.length;
-  updateQuoteDisplay();
-}
 
 function setQuoteCategory(category) {
-  currentQuoteList = category === "serious" ? quoteTrietLy : quoteHaiHuoc;
-  currentIndex = 0;
-  updateQuoteDisplay();
+  switch (category) {
+    case "trietLy":
+      import('./quoteTrietLy.js').then(module => {
+        quoteArray = module.quoteTrietLy;
+        quoteIndex = 0;
+        shuffleArray(quoteArray);
+        updateQuoteDisplay();
+      });
+      break;
+    case "haiHuoc":
+      import('./quoteHaiHuoc.js').then(module => {
+        quoteArray = module.quoteHaiHuoc;
+        quoteIndex = 0;
+        shuffleArray(quoteArray);
+        updateQuoteDisplay();
+      });
+      break;
+    case "cauToan":
+      import('./quoteCauToan.js').then(module => {
+        quoteArray = module.quoteCauToan;
+        quoteIndex = 0;
+        shuffleArray(quoteArray);
+        updateQuoteDisplay();
+      });
+      break;
+    case "baySuyNghi":
+      import('./quoteBaySuyNghi.js').then(module => {
+        quoteArray = module.quoteBaySuyNghi;
+        quoteIndex = 0;
+        shuffleArray(quoteArray);
+        updateQuoteDisplay();
+      });
+      break;
+    case "loiKyLuat":
+      import('./quoteLoiKyLuat.js').then(module => {
+        quoteArray = module.quoteLoiKyLuat;
+        quoteIndex = 0;
+        shuffleArray(quoteArray);
+        updateQuoteDisplay();
+      });
+      break;
+    default:
+      quoteArray = [];
+      quoteIndex = 0;
+  }
+}
+function showPrevQuote() {
+  const btnPrevQuote = document.getElementById("btnPrevQuote");
+  const btnNextQuote = document.getElementById("btnNextQuote");
+  if (quoteIndex > 0) {
+    quoteIndex--;
+    updateQuoteDisplay();
+  }
+  if (btnPrevQuote) btnPrevQuote.disabled = quoteIndex === 0;
+  if (btnNextQuote) btnNextQuote.disabled = quoteIndex === quoteArray.length - 1;
+}
+
+function showNextQuote() {
+  const btnPrevQuote = document.getElementById("btnPrevQuote");
+  const btnNextQuote = document.getElementById("btnNextQuote");
+  if (quoteIndex < quoteArray.length - 1) {
+    quoteIndex++;
+    updateQuoteDisplay();
+  }
+  if (btnPrevQuote) btnPrevQuote.disabled = quoteIndex === 0;
+  if (btnNextQuote) btnNextQuote.disabled = quoteIndex === quoteArray.length - 1;
 }
 
 function setStorage(obj, cb) {
@@ -409,6 +491,13 @@ function getCurrentDateFormatted() {
   const month = String(today.getMonth() + 1).padStart(2, '0'); // tháng bắt đầu từ 0
   const year = today.getFullYear();
   return `${day}.${month}.${year}`;
+}
+
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
 }
 
 function showChecklistOpenButton() {
