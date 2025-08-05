@@ -143,22 +143,14 @@ function chonNgayDiary() {
     position: "below",
     onChange: function (selectedDates, dateStr, instance) {
       const keyCache = "diary." + dateStr;
-      const el = document.getElementById("btnDiaryDay");
-      let text = el.innerHTML;
-      el.innerHTML = '<span class="spinner"></span>';
-      el.disabled = true;
       getStorage([keyCache], (obj) => {
         if (obj[keyCache]) {
           urlToOpen = obj[keyCache];
           showChecklistOpenButton();
-          el.innerHTML = text;
-          el.disabled = false;
         } else {
           fetchLinkAndStore(dateStr, "diary", () => getStorage([keyCache], (obj2) => {
             urlToOpen = obj2[keyCache];
             showChecklistOpenButton();
-            el.innerHTML = text;
-            el.disabled = false;
           }));
         }
       });
@@ -174,22 +166,14 @@ function chonNgayChecklist() {
     position: "below",
     onChange: function (selectedDates, dateStr, instance) {
       const keyCache = "checklist." + dateStr;
-      const el = document.getElementById("btnChecklistDay");
-      let text = el.innerHTML;
-      el.innerHTML = '<span class="spinner"></span>';
-      el.disabled = true;
       getStorage([keyCache], (obj) => {
         if (obj[keyCache]) {
           urlToOpen = obj[keyCache];
           showChecklistOpenButton();
-          el.innerHTML = text;
-          el.disabled = false;
         } else {
           fetchLinkAndStore(dateStr, "checklist", () => getStorage([keyCache], (obj2) => {
             urlToOpen = obj2[keyCache];
             showChecklistOpenButton();
-            el.innerHTML = text;
-            el.disabled = false;
           }));
         }
       });
@@ -201,18 +185,11 @@ function chonNgayChecklist() {
 function openUrl(type) {
   if (DATA[type].url) {
     window.open(DATA[type].url, '_self');
-  } else {
-    const id = "btn" + type.charAt(0).toUpperCase() + type.slice(1);
-    const el = document.getElementById(id);
-    let text = el.innerHTML;
-    el.innerHTML = '<span class="spinner"></span>';
-    el.disabled = true;
+  } else {    
     const dStr = getCurrentDateFormatted();
     fetchLinkAndStore(dStr, type, () => getStorage([DATA[type].keyCache], (obj) => {
       DATA[type].url = obj[DATA[type].keyCache];
       window.open(DATA[type].url, '_self');
-      el.innerHTML = text;
-      el.disabled = false;
     }));
   }
 }
@@ -273,6 +250,7 @@ function savePass() {
       localStorage.setItem(KEY_PASS, pass);
     }
     alert("Saved!");
+    togglePasswordInput();
   }
 }
 
@@ -283,9 +261,28 @@ function isExtensionEnv() {
 
 function fetchLinkAndStore(dStr, type, callback) {
   const pass = document.getElementById("txtPass").value;
+  if (!pass || pass.length === 0) {
+    togglePasswordInput();
+    return;
+  }
+  const id = "btn" + type.charAt(0).toUpperCase() + type.slice(1);
+  const el = document.getElementById(id);
+  let text = el.innerHTML;
+  el.innerHTML = '<span class="spinner"></span>';
+  el.disabled = true;
   fetch(`${URL_GET_LINK}?key=${pass}&day=${dStr}&type=${type}`)
-    .then(r => r.ok ? r.json() : Promise.reject("Lỗi khi gọi API"))
+    .then(r => {
+      if (!r.ok) {
+        alert("Lỗi khi gọi API");
+        throw new Error("Lỗi khi gọi API");
+      }
+      return r.json();
+    })
     .then(data => {
+      if (data.error) {
+        alert("Lỗi: " + data.error);
+        return;
+      }
       const url = data[type];
       let keyCache;
       if (type === 'diary' || type === 'checklist') {
@@ -297,7 +294,12 @@ function fetchLinkAndStore(dStr, type, callback) {
       }
       setStorage({ [keyCache]: url }, callback);
     })
-    .catch(console.error);
+    .catch(console.error)
+    .finally(() => {
+      el.innerHTML = text;
+      el.disabled = false;      
+    });
+    ;
 }
 
 
