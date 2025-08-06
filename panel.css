@@ -41,14 +41,14 @@
 #progressbar {
   transition: width 0.5s linear, background 0.3s;
   color: #222;
-  background: #2196f3;
+  background: #e0e0e0;
 }
 
 #progressbar.short-rest {
-  background: #43a047;
+  background: #e0e0e0;
 }
 #progressbar.long-rest {
-  background: #ffc107;
+  background: #e0e0e0;
   color: #333;
 }
 #progressbar.bg-gray {
@@ -73,4 +73,11 @@
   #motivation-text {
     font-size: 1rem;
   }
+}
+
+
+#iframeYoutube {
+  height: 45px !important;
+  min-height: 45px;
+  max-height: 45px;
 }
