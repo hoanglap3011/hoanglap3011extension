@@ -148,7 +148,7 @@ function chonNgayDiary() {
           urlToOpen = obj[keyCache];
           showChecklistOpenButton();
         } else {
-          fetchLinkAndStore(dateStr, "diary", () => getStorage([keyCache], (obj2) => {
+          fetchLinkAndStore(dateStr, "chonNgayDiary", () => getStorage([keyCache], (obj2) => {
             urlToOpen = obj2[keyCache];
             showChecklistOpenButton();
           }));
@@ -171,7 +171,7 @@ function chonNgayChecklist() {
           urlToOpen = obj[keyCache];
           showChecklistOpenButton();
         } else {
-          fetchLinkAndStore(dateStr, "checklist", () => getStorage([keyCache], (obj2) => {
+          fetchLinkAndStore(dateStr, "chonNgayChecklist", () => getStorage([keyCache], (obj2) => {
             urlToOpen = obj2[keyCache];
             showChecklistOpenButton();
           }));
@@ -259,17 +259,29 @@ function isExtensionEnv() {
   return typeof chrome !== "undefined" && chrome.storage && chrome.storage.local;
 }
 
-function fetchLinkAndStore(dStr, type, callback) {
+function fetchLinkAndStore(dStr, typeInput, callback) {
   const pass = document.getElementById("txtPass").value;
   if (!pass || pass.length === 0) {
     togglePasswordInput();
     return;
   }
-  const id = "btn" + type.charAt(0).toUpperCase() + type.slice(1);
+  let id;
+  let type = typeInput;
+  if (type == 'chonNgayDiary') {
+    type = 'diary';
+    id = "btnDiaryDay";
+  } else if (type === 'chonNgayChecklist') {
+    type = 'checklist';
+    id = "btnChecklistDay";
+  } else {
+    type = typeInput;
+    id = "btn" + type.charAt(0).toUpperCase() + type.slice(1);
+  }
   const el = document.getElementById(id);
   let text = el.innerHTML;
   el.innerHTML = '<span class="spinner"></span>';
   el.disabled = true;
+
   fetch(`${URL_GET_LINK}?key=${pass}&day=${dStr}&type=${type}`)
     .then(r => {
       if (!r.ok) {
