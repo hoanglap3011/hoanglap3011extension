@@ -207,4 +207,80 @@ document.addEventListener('DOMContentLoaded', () => {
   if ('Notification' in window && Notification.permission !== 'granted') {
     Notification.requestPermission();
   }
+  generateNoteIframe();
 });
+
+function generateNoteIframe() {
+  const iframe = document.getElementById('iframeNote')
+  const keyNote = getKeyNote();
+  getStorage([keyNote], (obj) => {
+      const url = obj[keyNote];
+      if (!url) {
+        alert('Chưa có note');
+        return;
+      }
+      iframe.src = url;
+    }
+  );
+  
+
+}
+
+function getKeyNote() {
+  const dStr = getCurrentDateFormatted();
+  const infoWeek = getInfoWeek(dStr);
+  const week = infoWeek.week;
+  return `note.week.${week}`;
+}
+
+function getCurrentDateFormatted() {
+  const today = new Date();
+  const day = String(today.getDate()).padStart(2, '0');
+  const month = String(today.getMonth() + 1).padStart(2, '0'); // tháng bắt đầu từ 0
+  const year = today.getFullYear();
+  return `${day}.${month}.${year}`;
+}
+
+function getInfoWeek(dateStr) {
+  const [day, month, year] = dateStr.split('.').map(Number);
+  const inputDate = new Date(year, month - 1, day);
+  const dayOfWeek = (inputDate.getDay() + 6) % 7; // 0 = Monday
+  const monday = new Date(inputDate);
+  monday.setDate(inputDate.getDate() - dayOfWeek);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const tempDate = new Date(monday);
+  tempDate.setDate(tempDate.getDate() + 3); // Thursday
+  const weekYear = tempDate.getFullYear();
+  const firstThursday = new Date(weekYear, 0, 4);
+  const firstThursdayDay = (firstThursday.getDay() + 6) % 7;
+  firstThursday.setDate(firstThursday.getDate() - firstThursdayDay + 3);
+  const diffInDays = (monday - firstThursday) / (1000 * 60 * 60 * 24);
+  const weekNumber = 1 + Math.round(diffInDays / 7);
+  const monthStr = String(sunday.getMonth() + 1).padStart(2, '0');
+  const formatDate = (d) =>
+      String(d.getDate()).padStart(2, '0') + '.' +
+      String(d.getMonth() + 1).padStart(2, '0') + '.' +
+      d.getFullYear();
+  return {
+      week: weekNumber,
+      month: monthStr,
+      startOfWeek: formatDate(monday),
+      endOfWeek: formatDate(sunday),
+      weekYear: weekYear
+  };
+}
+
+function getStorage(keys, cb) {
+  if (isExtensionEnv()) {
+    chrome.storage.local.get(keys, cb);
+  } else {
+    const result = {};
+    keys.forEach(k => result[k] = localStorage.getItem(k));
+    cb(result);
+  }
+}
+
+function isExtensionEnv() {
+  return typeof chrome !== "undefined" && chrome.storage && chrome.storage.local;
+}
