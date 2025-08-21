@@ -12,7 +12,6 @@
     "notifications"
   ],
   "action": {
-    "default_popup": "hello.html",
     "default_icon": "icon.png"
   },
   "icons": {
@@ -47,6 +46,12 @@
         "default": "Ctrl+Shift+L"
       },
       "description": "Mở trang chủ của extension hoanglap3011"
+    },
+    "open_panel": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+K"
+      },
+      "description": "Mở panel"
     }
   }
 }

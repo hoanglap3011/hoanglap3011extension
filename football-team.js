@@ -64,6 +64,8 @@ window.TEAMS = [
   { id: "/m/01w_d6", name: "Dortmund", stadium: "Westfalenstadion, Strobelallee 50, 44139 Dortmund, Đức" },
   { id: "/m/0175rc", name: "Bayern", stadium: "Sân vận động Allianz, Franz-Beckenbauer-Platz 5, 80939 München, Đức" },
   { id: "/m/011v3", name: "Milan", stadium: "Sân vận động Giuseppe Meazza, Piazzale Angelo Moratti, 20151 Milano MI, Ý" },
+  { id: "/m/07ll1k", name: "Al-Nassr", stadium: "Al -Awwal Park, عبدالله آل الشيخ، King Saud University, Riyadh 12372, Ả Rập Xê-út" },
+  { id: "/m/08fbvs", name: "Al-Ahli Saudi", stadium: "King Abdullah Sport City, طريق الأمير طلال بن منصور بن عبدالعزيز، King Abdulaziz International Airport, Jeddah 23737, Ả Rập Xê-út" }
 ];
 
 
