@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hành Trình Chữa Lành: Thấu Hiểu Kẻ Phán Xét Nội Tâm</title>
+    <script nonce="<RANDOM_NONCE>" src="https://cdn.tailwindcss.com"></script>
+    <script nonce="<RANDOM_NONCE>" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Harmony -->
+    <!-- Application Structure Plan: Tôi đã thiết kế ứng dụng theo một cấu trúc hành trình gồm 3 giai đoạn chính: Khám Phá, Thực Hành, và Xây Dựng. Cấu trúc này không sao chép y hệt báo cáo mà tổ chức lại thông tin theo một luồng logic, hướng người dùng từ việc nhận thức vấn đề (Khám Phá), đến học các giải pháp (Thực Hành), và cuối cùng là tích hợp chúng vào cuộc sống (Xây Dựng). Các tương tác như sơ đồ, biểu đồ, accordion và tab được chọn để chia nhỏ thông tin phức tạp, tăng sự tương tác và giúp người dùng dễ dàng tiếp thu và ghi nhớ hơn. -->
+    <!-- Visualization & Content Choices: Hệ sinh thái độc hại -> Sơ đồ HTML/CSS -> Click để xem chi tiết -> Trực quan hóa mối quan hệ. Thiên kiến tiêu cực -> Biểu đồ cột Chart.js -> So sánh trực quan -> Làm nổi bật sự chênh lệch. Lỗi tư duy -> Accordion -> Tổ chức thông tin -> Tránh quá tải. Các liệu pháp -> Giao diện Tab -> Phân loại rõ ràng -> Dễ điều hướng. Hexaflex của ACT -> Sơ đồ Lục giác HTML/CSS -> Hover để xem -> Trình bày sáng tạo, dễ nhớ. Tất cả đều nhằm mục đích biến nội dung học thuật thành trải nghiệm tương tác, dễ hiểu. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: #FDFBF5;
+            color: #4A4A4A;
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #8D6E63;
+            border-bottom-color: #8D6E63;
+        }
+        .tab-btn.active {
+            background-color: #D7CCC8;
+            color: #4E342E;
+            font-weight: 500;
+        }
+        .accordion-header {
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .accordion-header:hover {
+            background-color: #EFEBE9;
+        }
+        .accordion-content {
+            display: none;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-[#FDFBF5]/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="text-xl font-bold text-[#6D4C41]">Hành Trình Chữa Lành</div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#kham-pha" class="nav-link active pb-1">Khám Phá</a>
+                    <a href="#thuc-hanh" class="nav-link pb-1">Thực Hành</a>
+                    <a href="#xay-dung" class="nav-link pb-1">Xây Dựng</a>
+                </div>
+                <div class="md:hidden">
+                    <button id="menu-btn" class="text-[#6D4C41] focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                    </button>
+                </div>
+            </div>
+            <div id="mobile-menu" class="hidden md:hidden mt-4 flex flex-col space-y-2">
+                 <a href="#kham-pha" class="nav-link text-center py-2">Khám Phá</a>
+                 <a href="#thuc-hanh" class="nav-link text-center py-2">Thực Hành</a>
+                 <a href="#xay-dung" class="nav-link text-center py-2">Xây Dựng</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-6 py-12">
+        
+        <section id="hero" class="text-center mb-20">
+            <h1 class="text-4xl md:text-5xl font-bold text-[#4E342E] mb-4">Hành Trình Về Với Chính Mình</h1>
+            <p class="text-lg md:text-xl max-w-3xl mx-auto text-gray-600">Thấu hiểu, chuyển hóa "Kẻ Phán Xét" bên trong và kiến tạo lòng tự trọng bền vững.</p>
+        </section>
+
+        <!-- Giai đoạn 1: Khám Phá -->
+        <section id="kham-pha" class="mb-24 scroll-mt-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-[#6D4C41]">Giai Đoạn 1: Khám Phá</h2>
+                <p class="mt-2 text-lg text-gray-600">Giải mã "Kẻ Phán Xét" nội tâm và hiểu rõ nguồn gốc của sự tự phê bình.</p>
+            </div>
+
+            <div class="bg-white p-8 rounded-xl shadow-lg mb-12">
+                <h3 class="text-2xl font-semibold text-center mb-6 text-[#4E342E]">Hệ Sinh Thái Của Sự Tự Đánh Giá Thấp</h3>
+                <p class="text-center mb-8 text-gray-600">Tiếng nói chỉ trích không tồn tại đơn lẻ. Nó là trung tâm của một hệ thống độc hại, nơi các vấn đề tâm lý củng cố lẫn nhau. Hãy nhấn vào từng yếu tố để tìm hiểu thêm.</p>
+                <div id="ecosystem-diagram" class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+                    <div id="ecosystem-info" class="md:col-span-1 p-6 bg-[#F5F5F5] rounded-lg min-h-[150px] flex items-center justify-center text-center">
+                        <p class="text-gray-700">Chọn một yếu tố để xem mô tả.</p>
+                    </div>
+                    <div class="md:col-span-2 grid grid-cols-2 gap-4 text-center">
+                        <div class="col-span-2">
+                            <button data-info="Tiếng nói chỉ trích là giọng nói trong đầu liên tục phán xét và hạ thấp giá trị của bạn, cho rằng bạn không đủ năng lực, sai lầm hoặc vô giá trị." class="ecosystem-btn w-full p-4 bg-[#A1887F] text-white rounded-lg shadow hover:bg-[#8D6E63] transition">Kẻ Phán Xét Nội Tâm</button>
+                        </div>
+                        <button data-info="Là cách bạn nhìn nhận về bản thân. Kẻ phán xét bào mòn lòng tự trọng bằng cách gieo rắc cảm giác xấu hổ và thiếu sót." class="ecosystem-btn p-4 bg-white border border-[#D7CCC8] rounded-lg shadow-sm hover:bg-[#EFEBE9] transition">Lòng tự trọng thấp</button>
+                        <button data-info="Là nỗ lực phấn đấu cho sự hoàn mỹ không tì vết. Kẻ phán xét đặt ra những tiêu chuẩn phi thực tế và tấn công bạn khi thất bại." class="ecosystem-btn p-4 bg-white border border-[#D7CCC8] rounded-lg shadow-sm hover:bg-[#EFEBE9] transition">Chủ nghĩa hoàn hảo</button>
+                        <div class="col-span-2">
+                            <button data-info="Là cảm giác không thể nội tâm hóa thành công và sợ bị 'vạch mặt' là kẻ lừa đảo. Kẻ phán xét thì thầm rằng thành công của bạn chỉ là may mắn." class="ecosystem-btn w-full p-4 bg-white border border-[#D7CCC8] rounded-lg shadow-sm hover:bg-[#EFEBE9] transition">Hội chứng Kẻ mạo danh</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-8 rounded-xl shadow-lg mb-12">
+                <h3 class="text-2xl font-semibold text-center mb-2 text-[#4E342E]">Thiên Kiến Tiêu Cực Của Não Bộ</h3>
+                <p class="text-center mb-8 max-w-2xl mx-auto text-gray-600">Não bộ chúng ta được lập trình để chú ý và ghi nhớ các trải nghiệm tiêu cực mạnh mẽ hơn nhiều so với trải nghiệm tích cực. Đây là một cơ chế sinh tồn từ thời tổ tiên, nhưng trong thế giới hiện đại, nó tạo ra sân khấu hoàn hảo cho tiếng nói chỉ trích.</p>
+                <div class="chart-container">
+                    <canvas id="negativityBiasChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-8 rounded-xl shadow-lg">
+                <h3 class="text-2xl font-semibold text-center mb-6 text-[#4E342E]">Các Lỗi Tư Duy Phổ Biến</h3>
+                <p class="text-center mb-8 max-w-2xl mx-auto text-gray-600">Đây là những "lỗi phần mềm" độc hại cung cấp nhiên liệu cho kẻ phán xét. Hãy nhận diện chúng để bắt đầu thay đổi.</p>
+                <div id="accordion-container" class="space-y-2">
+                    <!-- Accordion items will be generated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Giai đoạn 2: Thực Hành -->
+        <section id="thuc-hanh" class="mb-24 scroll-mt-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-[#6D4C41]">Giai Đoạn 2: Thực Hành</h2>
+                <p class="mt-2 text-lg text-gray-600">Trang bị bộ công cụ chuyển hóa mạnh mẽ từ các liệu pháp tâm lý hàng đầu.</p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <div class="mb-6 border-b border-gray-200">
+                    <nav class="flex flex-wrap -mb-px" id="tabs-nav">
+                        <button class="tab-btn active text-gray-600 py-4 px-6 block hover:text-gray-800 focus:outline-none rounded-t-lg" data-tab="mindfulness">Chánh Niệm</button>
+                        <button class="tab-btn text-gray-600 py-4 px-6 block hover:text-gray-800 focus:outline-none rounded-t-lg" data-tab="cbt">Liệu pháp CBT</button>
+                        <button class="tab-btn text-gray-600 py-4 px-6 block hover:text-gray-800 focus:outline-none rounded-t-lg" data-tab="cft">Lòng Tự Trắc Ẩn</button>
+                        <button class="tab-btn text-gray-600 py-4 px-6 block hover:text-gray-800 focus:outline-none rounded-t-lg" data-tab="act">Liệu pháp ACT</button>
+                    </nav>
+                </div>
+
+                <div id="tabs-content">
+                    <!-- Tab content will be generated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Giai đoạn 3: Xây Dựng -->
+        <section id="xay-dung" class="mb-16 scroll-mt-20">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-[#6D4C41]">Giai Đoạn 3: Xây Dựng</h2>
+                <p class="mt-2 text-lg text-gray-600">Biến kiến thức thành thói quen để tạo ra sự thay đổi bền vững.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white p-8 rounded-xl shadow-lg">
+                    <h3 class="text-2xl font-semibold mb-4 text-[#4E342E]">Ghi Nhận Hành Trình</h3>
+                    <p class="mb-6 text-gray-600">Chủ động thu thập bằng chứng về những điều tốt đẹp để chống lại thiên kiến tiêu cực.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold text-lg text-gray-800">📝 Nhật ký Thành tựu</h4>
+                            <p class="text-gray-600">Mỗi tối, hãy viết ra 3-5 điều bạn đã làm tốt trong ngày, dù là nhỏ nhất. Ví dụ: "Giữ bình tĩnh trong một cuộc họp căng thẳng."</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg text-gray-800">💖 Nhật ký Lòng biết ơn</h4>
+                            <p class="text-gray-600">Liệt kê 3-5 điều bạn biết ơn trong ngày. Hãy cụ thể! Ví dụ: "Biết ơn vì đồng nghiệp đã mang cho mình một ly cà phê."</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-8 rounded-xl shadow-lg">
+                    <h3 class="text-2xl font-semibold mb-4 text-[#4E342E]">An Dịu Hệ Thần Kinh</h3>
+                    <p class="mb-6 text-gray-600">Sự tự chỉ trích gây căng thẳng cho cơ thể. Hãy dùng các bài tập này để gửi tín hiệu an toàn đến não bộ.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold text-lg text-gray-800">🧘 Kỹ thuật 5-4-3-2-1</h4>
+                            <p class="text-gray-600">Gọi tên 5 thứ bạn thấy, 4 thứ cảm nhận, 3 thứ nghe, 2 thứ ngửi, và 1 thứ nếm để quay về hiện tại.</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-lg text-gray-800">🦋 Cái ôm Bươm bướm</h4>
+                            <p class="text-gray-600">Bắt chéo tay lên ngực và vỗ nhẹ xen kẽ hai bên để tự xoa dịu.</p>
+                        </div>
+                         <div>
+                            <h4 class="font-semibold text-lg text-gray-800">🔳 Thở Hộp (Box Breathing)</h4>
+                            <p class="text-gray-600">Hít vào (4s) - Giữ (4s) - Thở ra (4s) - Giữ (4s). Lặp lại.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-[#D7CCC8] text-center py-8">
+        <div class="container mx-auto px-6">
+            <p class="text-[#4E342E] font-semibold text-lg">Bạn vốn dĩ đã giá trị, chỉ đơn giản vì bạn tồn tại.</p>
+            <p class="text-[#6D4C41] mt-2">Hãy bước đi với sự kiên nhẫn, lòng dũng cảm và lòng tốt dành cho chính mình.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            const accordionData = [
+                { title: 'Tư duy "Tất cả hoặc không có gì"', content: 'Nhìn nhận mọi thứ ở hai thái cực: hoàn hảo hoặc thất bại. <strong>Ví dụ:</strong> "Mình chỉ được 9 điểm, không phải 10. Mình đúng là một kẻ thất bại."' },
+                { title: 'Khái quát hóa quá mức', content: 'Lấy một sự kiện tiêu cực đơn lẻ và biến nó thành quy luật bất biến. <strong>Ví dụ:</strong> "Mình đã nói vấp trong buổi họp. Mình <em>luôn luôn</em> làm hỏng mọi thứ."' },
+                { title: 'Bộ lọc tâm trí', content: 'Chỉ tập trung vào một chi tiết tiêu cực và bỏ qua mọi khía cạnh tích cực. <strong>Ví dụ:</strong> "Trong buổi tiệc, có một người không nói chuyện với mình. Chắc chắn không ai ưa mình cả."' },
+                { title: 'Vô hiệu hóa điều tích cực', content: 'Gạt bỏ những trải nghiệm tích cực và cho rằng chúng "không đáng kể". <strong>Ví dụ:</strong> "Sếp khen dự án của mình à? Chắc do sếp đang có tâm trạng tốt thôi."' },
+                { title: 'Kết luận vội vàng', content: 'Đưa ra kết luận tiêu cực mà không có bằng chứng, bao gồm "đọc suy nghĩ" và "dự đoán tương lai". <strong>Ví dụ:</strong> "Anh ấy không trả lời tin nhắn ngay. Chắc anh ấy đang chán mình rồi."' },
+                { title: 'Phóng đại và Thu nhỏ', content: 'Thổi phồng sai lầm của bản thân và xem nhẹ điểm mạnh của mình. <strong>Ví dụ:</strong> "Lỗi chính tả nhỏ này thật là thảm họa." (Phóng đại).' },
+                { title: 'Dán nhãn', content: 'Dán một cái nhãn tiêu cực lên toàn bộ con người mình sau một sai lầm. <strong>Ví dụ:</strong> "Mình đã quên sinh nhật bạn. Mình là một người bạn tồi tệ."' }
+            ];
+
+            const tabsData = {
+                mindfulness: {
+                    title: 'Chánh Niệm: Nền Tảng Của Sự Thay Đổi',
+                    content: `
+                        <p class="mb-6 text-gray-600">Chánh niệm là sự chú tâm có chủ đích vào khoảnh khắc hiện tại, với thái độ không phán xét. Nó giúp tạo ra một "không gian" giữa bạn và suy nghĩ chỉ trích, làm giảm sức mạnh của chúng.</p>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="bg-[#F5F5F5] p-4 rounded-lg">
+                                <h4 class="font-semibold text-lg mb-2">🌬️ Bài tập thở (1-3 phút)</h4>
+                                <p>Ngồi thoải mái, nhắm mắt. Đưa sự chú ý vào cảm giác của hơi thở khi nó đi vào và đi ra. Khi tâm trí lang thang, nhẹ nhàng đưa nó trở lại với hơi thở.</p>
+                            </div>
+                            <div class="bg-[#F5F5F5] p-4 rounded-lg">
+                                <h4 class="font-semibold text-lg mb-2">🧘 Quét cơ thể (5-10 phút)</h4>
+                                <p>Nằm ngửa, từ từ di chuyển sự chú ý qua từng bộ phận của cơ thể, từ ngón chân lên đến đỉnh đầu, chỉ đơn giản là nhận biết cảm giác mà không phán xét.</p>
+                            </div>
+                        </div>
+                    `
+                },
+                cbt: {
+                    title: 'Liệu pháp CBT: Tái Lập Trình Tư Duy',
+                    content: `
+                        <p class="mb-6 text-gray-600">CBT giúp bạn xác định, thách thức và thay đổi những suy nghĩ tự động tiêu cực. Hãy thực hành quy trình 4 bước Tái cấu trúc Nhận thức.</p>
+                        <div class="border border-gray-200 rounded-lg p-6 space-y-4">
+                            <div><strong>Bước 1: Nhận diện</strong><p>Tình huống: Gửi email bị lỗi chính tả. Suy nghĩ tự động: "Mình thật cẩu thả và thiếu chuyên nghiệp."</p></div>
+                            <div><strong>Bước 2: Thách thức</strong><p>Hỏi bản thân: "Có bằng chứng nào 100% cho thấy suy nghĩ này là đúng? Một lỗi nhỏ có thực sự định nghĩa toàn bộ con người mình không?"</p></div>
+                            <div><strong>Bước 3: Tái cấu trúc</strong><p>Suy nghĩ thay thế: "Mình đã mắc một lỗi nhỏ. Điều này thật đáng tiếc, nhưng nó không định nghĩa năng lực của mình. Mình sẽ cẩn thận hơn lần sau."</p></div>
+                            <div><strong>Bước 4: Hành động</strong><p>Hành động: Gửi một email đính chính ngắn gọn (nếu cần) và tập trung vào công việc tiếp theo.</p></div>
+                        </div>
+                    `
+                },
+                cft: {
+                    title: 'Lòng Tự Trắc Ẩn: Liều Thuốc Chữa Lành Từ Bên Trong',
+                    content: `
+                        <p class="mb-6 text-gray-600">Đối xử với bản thân bằng sự tử tế và thấu hiểu khi bạn thất bại, giống như cách bạn đối xử với một người bạn thân. Điều này giúp kích hoạt "Hệ thống An dịu" của não bộ.</p>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="bg-[#F5F5F5] p-4 rounded-lg">
+                                <h4 class="font-semibold text-lg mb-2">💬 Đối thoại nội tâm tử tế</h4>
+                                <p>Khi mắc lỗi, hãy tự hỏi: "Nếu bạn mình ở trong tình huống này, mình sẽ nói gì với họ?". Sau đó, hãy nói những lời tử tế đó với chính mình.</p>
+                            </div>
+                            <div class="bg-[#F5F5F5] p-4 rounded-lg">
+                                <h4 class="font-semibold text-lg mb-2">💌 Viết thư trắc ẩn</h4>
+                                <p>Tưởng tượng một người bạn thông thái và yêu thương vô điều kiện đang viết thư cho bạn về một khuyết điểm bạn hay tự chỉ trích. Lá thư đó sẽ nói gì?</p>
+                            </div>
+                        </div>
+                    `
+                },
+                act: {
+                    title: 'Liệu pháp ACT: Sống Một Cuộc Đời Ý Nghĩa',
+                    content: `
+                        <p class="mb-6 text-gray-600">ACT dạy chúng ta cách thay đổi mối quan hệ với suy nghĩ, "gỡ móc" bản thân khỏi chúng để có thể tự do hành động theo giá trị sống của mình.</p>
+                        <div class="space-y-4">
+                            <p><strong>Quy trình ứng phó với tiếng nói chỉ trích theo ACT:</strong></p>
+                            <ol class="list-decimal list-inside space-y-2 text-gray-700">
+                                <li><strong>Ghi nhận:</strong> "À, giọng nói đó lại xuất hiện rồi."</li>
+                                <li><strong>Chấp nhận:</strong> Hít thở và tạo không gian cho nó, không chống cự.</li>
+                                <li><strong>Gỡ rối:</strong> Nhận ra đó chỉ là những từ ngữ, không phải sự thật. (Ví dụ: hát suy nghĩ đó theo một giai điệu ngớ ngẩn).</li>
+                                <li><strong>Kết nối với Giá trị:</strong> "Điều gì thực sự quan trọng với tôi lúc này?"</li>
+                                <li><strong>Hành động:</strong> Thực hiện một hành động nhỏ theo hướng giá trị của bạn, dù vẫn đang cảm thấy lo lắng.</li>
+                            </ol>
+                        </div>
+                    `
+                }
+            };
+
+            const accordionContainer = document.getElementById('accordion-container');
+            accordionData.forEach((item, index) => {
+                const accordionItem = document.createElement('div');
+                accordionItem.className = 'border border-gray-200 rounded-lg';
+                accordionItem.innerHTML = `
+                    <div class="accordion-header flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                        <h4 class="font-medium text-gray-800">${item.title}</h4>
+                        <span class="transform transition-transform duration-300">▼</span>
+                    </div>
+                    <div class="accordion-content p-4 border-t border-gray-200">
+                        <p class="text-gray-600">${item.content}</p>
+                    </div>
+                `;
+                accordionContainer.appendChild(accordionItem);
+            });
+
+            const accordionHeaders = document.querySelectorAll('.accordion-header');
+            accordionHeaders.forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    const icon = header.querySelector('span');
+                    
+                    if (content.style.maxHeight) {
+                        content.style.maxHeight = null;
+                        content.style.display = 'none';
+                        icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        document.querySelectorAll('.accordion-content').forEach(c => {
+                            c.style.maxHeight = null;
+                            c.style.display = 'none';
+                            c.previousElementSibling.querySelector('span').style.transform = 'rotate(0deg)';
+                        });
+                        content.style.display = 'block';
+                        content.style.maxHeight = content.scrollHeight + "px";
+                        icon.style.transform = 'rotate(180deg)';
+                    }
+                });
+            });
+
+            const tabsNav = document.getElementById('tabs-nav');
+            const tabsContent = document.getElementById('tabs-content');
+
+            function updateTabContent(tabKey) {
+                const tabData = tabsData[tabKey];
+                tabsContent.innerHTML = `
+                    <div class="p-4">
+                        <h3 class="text-2xl font-semibold mb-4 text-[#4E342E]">${tabData.title}</h3>
+                        ${tabData.content}
+                    </div>
+                `;
+            }
+
+            tabsNav.addEventListener('click', (e) => {
+                if (e.target.classList.contains('tab-btn')) {
+                    const tabKey = e.target.getAttribute('data-tab');
+                    tabsNav.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+                    updateTabContent(tabKey);
+                }
+            });
+            
+            updateTabContent('mindfulness');
+
+            const ecosystemBtns = document.querySelectorAll('.ecosystem-btn');
+            const ecosystemInfo = document.getElementById('ecosystem-info');
+            ecosystemBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const infoText = btn.getAttribute('data-info');
+                    ecosystemInfo.innerHTML = `<p class="text-gray-700">${infoText}</p>`;
+                    ecosystemBtns.forEach(b => b.classList.remove('bg-[#A1887F]', 'text-white'));
+                    btn.classList.add('bg-[#A1887F]', 'text-white');
+                });
+            });
+
+            const ctx = document.getElementById('negativityBiasChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Sự kiện Tích cực', 'Sự kiện Tiêu cực'],
+                    datasets: [{
+                        label: 'Tác động lên Trí nhớ và Cảm xúc',
+                        data: [35, 90],
+                        backgroundColor: [
+                            'rgba(161, 136, 127, 0.6)',
+                            'rgba(215, 204, 200, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(161, 136, 127, 1)',
+                            'rgba(215, 204, 200, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Mức độ tác động'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y + ' (ước tính)';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            const menuBtn = document.getElementById('menu-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+            menuBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            const navLinks = document.querySelectorAll('nav a');
+            const sections = document.querySelectorAll('section');
+
+            window.addEventListener('scroll', () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 80) {
+                        current = section.getAttribute('id');
+                    }
+                });
+                
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href').includes(current)) {
+                        link.classList.add('active');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
