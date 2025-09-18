@@ -1,18 +1,29 @@
 // Cấu hình
-const API_URL = 'https://api.example.com/gratitude'; // TODO: Thay đổi URL này
-const CATEGORIES = [
-    { value: 'khac', text: 'Chọn thể loại' },
-    { value: 'dieuDangCo', text: 'Điều đang có' },
-    { value: 'suGiupDo', text: 'Sự giúp đỡ' },
-    { value: 'baiHoc', text: 'Bài học' },
-    { value: 'taoHoa', text: 'Tạo hoá' },
-    { value: 'dieuVoHinh', text: 'Điều vô hình' },
-    { value: 'nvc', text: 'NVC' }
+const API_URL = 'https://script.google.com/macros/s/AKfycbyt7vrcnaO__2rPZ1QJ0VIEQTRexusN_2CKrT1NvA9mKSTs5qBjPD3LlrwF0-SGdcPmAg/exec'; // TODO: Thay đổi URL này
+const CATEGORIES = [    
+    { value: 'Điều đang có', text: 'Điều đang có' },
+    { value: 'Sự giúp đỡ', text: 'Sự giúp đỡ' },
+    { value: 'Bài học', text: 'Bài học' },
+    { value: 'Tạo hoá', text: 'Tạo hoá' },
+    { value: 'Điều vô hình', text: 'Điều vô hình' },
+    { value: 'NVC', text: 'NVC' },
+    { value: 'Khác', text: 'Khác' }
 ];
 
 // State
 let entryCount = 0;
 let quillInstances = [];
+
+// Helper: return a string suitable for <input type="datetime-local"> in the user's local timezone
+function getLocalDatetimeLocalValue(date = new Date()) {
+    const pad = (n) => String(n).padStart(2, '0');
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
 
 // Khởi tạo
 document.addEventListener('DOMContentLoaded', init);
@@ -26,13 +37,16 @@ function init() {
 function addEntry() {
     entryCount++;
     const container = document.getElementById('entries-container');
-    const now = new Date().toISOString().slice(0, 16);
+    const now = getLocalDatetimeLocalValue();
     const displayIndex = container.querySelectorAll('.gratitude-entry').length + 1;
     
     const entryDiv = document.createElement('div');
     entryDiv.className = 'gratitude-entry';
     entryDiv.id = `entry-${entryCount}`;
     
+    const selectedCategoryIndex = (displayIndex - 1) % CATEGORIES.length;
+    const optionsHtml = CATEGORIES.map((cat, idx) => `<option value="${cat.value}" ${idx === selectedCategoryIndex ? 'selected' : ''}>${cat.text}</option>`).join('');
+
     entryDiv.innerHTML = `
     <div class="entry-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
         <div style="display:flex;align-items:center;gap:12px;">
@@ -47,7 +61,7 @@ function addEntry() {
     
     <div class="form-group" style="display:flex;align-items:center;gap:12px;">
         <select id="category-${entryCount}">
-            ${CATEGORIES.map(cat => `<option value="${cat.value}">${cat.text}</option>`).join('')}
+            ${optionsHtml}
         </select>
     </div>
     
@@ -115,6 +129,8 @@ function updateRemoveButtons() {
 }
 
 function collectData() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const keyParam = urlParams.get('key');
     const entries = [];
     document.querySelectorAll('.gratitude-entry').forEach((entry, index) => {
         const entryId = entry.id.split('-')[1];
@@ -136,6 +152,7 @@ function collectData() {
     return {
         tongSoMuc: entries.length,
         thoiGianTao: new Date().toISOString(),
+        key: keyParam,
         duLieu: entries
     };
 }
@@ -153,10 +170,10 @@ function validateData(data) {
 }
 
 async function submitData() {
-    // if (API_URL === 'https://api.example.com/gratitude') {
-    //     showNotification('Vui lòng cấu hình URL API!', 'error');
-    //     return;
-    // }
+    if (API_URL === 'https://api.example.com/gratitude') {
+        showNotification('Vui lòng cấu hình URL API!', 'error');
+        return;
+    }
 
     const data = collectData();
     const error = validateData(data);
@@ -176,11 +193,14 @@ async function submitData() {
             body: JSON.stringify(data)
         });
 
-        if (response.ok) {
-            showNotification('✅ Gửi thành công!', 'success');
+        const result = await response.json();
+        if (result.code === 0) {
+            // Thành công
+            showNotification(result.content, "success");
             clearForm();
         } else {
-            throw new Error(`HTTP ${response.status}`);
+            // Lỗi theo quy ước
+            throw new Error(`${result.error}`);
         }
     } catch (error) {
         showNotification(`❌ Lỗi: ${error.message}`, 'error');
