@@ -1,0 +1,351 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background: linear-gradient(135deg, #fffbe6 0%, #ffe082 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.header {
+    background: linear-gradient(135deg, #ffd700 0%, #ff9800 100%);
+    color: #fff;
+    padding: 30px;
+    text-align: center;
+}
+
+.header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    font-weight: 400;
+    letter-spacing: 1px;
+}
+
+.content {
+    padding: 30px;
+}
+
+.gratitude-entry {
+    background: #fffde7;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 20px;
+    border-left: 5px solid #ffd700;
+    transition: all 0.3s ease;
+}
+
+.gratitude-entry:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(255, 215, 0, 0.13);
+}
+
+.entry-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.entry-number {
+    background: #ffd700;
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1rem;
+    box-shadow: 0 2px 6px rgba(255, 168, 0, 0.15);
+}
+
+.remove-entry {
+    background: #fffde7;
+    color: #e65100;
+    border: 2px solid #e65100;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    font-size: 0.8rem;
+}
+
+.remove-entry:hover {
+    background: #e65100;
+    color: #fffde7;
+    transform: scale(1.1);
+}
+
+.toggle-toolbar {
+    background: #fffde7;
+    color: #1976d2;
+    border: 2px solid #1976d2;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    margin-right: 4px;
+}
+
+.toggle-toolbar:hover {
+    background: #1976d2;
+    color: #fffde7;
+    transform: scale(1.1);
+}
+
+.toggle-toolbar:focus,
+.remove-entry:focus {
+    outline: 2px solid #ffd700;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #495057;
+}
+
+input[type="datetime-local"],
+select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ffe082;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+input[type="datetime-local"]:focus,
+select:focus {
+    outline: none;
+    border-color: #ffd700;
+    box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.12);
+}
+
+.editor-container {
+    border: 2px solid #ffe082;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.editor-container:focus-within {
+    border-color: #ffd700;
+    box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.10);
+}
+
+.ql-editor {
+    min-height: 80px;
+    font-size: 1rem;
+}
+
+.buttons-container {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 30px;
+    flex-wrap: wrap;
+}
+
+/* Password row styling (replaces inline styles) */
+.password-row {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 30px;
+}
+
+.password-inner {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.password-input {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    font-size: 1rem;
+    min-width: 220px;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.password-input:focus {
+    outline: none;
+    border-color: #f5576c;
+    box-shadow: 0 0 0 3px rgba(245, 87, 108, 0.08);
+}
+
+/* Make the password area align nicely on small screens */
+@media (max-width: 768px) {
+    .password-row {
+        padding: 12px 20px;
+    }
+
+    .password-input {
+        min-width: 140px;
+    }
+
+    .btn.btn-add {
+        padding: 10px 18px;
+    }
+}
+
+.btn {
+    padding: 12px 30px;
+    border: none;
+    border-radius: 25px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-add {
+    background: linear-gradient(135deg, #ffd700 0%, #ff9800 100%);
+    color: white;
+}
+
+.btn-add:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(255, 168, 0, 0.25);
+}
+
+.btn-submit {
+    background: linear-gradient(135deg, #1976d2 0%, #64b5f6 100%);
+    color: white;
+}
+
+.btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(25, 118, 210, 0.18);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    border-radius: 10px;
+    color: white;
+    font-weight: 600;
+    z-index: 1000;
+    transform: translateX(400px);
+    transition: all 0.3s ease;
+}
+
+.notification.success {
+    background: #ffd700;
+    color: #333;
+}
+
+.notification.error {
+    background: #e65100;
+    color: #fff;
+}
+
+.notification.show {
+    transform: translateX(0);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    .header {
+        padding: 20px;
+    }
+
+    .header h1 {
+        font-size: 2rem;
+    }
+
+    .content {
+        padding: 20px;
+    }
+
+    .gratitude-entry {
+        padding: 20px;
+    }
+
+    .buttons-container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .btn {
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        transform: translateY(-100px);
+    }
+
+    .notification.show {
+        transform: translateY(0);
+    }
+
+    .ql-editor {
+        min-height: 70px;
+    }
+}
+
+@media (max-width: 480px) {
+    .header h1 {
+        font-size: 1.5rem;
+    }
+
+    .gratitude-entry {
+        padding: 15px;
+    }
+}
+
+.editor-container .ql-editor {
+    min-height: 120px; /* hoặc giá trị bạn muốn, ví dụ 150px */
+}
