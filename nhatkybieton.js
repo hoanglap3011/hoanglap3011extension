@@ -32,6 +32,18 @@ function init() {
     addEntry();
     document.getElementById('add-btn').addEventListener('click', addEntry);
     document.getElementById('submit-btn').addEventListener('click', submitData);
+    document.getElementById('btnSavePass').addEventListener('click', savePass);
+    document.getElementById('togglePassBtn').addEventListener('click', togglePasswordInput);
+    // lấy dữ liệu từ storage hiển thị lên input
+    showPass();
+    // mặc định ẩn input password. nếu chưa có thì show input
+    setTimeout(() => {
+        const pass = document.getElementById("txtPass").value;
+        if (!pass || pass.length === 0) {
+            togglePasswordInput();
+        }
+    }, "1000");
+
 }
 
 function addEntry() {
@@ -129,8 +141,7 @@ function updateRemoveButtons() {
 }
 
 function collectData() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const keyParam = urlParams.get('key');
+    const keyParam = document.getElementById('txtPass').value;
     const entries = [];
     document.querySelectorAll('.gratitude-entry').forEach((entry, index) => {
         const entryId = entry.id.split('-')[1];
@@ -170,11 +181,6 @@ function validateData(data) {
 }
 
 async function submitData() {
-    if (API_URL === 'https://api.example.com/gratitude') {
-        showNotification('Vui lòng cấu hình URL API!', 'error');
-        return;
-    }
-
     const data = collectData();
     const error = validateData(data);
     if (error) {
@@ -228,4 +234,44 @@ function showNotification(message, type) {
         notification.classList.remove('show');
         setTimeout(() => notification.remove(), 300);
     }, 3000);
+}
+
+function savePass() {
+  const pass = document.getElementById('txtPass').value;
+  if (!pass || pass.length === 0) {
+    alert("Nhập pass");
+  } else {
+    if (isExtensionEnv()) {
+      chrome.storage.local.set({ ["KEY"]: pass });
+    } else {
+      localStorage.setItem("KEY", pass);
+    }
+    togglePasswordInput();
+  }
+}
+
+function togglePasswordInput() {
+  const divPassword = document.getElementById('divPassword');
+  divPassword.style.display = (divPassword.style.display === 'none') ? 'block' : 'none';
+  if (divPassword.style.display === 'block') showPass();
+}
+
+function isExtensionEnv() {
+  return typeof chrome !== "undefined" && chrome.storage && chrome.storage.local;
+}
+
+function showPass() {
+  getStorage(["KEY"], result => {
+    document.getElementById("txtPass").value = result["KEY"] || "";
+  });
+}
+
+function getStorage(keys, cb) {
+  if (isExtensionEnv()) {
+    chrome.storage.local.get(keys, cb);
+  } else {
+    const result = {};
+    keys.forEach(k => result[k] = localStorage.getItem(k));
+    cb(result);
+  }
 }

@@ -44,7 +44,7 @@
             font-size: 2.5rem;
             margin-bottom: 10px;
             font-weight: 300;
-        }
+        }     
 
         .content {
             padding: 30px;
@@ -157,6 +157,52 @@
             justify-content: center;
             margin-top: 30px;
             flex-wrap: wrap;
+        }
+
+        /* Password row styling (replaces inline styles) */
+        .password-row {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 12px;
+            padding: 18px 30px;
+        }
+
+        .password-inner {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .password-input {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            font-size: 1rem;
+            min-width: 220px;
+            background: white;
+            transition: all 0.2s ease;
+        }
+
+        .password-input:focus {
+            outline: none;
+            border-color: #f5576c;
+            box-shadow: 0 0 0 3px rgba(245, 87, 108, 0.08);
+        }
+
+        /* Make the password area align nicely on small screens */
+        @media (max-width: 768px) {
+            .password-row {
+                padding: 12px 20px;
+            }
+
+            .password-input {
+                min-width: 140px;
+            }
+
+            .btn.btn-add {
+                padding: 10px 18px;
+            }
         }
 
         .btn {
@@ -284,7 +330,14 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🌸 Nhật Ký Biết Ơn</h1>
+            <h1><span id="togglePassBtn">🌸</span> Nhật Ký Biết Ơn</h1>
+        </div>
+
+        <div class="password-row" id="divPassword" style="display:none;">
+            <div class="password-inner">
+                <input id="txtPass" type="text" placeholder="Nhập password..." class="password-input" aria-label="Nhập password">
+                <button class="btn btn-add" id="btnSavePass">Lưu</button>
+            </div>
         </div>
 
         <div class="content">
