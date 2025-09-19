@@ -12,17 +12,12 @@ const CATEGORIES = [
 
 // State
 let entryCount = 0;
-let quillInstances = [];
+let quillInstances = {};
 
 // Helper: return a string suitable for <input type="datetime-local"> in the user's local timezone
 function getLocalDatetimeLocalValue(date = new Date()) {
     const pad = (n) => String(n).padStart(2, '0');
-    const year = date.getFullYear();
-    const month = pad(date.getMonth() + 1);
-    const day = pad(date.getDate());
-    const hours = pad(date.getHours());
-    const minutes = pad(date.getMinutes());
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 // Khởi tạo
@@ -30,20 +25,18 @@ document.addEventListener('DOMContentLoaded', init);
 
 function init() {
     addEntry();
-    document.getElementById('add-btn').addEventListener('click', addEntry);
-    document.getElementById('submit-btn').addEventListener('click', submitData);
-    document.getElementById('btnSavePass').addEventListener('click', savePass);
-    document.getElementById('togglePassBtn').addEventListener('click', togglePasswordInput);
-    // lấy dữ liệu từ storage hiển thị lên input
+    document.getElementById('add-btn').onclick = addEntry;
+    document.getElementById('submit-btn').onclick = submitData;
+    document.getElementById('btnSavePass').onclick = savePass;
+    document.getElementById('togglePassBtn').onclick = togglePasswordInput;
+    document.getElementById('togglePassBtn').onkeydown = (e) => {
+        if (e.key === 'Enter' || e.key === ' ') togglePasswordInput();
+    };
     showPass();
-    // mặc định ẩn input password. nếu chưa có thì show input
     setTimeout(() => {
         const pass = document.getElementById("txtPass").value;
-        if (!pass || pass.length === 0) {
-            togglePasswordInput();
-        }
-    }, "1000");
-
+        if (!pass) togglePasswordInput();
+    }, 1000);
 }
 
 function addEntry() {
@@ -51,69 +44,70 @@ function addEntry() {
     const container = document.getElementById('entries-container');
     const now = getLocalDatetimeLocalValue();
     const displayIndex = container.querySelectorAll('.gratitude-entry').length + 1;
-    
+    const entryId = entryCount;
+
+    const selectedCategoryIndex = (displayIndex - 1) % CATEGORIES.length;
+    const optionsHtml = CATEGORIES.map((cat, idx) =>
+        `<option value="${cat.value}"${idx === selectedCategoryIndex ? ' selected' : ''}>${cat.text}</option>`
+    ).join('');
+
     const entryDiv = document.createElement('div');
     entryDiv.className = 'gratitude-entry';
-    entryDiv.id = `entry-${entryCount}`;
-    
-    const selectedCategoryIndex = (displayIndex - 1) % CATEGORIES.length;
-    const optionsHtml = CATEGORIES.map((cat, idx) => `<option value="${cat.value}" ${idx === selectedCategoryIndex ? 'selected' : ''}>${cat.text}</option>`).join('');
-
+    entryDiv.id = `entry-${entryId}`;
     entryDiv.innerHTML = `
-    <div class="entry-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <div class="entry-header">
         <div style="display:flex;align-items:center;gap:12px;">
             <div class="entry-number">${displayIndex}</div>
-            <input type="datetime-local" id="time-${entryCount}" value="${now}" style="min-width:200px;">
+            <input type="datetime-local" id="time-${entryId}" value="${now}" style="min-width:200px;">
         </div>
         <div style="margin-left:auto;display:flex;gap:6px;">
-            <button class="toggle-toolbar" data-entry-id="${entryCount}">▤</button>
-            <button class="remove-entry" data-entry-id="${entryCount}">❌</button>
+            <button class="toggle-toolbar" data-entry-id="${entryId}" type="button" aria-label="Hiện/Ẩn thanh công cụ">▤</button>
+            <button class="remove-entry" data-entry-id="${entryId}" type="button" aria-label="Xóa mục này">X</button>
         </div>
     </div>
-    
     <div class="form-group" style="display:flex;align-items:center;gap:12px;">
-        <select id="category-${entryCount}">
+        <select id="category-${entryId}">
             ${optionsHtml}
         </select>
     </div>
-    
     <div class="form-group">
         <div class="editor-container">
-            <div id="editor-${entryCount}"></div>
+            <div id="editor-${entryId}"></div>
         </div>
     </div>
-`;
-    
+    `;
+
     container.appendChild(entryDiv);
-    
+
+    const toolbarOptions = [
+        ['bold', 'italic', 'underline'],        // toggled buttons
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        [{ 'indent': '-1'}, { 'indent': '+1' }],          // outdent/indent
+        ['clean']                                         // remove formatting button
+        ];
+
+
     // Khởi tạo Quill editor (dùng toolbar mặc định)
-    quillInstances[entryCount] = new Quill(`#editor-${entryCount}`, {
+    quillInstances[entryId] = new Quill(`#editor-${entryId}`, {
         theme: 'snow',
         placeholder: 'Hãy chia sẻ điều bạn biết ơn...',
         modules: {
-            toolbar: true
+            toolbar: toolbarOptions
         }
     });
-    
-    // Attach toggle behavior to toolbar button (hide toolbar by default to save space)
-    const toggleBtn = entryDiv.querySelector('.toggle-toolbar');
+
+    // Ẩn toolbar mặc định
     const toolbar = entryDiv.querySelector('.ql-toolbar');
     if (toolbar) toolbar.style.display = 'none';
-    if (toggleBtn) {
-        toggleBtn.addEventListener('click', () => {
-            const tb = entryDiv.querySelector('.ql-toolbar');
-            if (!tb) return;
-            tb.style.display = (tb.style.display === 'none') ? '' : 'none';
-        });
-    }
-    
-    // Gắn event cho nút xóa
-    const removeBtn = entryDiv.querySelector('.remove-entry');
-    removeBtn.addEventListener('click', (e) => {
-        const id = Number(e.currentTarget.dataset.entryId);
-        removeEntry(id);
-    });
-    
+
+    // Toggle toolbar
+    entryDiv.querySelector('.toggle-toolbar').onclick = () => {
+        if (toolbar) toolbar.style.display = (toolbar.style.display === 'none') ? '' : 'none';
+    };
+
+    // Xóa entry
+    entryDiv.querySelector('.remove-entry').onclick = () => removeEntry(entryId);
+
     updateRemoveButtons();
 }
 
@@ -126,32 +120,28 @@ function removeEntry(entryId) {
 }
 
 function updateEntryNumbers() {
-    const entries = document.querySelectorAll('.gratitude-entry');
-    entries.forEach((entry, index) => {
-        entry.querySelector('.entry-number').textContent = index + 1;
+    document.querySelectorAll('.gratitude-entry').forEach((entry, idx) => {
+        entry.querySelector('.entry-number').textContent = idx + 1;
     });
 }
 
 function updateRemoveButtons() {
     const buttons = document.querySelectorAll('.remove-entry');
     const shouldShow = buttons.length > 1;
-    buttons.forEach(btn => {
-        btn.style.display = shouldShow ? 'flex' : 'none';
-    });
+    buttons.forEach(btn => btn.style.display = shouldShow ? 'flex' : 'none');
 }
 
 function collectData() {
     const keyParam = document.getElementById('txtPass').value;
     const entries = [];
-    document.querySelectorAll('.gratitude-entry').forEach((entry, index) => {
+    document.querySelectorAll('.gratitude-entry').forEach((entry, idx) => {
         const entryId = entry.id.split('-')[1];
         const time = entry.querySelector(`#time-${entryId}`).value;
         const category = entry.querySelector(`#category-${entryId}`).value;
         const quill = quillInstances[entryId];
-        
         if (quill) {
             entries.push({
-                soThuTu: index + 1,
+                soThuTu: idx + 1,
                 thoiGian: time,
                 theLoai: category,
                 noiDungText: quill.getText().trim(),
@@ -159,7 +149,6 @@ function collectData() {
             });
         }
     });
-    
     return {
         tongSoMuc: entries.length,
         thoiGianTao: new Date().toISOString(),
@@ -169,8 +158,7 @@ function collectData() {
 }
 
 function validateData(data) {
-    if (data.duLieu.length === 0) return 'Vui lòng thêm ít nhất một mục!';
-    
+    if (!data.duLieu.length) return 'Vui lòng thêm ít nhất một mục!';
     for (let i = 0; i < data.duLieu.length; i++) {
         const entry = data.duLieu[i];
         if (!entry.thoiGian) return `Vui lòng chọn thời gian cho mục ${i + 1}!`;
@@ -183,10 +171,7 @@ function validateData(data) {
 async function submitData() {
     const data = collectData();
     const error = validateData(data);
-    if (error) {
-        showNotification(error, 'error');
-        return;
-    }
+    if (error) return showNotification(error, 'error');
 
     const btn = document.getElementById('submit-btn');
     btn.disabled = true;
@@ -198,15 +183,12 @@ async function submitData() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-
         const result = await response.json();
         if (result.code === 0) {
-            // Thành công
             showNotification(result.content, "success");
             clearForm();
         } else {
-            // Lỗi theo quy ước
-            throw new Error(`${result.error}`);
+            throw new Error(result.error || 'Lỗi không xác định');
         }
     } catch (error) {
         showNotification(`❌ Lỗi: ${error.message}`, 'error');
@@ -219,7 +201,7 @@ async function submitData() {
 function clearForm() {
     document.getElementById('entries-container').innerHTML = '';
     entryCount = 0;
-    quillInstances = [];
+    quillInstances = {};
     addEntry();
 }
 
@@ -228,7 +210,6 @@ function showNotification(message, type) {
     notification.className = `notification ${type}`;
     notification.textContent = message;
     document.body.appendChild(notification);
-    
     setTimeout(() => notification.classList.add('show'), 100);
     setTimeout(() => {
         notification.classList.remove('show');
@@ -237,41 +218,41 @@ function showNotification(message, type) {
 }
 
 function savePass() {
-  const pass = document.getElementById('txtPass').value;
-  if (!pass || pass.length === 0) {
-    alert("Nhập pass");
-  } else {
+    const pass = document.getElementById('txtPass').value;
+    if (!pass) {
+        alert("Nhập pass");
+        return;
+    }
     if (isExtensionEnv()) {
-      chrome.storage.local.set({ ["KEY"]: pass });
+        chrome.storage.local.set({ KEY: pass });
     } else {
-      localStorage.setItem("KEY", pass);
+        localStorage.setItem("KEY", pass);
     }
     togglePasswordInput();
-  }
 }
 
 function togglePasswordInput() {
-  const divPassword = document.getElementById('divPassword');
-  divPassword.style.display = (divPassword.style.display === 'none') ? 'block' : 'none';
-  if (divPassword.style.display === 'block') showPass();
+    const divPassword = document.getElementById('divPassword');
+    divPassword.style.display = (divPassword.style.display === 'none') ? 'block' : 'none';
+    if (divPassword.style.display === 'block') showPass();
 }
 
 function isExtensionEnv() {
-  return typeof chrome !== "undefined" && chrome.storage && chrome.storage.local;
+    return typeof chrome !== "undefined" && chrome.storage && chrome.storage.local;
 }
 
 function showPass() {
-  getStorage(["KEY"], result => {
-    document.getElementById("txtPass").value = result["KEY"] || "";
-  });
+    getStorage(["KEY"], result => {
+        document.getElementById("txtPass").value = result["KEY"] || "";
+    });
 }
 
 function getStorage(keys, cb) {
-  if (isExtensionEnv()) {
-    chrome.storage.local.get(keys, cb);
-  } else {
-    const result = {};
-    keys.forEach(k => result[k] = localStorage.getItem(k));
-    cb(result);
-  }
+    if (isExtensionEnv()) {
+        chrome.storage.local.get(keys, cb);
+    } else {
+        const result = {};
+        keys.forEach(k => result[k] = localStorage.getItem(k));
+        cb(result);
+    }
 }
