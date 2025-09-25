@@ -1,0 +1,256 @@
+/* Giao diện đơn giản, dễ nhìn */
+body {
+    font-family: Arial, sans-serif;
+    background: #f7f7fa;
+    margin: 0;
+    padding: 0;
+}
+.container {
+    max-width: 700px;
+    margin: 32px auto;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px #0001;
+    padding: 24px 18px 32px 18px;
+}
+.header { display: none; }
+.loai0-row {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+.loai0-row .choices {
+    min-width: 320px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    display: block;
+    margin: 0 auto;
+}
+#loai0Select {
+    min-width: 260px;
+    width: 100%;
+    max-width: 400px;
+}
+.passwordRow {
+    margin-bottom: 18px;
+    display: flex;
+    justify-content: center;
+}
+.passwordInner {
+    display: flex;
+    gap: 8px;
+}
+.passwordInput {
+    padding: 6px 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+.content {
+    margin-top: 10px;
+}
+#entriesContainer {
+    margin-bottom: 18px;
+}
+.vg-entry {
+    background: #f3f6fa;
+    border-radius: 8px;
+    margin-bottom: 18px;
+    padding: 14px 12px 10px 12px;
+    box-shadow: 0 1px 4px #0001;
+    position: relative;
+}
+.vg-entry-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.vg-entry-number {
+    font-weight: bold;
+    color: #3b82f6;
+    font-size: 1.1em;
+}
+.vg-entry-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+}
+.btn, .btnAdd, .btnSubmit, .btnUpdateType {
+    font-size: 1.4em;
+    padding: 12px 22px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-right: 6px;
+    transition: background 0.2s;
+    color: #fff;
+}
+.btnSubmit { background: #22c55e; }
+.btnSubmit:hover { background: #16a34a; }
+.btnAdd { background: #3b82f6; }
+.btnAdd:hover { background: #2563eb; }
+.btnUpdateType { background: #f59e42; }
+.btnUpdateType:hover { background: #ea580c; }
+.btn:last-child, .btnAdd:last-child, .btnSubmit:last-child, .btnUpdateType:last-child {
+    margin-right: 0;
+}
+.remove-entry {
+    background: #ef4444;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+.remove-entry:hover { background: #b91c1c; }
+.toggle-toolbar {
+    background: #fbbf24;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+.toggle-toolbar:hover { background: #d97706; }
+.form-group { margin-bottom: 10px; }
+.choices__inner {
+    border: 1px solid #ccc !important;
+    border-radius: 5px !important;
+    box-sizing: border-box;
+    min-height: 38px;
+    transition: border-color 0.2s;
+}
+.choices__inner:focus, .choices__inner.is-focused {
+    border-color: #3b82f6 !important;
+}
+.choices[data-type*=select-one] .choices__inner {
+    padding-right: 30px;
+}
+.editor-container {
+    min-height: 180px;
+    height: 180px;
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: stretch;
+}
+.ql-toolbar { margin-bottom: 4px; }
+.ql-container {
+    min-height: 140px !important;
+    height: 100% !important;
+    border-radius: 0 0 8px 8px;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+    border-top: 1px solid #ccc !important;
+}
+.buttonsContainer {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    justify-content: center;
+}
+.notification {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #fff;
+    color: #222;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px #0002;
+    padding: 12px 24px;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1000;
+    transition: opacity 0.3s;
+}
+.notification.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+.notification.success { border-left: 5px solid #22c55e; }
+.notification.error { border-left: 5px solid #ef4444; }
+#congratsOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.4s;
+}
+#confettiCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 1;
+}
+.congratsContent {
+    position: relative;
+    z-index: 2;
+    background: #fff;
+    border-radius: 16px;
+    padding: 48px 32px;
+    font-size: 2rem;
+    color: #22c55e;
+    text-align: center;
+    box-shadow: 0 4px 32px #0003;
+    animation: popIn 0.5s;
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes popIn {
+    0% { transform: scale(0.7); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+.switchRow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    gap: 8px;
+}
+.switchLabel {
+    font-size: 1em;
+    color: #333;
+}
+.switchInput {
+    width: 40px;
+    height: 22px;
+    position: relative;
+    appearance: none;
+    background: #d1d5db;
+    outline: none;
+    border-radius: 20px;
+    transition: background 0.2s;
+    cursor: pointer;
+}
+.switchInput:checked { background: #22c55e; }
+.switchInput::before {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: 0.2s;
+}
+.switchInput:checked::before { left: 21px; }
+.emojiBtn {
+    font-size: 2.2em;
+    vertical-align: middle;
+}
+@media (max-width: 600px) {
+    .container { max-width: 99vw; padding: 8px 2vw 16px 2vw; }
+    .editor-container { min-height: 120px; height: 120px; }
+    .ql-container { min-height: 80px !important; }
+    .congratsContent { font-size: 1.2rem; padding: 24px 8px; }
+}

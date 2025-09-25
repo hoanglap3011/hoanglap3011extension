@@ -1,4 +1,4 @@
-const API_URL = 'https://script.google.com/macros/s/AKfycbyF9Dxf-eK3Nze536uWmY1iO4K-mYAHXq8J-NvGZYxbGLpew7UQPn-UCDNUKAZKWsRiVA/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwN-v_NXWNw88-PfJettH7otkHeagha2pDiBToBLcmPauaCR7Sw7nQW-qvonFv5bYZXGw/exec';
 const CATEGORIES = ['Điều đang có', 'Sự giúp đỡ', 'Bài học', 'Tạo hoá', 'Điều vô hình', 'NVC', 'Khác'];
 let entryCount = 0, quillInstances = {};
 
@@ -45,6 +45,10 @@ function addEntry() {
                 ${CATEGORIES.map((c, i) => `<option${i === catIdx ? ' selected' : ''}>${c}</option>`).join('')}
             </select>
         </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:12px;">
+            <input type="checkbox" id="isGuiLai-${entryId}" />
+            <label for="isGuiLai-${entryId}">Gửi lại</label>
+        </div>
         <div class="form-group">
             <div class="editor-container"><div id="editor-${entryId}"></div></div>
         </div>
@@ -87,8 +91,16 @@ function collectData() {
         const id = entry.id.split('-')[1];
         const time = byId(`time-${id}`).value;
         const cat = byId(`category-${id}`).value;
+        const isGuiLai = byId(`isGuiLai-${id}`).checked ? true : false;
         const quill = quillInstances[id];
-        if (quill) duLieu.push({ soThuTu: i + 1, thoiGian: time, theLoai: cat, noiDungText: quill.getText().trim(), noiDungHtml: quill.root.innerHTML });
+        if (quill) duLieu.push({
+            soThuTu: i + 1,
+            thoiGian: time,
+            theLoai: cat,
+            isGuiLai: isGuiLai,
+            noiDungText: quill.getText().trim(),
+            noiDungHtml: quill.root.innerHTML
+        });
     });
     return { tongSoMuc: duLieu.length, thoiGianTao: new Date().toISOString(), key, duLieu };
 }

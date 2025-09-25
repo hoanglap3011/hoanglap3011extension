@@ -140,3 +140,23 @@ chrome.action.onClicked.addListener(async (tab) => {
     console.error("Inject failed:", e);
   }
 });
+
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command === "call_api_and_open_tab") {
+    try {
+      const response = await fetch("https://your-api-endpoint.com/data");
+      const data = await response.json();
+
+      // Giả sử API trả về { "url": "https://example.com" }
+      const targetUrl = data.url;
+
+      if (targetUrl) {
+        chrome.tabs.create({ url: targetUrl });
+      } else {
+        console.error("Không tìm thấy giá trị url trong JSON:", data);
+      }
+    } catch (error) {
+      console.error("Lỗi khi gọi API:", error);
+    }
+  }
+});
