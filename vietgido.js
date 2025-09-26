@@ -110,6 +110,32 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
+
+// --- START: THÊM HÀM MỚI ---
+/**
+ * Dựa vào giá trị được chọn, áp dụng theme (thay đổi class CSS) cho toàn bộ trang.
+ * @param {string | null} selectedValue - Giá trị của combobox (ví dụ: 'Biết Ơn').
+ */
+function applyTheme(selectedValue) {
+    // --- SỬA ĐỔI: Thay đổi mục tiêu từ .container sang document.body ---
+    const target = document.body;
+    if (!target) return;
+
+    // 1. Luôn xóa các class theme cũ trước khi áp dụng theme mới
+    target.classList.remove('theme-biet-on', 'theme-thanh-tuu', 'theme-cam-xuc');
+
+    // 2. Thêm class theme tương ứng nếu có
+    if (selectedValue === 'Biết Ơn') {
+        target.classList.add('theme-biet-on');
+    } else if (selectedValue === 'Thành Tựu') {
+        target.classList.add('theme-thanh-tuu');
+    } else if (selectedValue === 'Cảm Xúc') {
+        target.classList.add('theme-cam-xuc');
+    }
+}
+// --- END: THÊM HÀM MỚI ---
+
+
 // --- Loại (Type) Selection ---
 function initLoai0Select() {
   const select = $('loai0Select');
@@ -136,7 +162,11 @@ function initLoai0Select() {
 
   if (!select.dataset.hasChangeListener) {
     select.addEventListener('change', () => {
-      if (select.value) buildEntriesForSelected(select.value);
+      const selectedValue = select.value;
+      buildEntriesForSelected(selectedValue);
+      
+      // --- SỬA ĐỔI: Gọi hàm applyTheme khi thay đổi ---
+      applyTheme(selectedValue);
     });
     select.dataset.hasChangeListener = 'true';
   }
@@ -146,8 +176,12 @@ function initLoai0Select() {
     if (types.length > 0) {
       populateLoai0SelectFromData(types);
       const firstType = types[0]?.name;
+
       buildEntriesForSelected(firstType || null);
       if(firstType && select.choices) select.choices.setChoiceByValue(firstType);
+      
+      // --- SỬA ĐỔI: Gọi hàm applyTheme khi tải trang xong ---
+      applyTheme(firstType);
       
       $('addBtn').disabled = false;
       $('submitBtn').disabled = false;
