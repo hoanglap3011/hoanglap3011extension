@@ -1,6 +1,6 @@
 // --- Config ---
 const API_URL = 'https://your-api-url.com/submit';
-const API_TYPE_URL = 'https://script.google.com/macros/s/AKfycbwcB77WC_2uoXWhyrma6cwNrXti9E4DkbcsJFbFE7lP9FcdRiLb1knQR0JflURLdSV4/exec';
+const API_TYPE_URL = 'https://script.google.com/macros/s/AKfycbyTicNGnI3QhPNpnePqZb52jPFdgrMOZeu7CGWDYV3DYV_KUA1SwUwf3xOgSsKgQn4v/exec';
 
 let entryCount = 0;
 const quillInstances = new Map();
@@ -455,7 +455,6 @@ async function submitData() {
   try {
     const response = await fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
     if (!response.ok) throw new Error(`Lỗi mạng: ${response.statusText}`);
@@ -555,7 +554,6 @@ async function updateTypesFromAPI(options = {}) {
   try {
     const response = await fetch(API_TYPE_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key })
     });
     if (!response.ok) throw new Error(`Lỗi mạng: ${response.statusText}`);
