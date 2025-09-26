@@ -1,4 +1,4 @@
-const API_URL = 'https://script.google.com/macros/s/AKfycbwN-v_NXWNw88-PfJettH7otkHeagha2pDiBToBLcmPauaCR7Sw7nQW-qvonFv5bYZXGw/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxykUGwn1ndyGFiD59UsEm0Og_XvAd4vBQ89uzFqmX6yGhrAK6P338HoGqClGDWcnbntQ/exec';
 const CATEGORIES = ['Điều đang có', 'Sự giúp đỡ', 'Bài học', 'Tạo hoá', 'Điều vô hình', 'NVC', 'Khác'];
 let entryCount = 0, quillInstances = {};
 
