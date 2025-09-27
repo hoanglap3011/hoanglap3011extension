@@ -17,24 +17,25 @@
                 <button class="btn btnSavePass" id="btnSavePass" type="button">💾</button>
             </div>
         </div>
-        <div class="loai0-row">
-            <select id="loai0Select"></select>
+        <div class="danhMuc-row">
+            <select id="danhMucSelect"></select>
         </div>        
         <div class="content">
             <div id="entriesContainer"></div>
             <div class="buttonsContainer">
                 <button class="btn btnAdd" id="addBtn" type="button"></button>
                 <button class="btn btnSubmit" id="submitBtn" type="button"></button>
-                <button class="btn btnUpdateType" id="updateTypeBtn" type="button"></button>
+                <button class="btn btnUpdateDanhMuc" id="updateDanhMucBtn" type="button"></button>
             </div>
+
             <div class="switchRow">
-                <label class="switchLabel" for="serverSwitch">Tự chọn danh mục</label>
+                <label class="switchLabel" for="autoNextTheLoaiBietOnSwtich">Tự Thêm Thể Loại Biết Ơn</label>
                 <label class="switch">
-                    <input type="checkbox" id="serverSwitch" checked>
+                    <input type="checkbox" id="autoNextTheLoaiBietOnSwtich" checked>
                     <span class="slider"></span>
                 </label>
             </div>
-        </div>
+            </div>
     </div>
     <div id="congratsOverlay" style="display:none;">
         <canvas id="confettiCanvas"></canvas>

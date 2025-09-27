@@ -1,10 +1,12 @@
 // --- Config ---
 const API_URL = 'https://your-api-url.com/submit';
 const API_TYPE_URL = 'https://script.google.com/macros/s/AKfycbyTicNGnI3QhPNpnePqZb52jPFdgrMOZeu7CGWDYV3DYV_KUA1SwUwf3xOgSsKgQn4v/exec';
+const CACHE_KEY_DANH_MUC = 'selectedDanhMuc';
+const CACHE_KEY_AUTO_NEXT = 'autoNextSwitchState';
 
 let entryCount = 0;
 const quillInstances = new Map();
-let currentTypeHeaders = null;
+let currentCategoryHeaders = null;
 
 // --- DOM helpers ---
 const $ = id => document.getElementById(id);
@@ -18,6 +20,59 @@ function setChoicesPlaceholder(selectElement, text) {
         placeholderEl.textContent = text;
     }
 }
+
+// ==========================================================
+// --- CÁC HÀM TRỢ GIÚP (HELPER FUNCTIONS) ---
+// ==========================================================
+
+/**
+ * Tạo một trình soạn thảo Quill hoàn chỉnh, bao gồm cả lớp bọc và mã sửa lỗi focus.
+ * @param {HTMLElement} parentContainer - Element để chứa trình soạn thảo.
+ * @param {object} options - Các tùy chọn cho Quill (VD: placeholder).
+ * @returns {object} - Trả về đối tượng Quill đã được khởi tạo.
+ */
+function createQuillEditor(parentContainer, options = {}) {
+    const wrapper = document.createElement('div');
+    const editorContainer = document.createElement('div');
+    editorContainer.className = 'editor-container';
+    const editorDiv = document.createElement('div');
+    
+    editorContainer.appendChild(editorDiv);
+    wrapper.appendChild(editorContainer);
+    parentContainer.appendChild(wrapper);
+
+    const quillInstance = new Quill(editorDiv, {
+        theme: 'snow',
+        placeholder: options.placeholder || 'Nhập nội dung...',
+        modules: options.modules || { toolbar: [['bold','italic','underline'], [{list:'ordered'},{list:'bullet'}], [{indent:'-1'},{indent:'+1'}], ['clean']] }
+    });
+
+    setupQuillFocusFix(quillInstance, wrapper);
+    
+    return quillInstance;
+}
+
+/**
+ * [PHIÊN BẢN ĐÚNG]
+ * Sửa lỗi focus của Quill bằng logic đơn giản và hiệu quả nhất đã được xác nhận.
+ * @param {object} quillInstance - Đối tượng Quill editor.
+ * @param {HTMLElement} wrapperElement - Phần tử lớp bọc bên ngoài.
+ */
+function setupQuillFocusFix(quillInstance, wrapperElement) {
+    if (!quillInstance || !wrapperElement) return;
+
+    wrapperElement.addEventListener('click', (e) => {
+        // LOGIC ĐÚNG: Nếu mục tiêu click không phải là một dòng chữ (thẻ P),
+        // chúng ta giả định đó là vùng trống và thực hiện focus.
+        if (e.target.tagName !== 'P') {
+            setTimeout(() => {
+                quillInstance.focus();
+                quillInstance.setSelection(quillInstance.getLength(), 0, 'user');
+            }, 0);
+        }
+    });
+}
+
 
 // --- Storage helpers ---
 const isExtensionEnv = () => typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local;
@@ -44,38 +99,41 @@ const setStorage = (obj, cb) => {
 document.addEventListener('DOMContentLoaded', () => {
   setBtnContent('addBtn', '+');
   setBtnContent('submitBtn', '💾');
-  setBtnContent('updateTypeBtn', '🔄');
+  setBtnContent('updateDanhMucBtn', '🔄');
 
   $('addBtn')?.addEventListener('click', addEntry);
   $('submitBtn')?.addEventListener('click', submitData);
   $('btnSavePass')?.addEventListener('click', savePass);
 
-  $('updateTypeBtn')?.addEventListener('click', () => {
-    const select = $('loai0Select');
+  $('updateDanhMucBtn')?.addEventListener('click', () => {
+    const select = $('danhMucSelect');
     const key = $('txtPass')?.value.trim();
 
     if (!key) {
-        updateTypesFromAPI({ force: true });
+        updateCategoriesFromAPI({ force: true });
         return;
     }
     
     setChoicesPlaceholder(select, 'Đang tải...');
     
-    updateTypesFromAPI({ force: true }).then(success => {
-        setChoicesPlaceholder(select, 'Chọn một loại...');
+    updateCategoriesFromAPI({ force: true }).then(success => {
+        setChoicesPlaceholder(select, 'Chọn một danh mục...');
         
         if (success) {
             $('addBtn').disabled = false;
             $('submitBtn').disabled = false;
-            getStorage('loai0', data => {
-                const firstType = data?.loai0?.[0]?.name;
-                if (firstType && select && select.choices) {
-                    select.choices.setChoiceByValue(String(firstType));
+            getStorage('danhMuc', data => {
+                const firstCategory = data?.danhMuc?.[0]?.name;
+                if (firstCategory && select && select.choices) {
+                    select.choices.setChoiceByValue(String(firstCategory));
                 }
-                buildEntriesForSelected(firstType || null);
+                
+                applyTheme(firstCategory || null);
+
+                buildEntriesForSelected(firstCategory || null);
             });
         } else {
-            initLoai0Select();
+            initDanhMucSelect();
         }
     });
   });
@@ -105,26 +163,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // --- START: LOGIC MỚI - LƯU/TẢI TRẠNG THÁI CÔNG TẮC ---
+  const autoNextSwitch = $('autoNextTheLoaiBietOnSwtich');
+  if (autoNextSwitch) {
+    // Tải trạng thái đã lưu khi mở trang
+    getStorage(CACHE_KEY_AUTO_NEXT, data => {
+        if (data[CACHE_KEY_AUTO_NEXT] !== null && typeof data[CACHE_KEY_AUTO_NEXT] !== 'undefined') {
+            autoNextSwitch.checked = data[CACHE_KEY_AUTO_NEXT];
+        }
+    });
+    // Lưu trạng thái khi có thay đổi
+    autoNextSwitch.addEventListener('change', (event) => {
+        setStorage({ [CACHE_KEY_AUTO_NEXT]: event.target.checked });
+    });
+  }
+  // --- END: LOGIC MỚI ---
+
   showPass();
-  initLoai0Select();
+  initDanhMucSelect();
 });
 
 
 
-// --- START: THÊM HÀM MỚI ---
-/**
- * Dựa vào giá trị được chọn, áp dụng theme (thay đổi class CSS) cho toàn bộ trang.
- * @param {string | null} selectedValue - Giá trị của combobox (ví dụ: 'Biết Ơn').
- */
+// --- Theme ---
 function applyTheme(selectedValue) {
-    // --- SỬA ĐỔI: Thay đổi mục tiêu từ .container sang document.body ---
     const target = document.body;
     if (!target) return;
 
-    // 1. Luôn xóa các class theme cũ trước khi áp dụng theme mới
     target.classList.remove('theme-biet-on', 'theme-thanh-tuu', 'theme-cam-xuc');
 
-    // 2. Thêm class theme tương ứng nếu có
     if (selectedValue === 'Biết Ơn') {
         target.classList.add('theme-biet-on');
     } else if (selectedValue === 'Thành Tựu') {
@@ -133,12 +200,11 @@ function applyTheme(selectedValue) {
         target.classList.add('theme-cam-xuc');
     }
 }
-// --- END: THÊM HÀM MỚI ---
 
 
-// --- Loại (Type) Selection ---
-function initLoai0Select() {
-  const select = $('loai0Select');
+// --- Danh Mục (Category) Selection ---
+function initDanhMucSelect() {
+  const select = $('danhMucSelect');
   if (!select) return;
 
   if (window.Choices && !select.choices) {
@@ -146,7 +212,7 @@ function initLoai0Select() {
         removeItemButton: false,
         shouldSort: false,
         placeholder: true,
-        placeholderValue: 'Chọn một loại...',
+        placeholderValue: 'Chọn một danh mục...',
     });
     select.addEventListener('search', function(event) {
         if (event.detail.value && event.detail.value.toLowerCase() === 'showpass') {
@@ -164,31 +230,40 @@ function initLoai0Select() {
     select.addEventListener('change', () => {
       const selectedValue = select.value;
       buildEntriesForSelected(selectedValue);
-      
-      // --- SỬA ĐỔI: Gọi hàm applyTheme khi thay đổi ---
       applyTheme(selectedValue);
+      // --- START: LOGIC MỚI - LƯU DANH MỤC ĐƯỢC CHỌN ---
+      setStorage({ [CACHE_KEY_DANH_MUC]: selectedValue });
+      // --- END: LOGIC MỚI ---
     });
     select.dataset.hasChangeListener = 'true';
   }
 
-  getStorage('loai0', data => {
-    const types = data?.loai0 || [];
-    if (types.length > 0) {
-      populateLoai0SelectFromData(types);
-      const firstType = types[0]?.name;
+  getStorage('danhMuc', data => {
+    const categories = data?.danhMuc || [];
+    if (categories.length > 0) {
+      populateDanhMucSelectFromData(categories);
 
-      buildEntriesForSelected(firstType || null);
-      if(firstType && select.choices) select.choices.setChoiceByValue(firstType);
-      
-      // --- SỬA ĐỔI: Gọi hàm applyTheme khi tải trang xong ---
-      applyTheme(firstType);
+      // --- START: LOGIC MỚI - TẢI DANH MỤC ĐÃ LƯU ---
+      getStorage(CACHE_KEY_DANH_MUC, cache => {
+        const savedDanhMuc = cache[CACHE_KEY_DANH_MUC];
+        const firstCategory = categories[0]?.name;
+        // Ưu tiên danh mục đã lưu, nếu không có thì dùng danh mục đầu tiên trong danh sách
+        const targetDanhMuc = savedDanhMuc && categories.some(c => c.name === savedDanhMuc) ? savedDanhMuc : firstCategory;
+
+        if (targetDanhMuc) {
+            buildEntriesForSelected(targetDanhMuc);
+            if(select.choices) select.choices.setChoiceByValue(targetDanhMuc);
+            applyTheme(targetDanhMuc);
+        }
+      });
+      // --- END: LOGIC MỚI ---
       
       $('addBtn').disabled = false;
       $('submitBtn').disabled = false;
     } else {
       $('entriesContainer').innerHTML = '';
       if (select.choices) {
-        select.choices.setChoices([{ value: '', label: 'Cần cập nhật danh sách loại', disabled: true }], 'value', 'label', true);
+        select.choices.setChoices([{ value: '', label: 'Cần cập nhật danh sách danh mục', disabled: true }], 'value', 'label', true);
       }
       $('addBtn').disabled = true;
       $('submitBtn').disabled = true;
@@ -196,13 +271,13 @@ function initLoai0Select() {
   });
 }
 
-function populateLoai0SelectFromData(dataArray) {
-  const select = $('loai0Select');
+function populateDanhMucSelectFromData(dataArray) {
+  const select = $('danhMucSelect');
   if (!select || !select.choices) return;
 
   const choicesData = (Array.isArray(dataArray) ? dataArray : []).map(item => ({
     value: item?.name || JSON.stringify(item),
-    label: item?.name || "Unnamed Type"
+    label: item?.name || "Unnamed Category"
   }));
   
   select.choices.setChoices(choicesData, 'value', 'label', true);
@@ -216,18 +291,18 @@ function buildEntriesForSelected(name) {
   quillInstances.clear();
 
   if (!name) {
-    currentTypeHeaders = null;
+    currentCategoryHeaders = null;
     addEntry();
     return;
   }
   
-  getStorage('loai0', data => {
-    const types = data?.loai0 || [];
-    const selectedType = types.find(it => it && it.name === name);
-    if (!selectedType) {
-      currentTypeHeaders = null;
+  getStorage('danhMuc', data => {
+    const categories = data?.danhMuc || [];
+    const selectedCategory = categories.find(it => it && it.name === name);
+    if (!selectedCategory) {
+      currentCategoryHeaders = null;
     } else {
-      currentTypeHeaders = (selectedType.header || []).slice().sort((a, b) => (a.index || 0) - (b.index || 0));
+      currentCategoryHeaders = (selectedCategory.header || []).slice().sort((a, b) => (a.index || 0) - (b.index || 0));
     }
     addEntry();
   });
@@ -241,6 +316,7 @@ function _createFieldNode(entryId, header, fieldIndex) {
 
   const controlWrap = document.createElement('div');
   controlWrap.className = 'vg-field-control';
+  fieldWrapper.appendChild(controlWrap);
 
   const listData = header.listData || [];
 
@@ -267,7 +343,6 @@ function _createFieldNode(entryId, header, fieldIndex) {
     switchLabel.appendChild(slider);
     controlWrap.appendChild(switchLabel);
 
-    fieldWrapper.appendChild(controlWrap);
     fieldWrapper.appendChild(labelText);
   } else if (listData.length > 0) {
     const sel = document.createElement('select');
@@ -279,14 +354,11 @@ function _createFieldNode(entryId, header, fieldIndex) {
     sel.appendChild(placeholder);
     listData.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
     controlWrap.appendChild(sel);
-    fieldWrapper.appendChild(controlWrap);
 
-    // SỬA LỖI: Dùng setTimeout để khắc phục race condition
     sel.addEventListener('change', (e) => {
         const currentField = e.target.closest('.vg-field');
         if (!currentField) return;
 
-        // Đẩy hành động focus vào cuối hàng đợi event, sau khi các element khác đã được khởi tạo
         setTimeout(() => {
             let nextField = currentField.nextElementSibling;
             while(nextField && !nextField.classList.contains('vg-field')) {
@@ -312,17 +384,8 @@ function _createFieldNode(entryId, header, fieldIndex) {
       }
     }, 50);
   } else {
-    const editorWrap = document.createElement('div');
-    editorWrap.className = 'editor-container';
-    const editorDiv = document.createElement('div');
-    editorWrap.appendChild(editorDiv);
-    controlWrap.appendChild(editorWrap);
-    fieldWrapper.appendChild(controlWrap);
-    
-    const q = new Quill(editorDiv, {
-      theme: 'snow',
-      placeholder: header.name?.trim() || 'Nhập nội dung...',
-      modules: { toolbar: [['bold','italic','underline'], [{list:'ordered'},{list:'bullet'}], [{indent:'-1'},{indent:'+1'}], ['clean']] }
+    const q = createQuillEditor(controlWrap, {
+        placeholder: header.name?.trim() || 'Nhập nội dung...'
     });
     quillInstances.set(`${entryId}-${fieldIndex}`, q);
   }
@@ -351,27 +414,58 @@ function addEntry() {
   
   const bodyDiv = entryDiv.querySelector('.vg-entry-body');
 
-  if (Array.isArray(currentTypeHeaders) && currentTypeHeaders.length) {
-    currentTypeHeaders.forEach((h, idx) => bodyDiv.appendChild(_createFieldNode(entryCount, h, idx)));
+  if (Array.isArray(currentCategoryHeaders) && currentCategoryHeaders.length) {
+    currentCategoryHeaders.forEach((h, idx) => bodyDiv.appendChild(_createFieldNode(entryCount, h, idx)));
   } else {
-    const editorWrap = document.createElement('div');
-    editorWrap.className = 'editor-container';
-    const editorDiv = document.createElement('div');
-    editorWrap.appendChild(editorDiv);
-    bodyDiv.appendChild(editorWrap);
-    
-    const q = new Quill(editorDiv, {
-      theme: 'snow',
-      placeholder: 'Nhập nội dung...',
-      modules: { toolbar: [['bold','italic','underline'], [{list:'ordered'},{list:'bullet'}], [{indent:'-1'},{indent:'+1'}], ['clean']] }
-    });
+    const q = createQuillEditor(bodyDiv);
     quillInstances.set(String(entryCount), q);
   }
 
   container.appendChild(entryDiv);
   updateEntryNumbers();
-  setTimeout(() => entryDiv.querySelector('.ql-editor')?.focus(), 200);
+  
+  if ($('autoNextTheLoaiBietOnSwtich')?.checked && $('danhMucSelect')?.value === 'Biết Ơn') {
+    const theLoaiHeader = currentCategoryHeaders?.find(h => h.name === 'Thể Loại');
+    const options = theLoaiHeader?.listData;
+
+    if (options && options.length > 0) {
+      const selectElement = entryDiv.querySelector('.vg-field[data-header-name="Thể Loại"] select');
+      
+      if (selectElement) {
+        const numOptions = options.length;
+        const entryIndex = container.children.length;
+        const optionIndexToSelect = (entryIndex - 1) % numOptions;
+        const valueToSelect = options[optionIndexToSelect];
+
+        selectElement.value = valueToSelect;
+        
+        const currentField = selectElement.closest('.vg-field');
+        setTimeout(() => {
+            let nextField = currentField.nextElementSibling;
+            while(nextField && !nextField.classList.contains('vg-field')) {
+                nextField = nextField.nextElementSibling;
+            }
+            if (nextField) {
+                const nextEditor = nextField.querySelector('.ql-editor');
+                if (nextEditor) {
+                    nextEditor.focus();
+                }
+            }
+        }, 100);
+        return;
+      }
+    }
+  }
+
+  // Logic focus mặc định
+  setTimeout(() => {
+    const firstEditor = entryDiv.querySelector('.ql-editor');
+    if (firstEditor) {
+        firstEditor.focus();
+    }
+  }, 200);
 }
+
 
 function updateEntryNumbers() {
   document.querySelectorAll('.vg-entry-number').forEach((num, i) => {
@@ -425,7 +519,15 @@ function collectData() {
     entries.push({ soThuTu: idx + 1, fields });
   });
 
-  return { tongSoMuc: entries.length, thoiGianTao: new Date().toISOString(), key: $('txtPass')?.value, duLieu: entries };
+  const selectedDanhMuc = $('danhMucSelect')?.value;
+
+  return { 
+    tongSoMuc: entries.length, 
+    thoiGianTao: new Date().toISOString(), 
+    key: $('txtPass')?.value,
+    danhMuc: selectedDanhMuc,
+    duLieu: entries 
+  };
 }
 
 function validateData(data) {
@@ -452,6 +554,7 @@ async function submitData() {
   const btn = $('submitBtn');
   if (btn) { btn.disabled = true; btn.innerHTML = '🔄'; }
 
+  console.log('Submitting data:', data);
   try {
     const response = await fetch(API_URL, {
       method: 'POST',
@@ -474,8 +577,8 @@ async function submitData() {
 }
 
 function clearForm() {
-  const selectedType = $('loai0Select')?.value;
-  buildEntriesForSelected(selectedType);
+  const selectedCategory = $('danhMucSelect')?.value;
+  buildEntriesForSelected(selectedCategory);
 }
 
 // --- UI Feedback (Notification, Confetti) ---
@@ -539,10 +642,10 @@ function stopConfetti() {
   if (c) c.getContext('2d')?.clearRect(0, 0, c.width, c.height);
 }
 
-// --- API for Types ---
-async function updateTypesFromAPI(options = {}) {
+// --- API for Categories ---
+async function updateCategoriesFromAPI(options = {}) {
   const { reloadAfter = false } = options;
-  const btn = $('updateTypeBtn');
+  const btn = $('updateDanhMucBtn');
 
   const key = $('txtPass')?.value.trim();
   if (!key) {
@@ -571,9 +674,9 @@ async function updateTypesFromAPI(options = {}) {
       throw new Error('Dữ liệu trả về không phải là một danh sách.');
     }
     
-    setStorage({ loai0: payload }, () => {
-      showNotification('Đã cập nhật danh sách loại!', 'success');
-      populateLoai0SelectFromData(payload);
+    setStorage({ danhMuc: payload }, () => {
+      showNotification('Đã cập nhật danh sách danh mục!', 'success');
+      populateDanhMucSelectFromData(payload);
       if (reloadAfter) setTimeout(() => location.reload(), 400);
     });
     return true;

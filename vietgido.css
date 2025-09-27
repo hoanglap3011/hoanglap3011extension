@@ -6,24 +6,21 @@ body {
     background: #f7f7fa;
     margin: 0;
     padding: 0;
-    /* Chuyển transition về lại đây */
     transition: background 0.5s ease-in-out;
 }
 .container {
     max-width: 700px;
     margin: 32px auto;
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 2px 12px #0001;
+    background: transparent;
+    box-shadow: none;
     padding: 24px 18px 32px 18px;
-    /* Bỏ transition khỏi đây */
 }
 .content {
     margin-top: 10px;
 }
 
 /* =================================== */
-/* --- KHU VỰC PASSWORD & LOẠI --- */
+/* --- KHU VỰC PASSWORD & DANH MỤC --- */
 /* =================================== */
 .passwordRow {
     margin-bottom: 18px;
@@ -38,17 +35,21 @@ body {
     padding: 6px 10px;
     border-radius: 5px;
     border: 1px solid #ccc;
+    /* --- SỬA ĐỔI: Thêm hiệu ứng đổ bóng --- */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
 }
-.loai0-row {
+.danhMuc-row {
     display: flex;
     justify-content: center;
     margin-bottom: 16px;
     min-height: 40px; 
 }
-.loai0-row .choices {
+.danhMuc-row .choices {
     min-width: 320px;
     width: 100%;
     max-width: 100%;
+    /* --- SỬA ĐỔI: Thêm hiệu ứng đổ bóng --- */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* =================================== */
@@ -60,26 +61,33 @@ body {
     margin-bottom: 10px;
     justify-content: center;
 }
-.btn, .btnAdd, .btnSubmit, .btnUpdateType {
+.btn, .btnAdd, .btnSubmit, .btnUpdateDanhMuc {
     font-size: 1.4em;
     font-weight: bold;
     padding: 12px 22px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s; /* Sửa 'background' thành 'all' */
     color: #fff;
+    /* --- SỬA ĐỔI: Thêm hiệu ứng đổ bóng --- */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+.btn:hover:not(:disabled) {
+    transform: translateY(-2px); /* Thêm hiệu ứng nhấc lên khi hover */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 .btn:disabled {
     background-color: #9ca3af;
     cursor: not-allowed;
+    box-shadow: none;
 }
 .btnSubmit { background: #22c55e; }
 .btnSubmit:hover:not(:disabled) { background: #16a34a; }
 .btnAdd { background: #3b82f6; }
 .btnAdd:hover:not(:disabled) { background: #2563eb; }
-.btnUpdateType { background: #f59e42; }
-.btnUpdateType:hover:not(:disabled) { background: #ea580c; }
+.btnUpdateDanhMuc { background: #f59e42; }
+.btnUpdateDanhMuc:hover:not(:disabled) { background: #ea580c; }
 
 
 /* =================================== */
@@ -89,11 +97,14 @@ body {
     margin-bottom: 18px;
 }
 .vg-entry {
-    background: #f3f6fa;
-    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 12px;
     margin-bottom: 18px;
     padding: 14px 12px 10px 12px;
-    box-shadow: 0 1px 4px #0001;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
 }
@@ -119,6 +130,7 @@ body {
     border-radius: 5px;
     padding: 5px 10px;
     cursor: pointer;
+    transition: background 0.2s;
 }
 .remove-entry { background: #ef4444; }
 .remove-entry:hover { background: #b91c1c; }
@@ -180,12 +192,15 @@ body {
     flex-shrink: 0;
     border-radius: 8px 8px 0 0;
     border-bottom: none !important;
+    background-color: #fff;
 }
 .ql-container {
     flex-grow: 1;
     border-radius: 0 0 8px 8px;
     border-top: none !important;
+    background-color: #fff;
 }
+
 .vg-entry.no-toolbar .ql-toolbar { display: none; }
 .vg-entry.no-toolbar .ql-container {
     border-radius: 8px !important;
@@ -227,6 +242,8 @@ body {
     background-color: #d1d5db;
     border-radius: 20px;
     transition: .2s;
+    /* --- SỬA ĐỔI: Thêm hiệu ứng đổ bóng --- */
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 .slider:before {
     position: absolute;
@@ -238,6 +255,8 @@ body {
     background-color: white;
     border-radius: 50%;
     transition: .2s;
+    /* --- SỬA ĐỔI: Thêm hiệu ứng đổ bóng --- */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 input:checked + .slider {
     background-color: #22c55e;
@@ -288,12 +307,6 @@ input:checked + .slider:before {
 /* =================================== */
 /* --- CÁC THEME ĐẶC BIỆT --- */
 /* =================================== */
-
-/* Khi có theme, làm cho container có nền mờ để thấy background toàn trang */
-body[class*="theme-"] .container {
-    background-color: rgba(255, 255, 255, 0.3); 
-    backdrop-filter: blur(4px);
-}
 
 /* --- Theme Biết Ơn (7 lớp emoji) --- */
 body.theme-biet-on {
