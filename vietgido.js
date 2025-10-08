@@ -1,395 +1,465 @@
-// --- Config ---
-const API_URL = 'https://your-api-url.com/submit';
-const API_TYPE_URL = 'https://script.google.com/macros/s/AKfycbyTicNGnI3QhPNpnePqZb52jPFdgrMOZeu7CGWDYV3DYV_KUA1SwUwf3xOgSsKgQn4v/exec';
-const CACHE_KEY_DANH_MUC = 'selectedDanhMuc';
-const CACHE_KEY_AUTO_NEXT = 'autoNextSwitchState';
+// === CONFIG ===
+const API = 'https://script.google.com/macros/s/AKfycbzxkH-kuFG-USCxrvUUbBfnu1f26CI4iP7ZVkVAt2azjHmKh_SNixJsvXDFX3-cC-C6Vg/exec';
+const CACHE_DANH_MUC = 'selectedDanhMuc';
+const CACHE_AUTO_NEXT = 'autoNextSwitchState';
 
+// === STATE ===
 let entryCount = 0;
 const quillInstances = new Map();
-let currentCategoryHeaders = null;
+let currentCategoryConfig = null; // Lưu toàn bộ config của category đang chọn
 
-// --- DOM helpers ---
+// === HELPERS ===
 const $ = id => document.getElementById(id);
-const setBtnContent = (id, text) => { const el = $(id); if (el) el.textContent = text; };
 
-function setChoicesPlaceholder(selectElement, text) {
-    if (!selectElement) return;
-    const choicesContainer = selectElement.closest('.choices');
-    const placeholderEl = choicesContainer?.querySelector('.choices__placeholder');
-    if (placeholderEl) {
-        placeholderEl.textContent = text;
+const storage = {
+  isExtension: () => typeof chrome !== 'undefined' && chrome.storage?.local,
+  
+  get: (keys, cb) => {
+    if (storage.isExtension()) {
+      chrome.storage.local.get(keys, cb);
+    } else {
+      const result = {};
+      (Array.isArray(keys) ? keys : [keys]).forEach(k => 
+        result[k] = JSON.parse(localStorage.getItem(k) || 'null')
+      );
+      cb(result);
     }
-}
-
-// ==========================================================
-// --- CÁC HÀM TRỢ GIÚP (HELPER FUNCTIONS) ---
-// ==========================================================
-
-/**
- * Tạo một trình soạn thảo Quill hoàn chỉnh, bao gồm cả lớp bọc và mã sửa lỗi focus.
- * @param {HTMLElement} parentContainer - Element để chứa trình soạn thảo.
- * @param {object} options - Các tùy chọn cho Quill (VD: placeholder).
- * @returns {object} - Trả về đối tượng Quill đã được khởi tạo.
- */
-function createQuillEditor(parentContainer, options = {}) {
-    const wrapper = document.createElement('div');
-    const editorContainer = document.createElement('div');
-    editorContainer.className = 'editor-container';
-    const editorDiv = document.createElement('div');
-    
-    editorContainer.appendChild(editorDiv);
-    wrapper.appendChild(editorContainer);
-    parentContainer.appendChild(wrapper);
-
-    const quillInstance = new Quill(editorDiv, {
-        theme: 'snow',
-        placeholder: options.placeholder || 'Nhập nội dung...',
-        modules: options.modules || { toolbar: [['bold','italic','underline'], [{list:'ordered'},{list:'bullet'}], [{indent:'-1'},{indent:'+1'}], ['clean']] }
-    });
-
-    setupQuillFocusFix(quillInstance, wrapper);
-    
-    return quillInstance;
-}
-
-/**
- * [PHIÊN BẢN ĐÚNG]
- * Sửa lỗi focus của Quill bằng logic đơn giản và hiệu quả nhất đã được xác nhận.
- * @param {object} quillInstance - Đối tượng Quill editor.
- * @param {HTMLElement} wrapperElement - Phần tử lớp bọc bên ngoài.
- */
-function setupQuillFocusFix(quillInstance, wrapperElement) {
-    if (!quillInstance || !wrapperElement) return;
-
-    wrapperElement.addEventListener('click', (e) => {
-        // LOGIC ĐÚNG: Nếu mục tiêu click không phải là một dòng chữ (thẻ P),
-        // chúng ta giả định đó là vùng trống và thực hiện focus.
-        if (e.target.tagName !== 'P') {
-            setTimeout(() => {
-                quillInstance.focus();
-                quillInstance.setSelection(quillInstance.getLength(), 0, 'user');
-            }, 0);
-        }
-    });
-}
-
-
-// --- Storage helpers ---
-const isExtensionEnv = () => typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local;
-const getStorage = (keys, cb) => {
-  if (isExtensionEnv()) {
-    chrome.storage.local.get(keys, cb);
-  } else {
-    const result = {};
-    (Array.isArray(keys) ? keys : [keys]).forEach(k => result[k] = JSON.parse(localStorage.getItem(k) || 'null'));
-    cb(result);
-  }
-};
-const setStorage = (obj, cb) => {
-  if (isExtensionEnv()) {
-    chrome.storage.local.set(obj, cb);
-  } else {
-    Object.entries(obj).forEach(([k, v]) => localStorage.setItem(k, JSON.stringify(v)));
-    cb && cb();
+  },
+  
+  set: (obj, cb) => {
+    if (storage.isExtension()) {
+      chrome.storage.local.set(obj, cb);
+    } else {
+      Object.entries(obj).forEach(([k, v]) => 
+        localStorage.setItem(k, JSON.stringify(v))
+      );
+      cb?.();
+    }
   }
 };
 
+// === QUILL EDITOR ===
+function createQuillEditor(container, placeholder = 'Nhập nội dung...') {
+  const wrapper = document.createElement('div');
+  const editorDiv = document.createElement('div');
+  editorDiv.className = 'editor-container';
+  
+  wrapper.appendChild(editorDiv);
+  container.appendChild(wrapper);
 
-// --- UI Init & Event Handling ---
-document.addEventListener('DOMContentLoaded', () => {
-  setBtnContent('addBtn', '+');
-  setBtnContent('submitBtn', '💾');
-  setBtnContent('updateDanhMucBtn', '🔄');
-
-  $('addBtn')?.addEventListener('click', addEntry);
-  $('submitBtn')?.addEventListener('click', submitData);
-  $('btnSavePass')?.addEventListener('click', savePass);
-
-  $('updateDanhMucBtn')?.addEventListener('click', () => {
-    const select = $('danhMucSelect');
-    const key = $('txtPass')?.value.trim();
-
-    if (!key) {
-        updateCategoriesFromAPI({ force: true });
-        return;
-    }
-    
-    setChoicesPlaceholder(select, 'Đang tải...');
-    
-    updateCategoriesFromAPI({ force: true }).then(success => {
-        setChoicesPlaceholder(select, 'Chọn một danh mục...');
-        
-        if (success) {
-            $('addBtn').disabled = false;
-            $('submitBtn').disabled = false;
-            getStorage('danhMuc', data => {
-                const firstCategory = data?.danhMuc?.[0]?.name;
-                if (firstCategory && select && select.choices) {
-                    select.choices.setChoiceByValue(String(firstCategory));
-                }
-                
-                applyTheme(firstCategory || null);
-
-                buildEntriesForSelected(firstCategory || null);
-            });
-        } else {
-            initDanhMucSelect();
-        }
-    });
-  });
-
-  document.addEventListener('click', (e) => {
-    const target = e.target;
-    if (!target) return;
-
-    const actionButton = target.closest('button');
-    if (actionButton) {
-        const entryId = actionButton.dataset.entryId;
-        if (!entryId) return;
-
-        if (actionButton.classList.contains('remove-entry')) {
-            $(`vg-entry-${entryId}`)?.remove();
-            Array.from(quillInstances.keys()).forEach(k => {
-                if (k.startsWith(`${entryId}-`) || k === String(entryId)) {
-                    quillInstances.delete(k);
-                }
-            });
-            updateEntryNumbers();
-        }
-
-        if (actionButton.classList.contains('toggle-toolbar')) {
-            $(`vg-entry-${entryId}`)?.classList.toggle('no-toolbar');
-        }
+  const quill = new Quill(editorDiv, {
+    theme: 'snow',
+    placeholder,
+    modules: {
+      toolbar: [
+        ['bold', 'italic', 'underline'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        [{ indent: '-1' }, { indent: '+1' }],
+        ['clean']
+      ]
     }
   });
 
-  // --- START: LOGIC MỚI - LƯU/TẢI TRẠNG THÁI CÔNG TẮC ---
-  const autoNextSwitch = $('autoNextTheLoaiBietOnSwtich');
-  if (autoNextSwitch) {
-    // Tải trạng thái đã lưu khi mở trang
-    getStorage(CACHE_KEY_AUTO_NEXT, data => {
-        if (data[CACHE_KEY_AUTO_NEXT] !== null && typeof data[CACHE_KEY_AUTO_NEXT] !== 'undefined') {
-            autoNextSwitch.checked = data[CACHE_KEY_AUTO_NEXT];
-        }
-    });
-    // Lưu trạng thái khi có thay đổi
-    autoNextSwitch.addEventListener('change', (event) => {
-        setStorage({ [CACHE_KEY_AUTO_NEXT]: event.target.checked });
-    });
-  }
-  // --- END: LOGIC MỚI ---
-
-  showPass();
-  initDanhMucSelect();
-});
-
-
-
-// --- Theme ---
-function applyTheme(selectedValue) {
-    const target = document.body;
-    if (!target) return;
-
-    target.classList.remove('theme-biet-on', 'theme-thanh-tuu', 'theme-cam-xuc');
-
-    if (selectedValue === 'Biết Ơn') {
-        target.classList.add('theme-biet-on');
-    } else if (selectedValue === 'Thành Tựu') {
-        target.classList.add('theme-thanh-tuu');
-    } else if (selectedValue === 'Cảm Xúc') {
-        target.classList.add('theme-cam-xuc');
+  // Fix focus issue
+  wrapper.addEventListener('click', e => {
+    if (e.target.tagName !== 'P') {
+      setTimeout(() => {
+        quill.focus();
+        quill.setSelection(quill.getLength(), 0, 'user');
+      }, 0);
     }
+  });
+
+  return quill;
 }
 
+// === THEME ===
+// NEW: Thêm một thẻ <style> vào <head> để chứa style động
+let dynamicThemeStyle = document.getElementById('dynamic-theme-style');
+if (!dynamicThemeStyle) {
+  dynamicThemeStyle = document.createElement('style');
+  dynamicThemeStyle.id = 'dynamic-theme-style';
+  document.head.appendChild(dynamicThemeStyle);
+}
 
-// --- Danh Mục (Category) Selection ---
+// UPDATED: Thêm logic đặc biệt để tô màu cho emoji trái tim đỏ
+function generateEmojiBackground(emojis) {
+  if (!emojis) return 'none';
+
+  const emojiArray = [...emojis];
+
+  // --- Cấu hình cho tile ---
+  const TILE_SIZE = 400;
+  const EMOJI_COUNT = 8;
+  const MAX_TRIES = 20;
+
+  const placedEmojis = [];
+
+  const isColliding = (rect1, rect2) => {
+    return (
+      rect1.x < rect2.x + rect2.width &&
+      rect1.x + rect1.width > rect2.x &&
+      rect1.y < rect2.y + rect2.height &&
+      rect1.y + rect1.height > rect2.y
+    );
+  };
+
+  for (let i = 0; i < EMOJI_COUNT; i++) {
+    let currentEmoji, tries = 0;
+    
+    while (tries < MAX_TRIES) {
+      const fontSize = Math.floor(Math.random() * 30) + 25;
+      const angle = Math.floor(Math.random() * 70) - 35;
+      const opacity = (Math.random() * 0.4 + 0.3).toFixed(2);
+      
+      const rect = {
+        x: Math.random() * (TILE_SIZE - fontSize),
+        y: Math.random() * (TILE_SIZE - fontSize),
+        width: fontSize + 10,
+        height: fontSize + 10,
+      };
+
+      let hasCollision = false;
+      for (const placed of placedEmojis) {
+        if (isColliding(rect, placed.rect)) {
+          hasCollision = true;
+          break;
+        }
+      }
+
+      if (!hasCollision) {
+        const randomEmoji = emojiArray[Math.floor(Math.random() * emojiArray.length)];
+
+        currentEmoji = {
+          rect: rect,
+          emoji: randomEmoji,
+          x: rect.x + fontSize / 2,
+          y: rect.y + fontSize / 2,
+          fontSize: fontSize,
+          angle: angle,
+          opacity: opacity,
+        };
+        placedEmojis.push(currentEmoji);
+        break;
+      }
+      
+      tries++;
+    }
+  }
+
+  const textElements = placedEmojis
+    .map(p => {
+      // 💡 LOGIC MỚI BẮT ĐẦU TỪ ĐÂY
+      // Kiểm tra xem emoji có phải là trái tim không
+      const isRedHeart = (p.emoji === '❤️' || p.emoji === '❤');
+      // Nếu là trái tim, thêm thuộc tính fill="red". Nếu không, để trống.
+      const fillAttribute = isRedHeart ? 'fill="red"' : '';
+
+      return `<text x="${p.x}" y="${p.y}" font-size="${p.fontSize}" opacity="${p.opacity}" transform="rotate(${p.angle} ${p.x} ${p.y})" text-anchor="middle" dominant-baseline="central" ${fillAttribute}>${p.emoji}</text>`;
+      // 💡 KẾT THÚC LOGIC MỚI
+    })
+    .join('');
+
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${TILE_SIZE}' height='${TILE_SIZE}'>${textElements}</svg>`;
+
+  const encodedSvg = encodeURIComponent(svg)
+    .replace(/'/g, '%27')
+    .replace(/"/g, '%22');
+
+  return `url("data:image/svg+xml,${encodedSvg}")`;
+}
+
+// NEW HELPER: Hàm chuyển đổi mã màu HEX sang RGBA
+function hexToRgba(hex, alpha = 1) {
+  if (!/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
+    return hex; // Trả về màu ban đầu nếu không phải là mã hex hợp lệ
+  }
+
+  let c = hex.substring(1).split('');
+  if (c.length === 3) {
+    c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+  }
+  c = '0x' + c.join('');
+  
+  const r = (c >> 16) & 255;
+  const g = (c >> 8) & 255;
+  const b = c & 255;
+
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// UPDATED: Truyền cả chuỗi emoji vào hàm generateEmojiBackground
+function applyTheme(categoryConfig) {
+  document.body.className = document.body.className.replace(/theme-\S+/g, '');
+
+  if (!categoryConfig) {
+    dynamicThemeStyle.innerHTML = '';
+    return;
+  }
+
+  const baseColor = categoryConfig.color || '#ffffff';
+  // 💡 DÒNG THAY ĐỔI: Lấy cả chuỗi emojis thay vì chỉ ký tự đầu tiên
+  const emojis = categoryConfig.emojis || null;
+
+  const gradientLayer = `linear-gradient(to right, ${baseColor}, ${hexToRgba(baseColor, 0)}, ${baseColor})`;
+  // 💡 DÒNG THAY ĐỔI: Truyền cả chuỗi 'emojis'
+  const emojiLayer = generateEmojiBackground(emojis);
+
+  const finalBackgroundImage = emojiLayer !== 'none' 
+    ? `${emojiLayer}, ${gradientLayer}` 
+    : gradientLayer;
+
+  const cssRule = `
+    body {
+      background-image: ${finalBackgroundImage} !important;
+      background-repeat: repeat, repeat !important;
+      background-color: #f5f5f5 !important;
+    }
+  `;
+  
+  dynamicThemeStyle.innerHTML = cssRule;
+}
+
+// === CATEGORY SELECT ===
 function initDanhMucSelect() {
   const select = $('danhMucSelect');
   if (!select) return;
 
+  // Initialize Choices.js
   if (window.Choices && !select.choices) {
     select.choices = new Choices(select, {
-        removeItemButton: false,
-        shouldSort: false,
-        placeholder: true,
-        placeholderValue: 'Chọn một danh mục...',
+      removeItemButton: false,
+      shouldSort: false,
+      placeholder: true,
+      placeholderValue: 'Chọn một danh mục...'
     });
-    select.addEventListener('search', function(event) {
-        if (event.detail.value && event.detail.value.toLowerCase() === 'showpass') {
-            const divPassword = $('divPassword');
-            if (divPassword && divPassword.style.display === 'none') {
-                togglePasswordInput();
-                $('txtPass')?.focus();
-            }
-            setTimeout(() => select.choices.clearInput(), 50);
-        }
+
+    // Easter egg: type "showpass" to reveal password input
+    select.addEventListener('search', e => {
+      if (e.detail.value?.toLowerCase() === 'showpass') {
+        togglePasswordInput();
+        $('txtPass')?.focus();
+        setTimeout(() => select.choices.clearInput(), 50);
+      }
     });
   }
 
+  // Handle category change
   if (!select.dataset.hasChangeListener) {
     select.addEventListener('change', () => {
-      const selectedValue = select.value;
-      buildEntriesForSelected(selectedValue);
-      applyTheme(selectedValue);
-      // --- START: LOGIC MỚI - LƯU DANH MỤC ĐƯỢC CHỌN ---
-      setStorage({ [CACHE_KEY_DANH_MUC]: selectedValue });
-      // --- END: LOGIC MỚI ---
+      const value = select.value;
+      buildEntriesForSelected(value);
+      storage.get('danhMuc', data => { // MODIFIED: Lấy config để apply theme
+        const categories = data?.danhMuc || [];
+        const category = categories.find(c => c.table === value);
+        applyTheme(category);
+      });
+      storage.set({ [CACHE_DANH_MUC]: value });
     });
     select.dataset.hasChangeListener = 'true';
   }
 
-  getStorage('danhMuc', data => {
+  // Load categories
+  storage.get('danhMuc', data => {
     const categories = data?.danhMuc || [];
+    
     if (categories.length > 0) {
-      populateDanhMucSelectFromData(categories);
+      populateCategories(categories);
+      
+      // Load saved or first category
+      storage.get(CACHE_DANH_MUC, cache => {
+        const saved = cache[CACHE_DANH_MUC];
+        const firstCategory = categories[0];
+        const targetCategory = categories.find(c => c.table === saved) || firstCategory;
 
-      // --- START: LOGIC MỚI - TẢI DANH MỤC ĐÃ LƯU ---
-      getStorage(CACHE_KEY_DANH_MUC, cache => {
-        const savedDanhMuc = cache[CACHE_KEY_DANH_MUC];
-        const firstCategory = categories[0]?.name;
-        // Ưu tiên danh mục đã lưu, nếu không có thì dùng danh mục đầu tiên trong danh sách
-        const targetDanhMuc = savedDanhMuc && categories.some(c => c.name === savedDanhMuc) ? savedDanhMuc : firstCategory;
-
-        if (targetDanhMuc) {
-            buildEntriesForSelected(targetDanhMuc);
-            if(select.choices) select.choices.setChoiceByValue(targetDanhMuc);
-            applyTheme(targetDanhMuc);
+        if (targetCategory) { // MODIFIED: Dùng targetCategory
+          buildEntriesForSelected(targetCategory.table);
+          select.choices?.setChoiceByValue(targetCategory.table);
+          applyTheme(targetCategory); // MODIFIED: Truyền cả object config
         }
       });
-      // --- END: LOGIC MỚI ---
       
       $('addBtn').disabled = false;
       $('submitBtn').disabled = false;
     } else {
       $('entriesContainer').innerHTML = '';
-      if (select.choices) {
-        select.choices.setChoices([{ value: '', label: 'Cần cập nhật danh sách danh mục', disabled: true }], 'value', 'label', true);
-      }
+      select.choices?.setChoices([{
+        value: '',
+        label: 'Cần cập nhật danh sách danh mục',
+        disabled: true
+      }], 'value', 'label', true);
+      
       $('addBtn').disabled = true;
       $('submitBtn').disabled = true;
     }
   });
 }
 
-function populateDanhMucSelectFromData(dataArray) {
+// UPDATED: Sửa lỗi duplicate giá trị khi cập nhật danh mục
+function populateCategories(categories) {
   const select = $('danhMucSelect');
-  if (!select || !select.choices) return;
+  if (!select?.choices) return;
 
-  const choicesData = (Array.isArray(dataArray) ? dataArray : []).map(item => ({
-    value: item?.name || JSON.stringify(item),
-    label: item?.name || "Unnamed Category"
+  // DÒNG THÊM VÀO ĐỂ SỬA LỖI
+  // Dọn dẹp hoàn toàn danh sách lựa chọn và các mục đã chọn trước khi thêm mới
+  select.choices.clearStore();
+
+  const choices = categories.map(c => ({
+    value: c?.table || '',
+    label: c?.table || 'Unnamed Category'
   }));
   
-  select.choices.setChoices(choicesData, 'value', 'label', true);
+  // Tham số cuối `true` (replaceChoices) sẽ xóa các lựa chọn cũ, 
+  // nhưng clearStore() đảm bảo dọn dẹp triệt để hơn.
+  select.choices.setChoices(choices, 'value', 'label', true);
 }
 
-// --- Entry & Field Creation ---
-function buildEntriesForSelected(name) {
+// === ENTRY CREATION ===
+function buildEntriesForSelected(categoryName) {
   const container = $('entriesContainer');
   if (container) container.innerHTML = '';
+  
   entryCount = 0;
   quillInstances.clear();
 
-  if (!name) {
-    currentCategoryHeaders = null;
+  if (!categoryName) {
+    currentCategoryConfig = null;
     addEntry();
     return;
   }
-  
-  getStorage('danhMuc', data => {
+
+  storage.get('danhMuc', data => {
     const categories = data?.danhMuc || [];
-    const selectedCategory = categories.find(it => it && it.name === name);
-    if (!selectedCategory) {
-      currentCategoryHeaders = null;
+    const category = categories.find(c => c?.table === categoryName);
+    
+    if (!category) {
+      currentCategoryConfig = null;
     } else {
-      currentCategoryHeaders = (selectedCategory.header || []).slice().sort((a, b) => (a.index || 0) - (b.index || 0));
+      // Lưu toàn bộ config và sort headers theo stt
+      currentCategoryConfig = {
+        ...category,
+        header: (category.header || []).slice().sort((a, b) => {
+          const sttA = parseInt(a.stt) || 0;
+          const sttB = parseInt(b.stt) || 0;
+          return sttA - sttB;
+        })
+      };
     }
+    
     addEntry();
   });
 }
 
-function _createFieldNode(entryId, header, fieldIndex) {
-  const fieldWrapper = document.createElement('div');
-  fieldWrapper.className = 'vg-field';
-  fieldWrapper.dataset.headerName = header.name || '';
-  fieldWrapper.dataset.headerIndex = header.index || fieldIndex + 1;
+// UPDATED: Sửa đổi hàm createField
+function createField(entryId, headerConfig, fieldIndex) {
+  const field = document.createElement('div');
+  field.className = 'vg-field';
+  field.dataset.headerColumn = headerConfig.column || '';
+  field.dataset.headerStt = headerConfig.stt || fieldIndex + 1;
+  field.dataset.headerType = headerConfig.type || 'text';
+  // NEW: Lưu trạng thái required vào dataset
+  field.dataset.headerRequired = headerConfig.required || false; 
 
-  const controlWrap = document.createElement('div');
-  controlWrap.className = 'vg-field-control';
-  fieldWrapper.appendChild(controlWrap);
+  const control = document.createElement('div');
+  control.className = 'vg-field-control';
+  field.appendChild(control);
 
-  const listData = header.listData || [];
+  const type = headerConfig.type || 'text';
+  const columnName = headerConfig.column || '';
+  const isRequired = headerConfig.required || false;
 
-  if (listData.length === 2 && listData.includes('TRUE') && listData.includes('FALSE')) {
-    fieldWrapper.classList.add('vg-field--switch');
+  // Checkbox/Switch
+  if (type === 'checkbox') {
+    field.classList.add('vg-field--switch');
 
-    const labelText = document.createElement('label');
-    labelText.className = 'vg-field-label';
-    labelText.textContent = header.name || '';
+    const label = document.createElement('label');
+    label.className = 'vg-field-label';
+    label.textContent = columnName;
+
+    // NEW: Thêm dấu * nếu bắt buộc
+    if (isRequired) {
+      const requiredSpan = document.createElement('span');
+      requiredSpan.className = 'required-indicator';
+      requiredSpan.textContent = '*';
+      label.appendChild(requiredSpan);
+    }
     
     const switchLabel = document.createElement('label');
     switchLabel.className = 'switch';
-    
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.id = `checkbox-${entryId}-${fieldIndex}`;
-    
-    labelText.htmlFor = cb.id;
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = `checkbox-${entryId}-${fieldIndex}`;
+    label.htmlFor = checkbox.id;
 
     const slider = document.createElement('span');
     slider.className = 'slider';
 
-    switchLabel.appendChild(cb);
-    switchLabel.appendChild(slider);
-    controlWrap.appendChild(switchLabel);
-
-    fieldWrapper.appendChild(labelText);
-  } else if (listData.length > 0) {
-    const sel = document.createElement('select');
+    switchLabel.append(checkbox, slider);
+    control.appendChild(switchLabel);
+    field.appendChild(label);
+  }
+  // Selectbox
+  else if (type === 'selectbox') {
+    const select = document.createElement('select');
     const placeholder = document.createElement('option');
     placeholder.value = '';
-    placeholder.textContent = header.name || 'Chọn giá trị';
+    // NEW: Thêm dấu * vào placeholder
+    placeholder.textContent = columnName + (isRequired ? ' *' : '');
     placeholder.disabled = true;
     placeholder.selected = true;
-    sel.appendChild(placeholder);
-    listData.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
-    controlWrap.appendChild(sel);
-
-    sel.addEventListener('change', (e) => {
-        const currentField = e.target.closest('.vg-field');
-        if (!currentField) return;
-
-        setTimeout(() => {
-            let nextField = currentField.nextElementSibling;
-            while(nextField && !nextField.classList.contains('vg-field')) {
-                nextField = nextField.nextElementSibling;
-            }
-
-            if (nextField) {
-                const nextSelect = nextField.querySelector('select');
-                const nextEditor = nextField.querySelector('.ql-editor');
-
-                if (nextSelect && nextSelect.choices) {
-                    nextSelect.choices.showDropdown();
-                } else if (nextEditor) {
-                    nextEditor.focus();
-                }
-            }
-        }, 0);
+    
+    select.appendChild(placeholder);
+    
+    const setValues = (headerConfig.set || '')
+      .split(';')
+      .map(v => v.trim())
+      .filter(v => v);
+    
+    setValues.forEach(v => {
+      const option = document.createElement('option');
+      option.value = option.textContent = v;
+      select.appendChild(option);
     });
     
+    control.appendChild(select);
+
+    select.addEventListener('change', e => {
+      const currentField = e.target.closest('.vg-field');
+      setTimeout(() => {
+        let next = currentField?.nextElementSibling;
+        while (next && !next.classList.contains('vg-field')) {
+          next = next.nextElementSibling;
+        }
+        
+        if (next) {
+          const nextSelect = next.querySelector('select');
+          const nextEditor = next.querySelector('.ql-editor');
+          
+          if (nextSelect?.choices) {
+            nextSelect.choices.showDropdown();
+          } else if (nextEditor) {
+            nextEditor.focus();
+          }
+        }
+      }, 0);
+    });
+
     setTimeout(() => {
-      if (window.Choices && !sel.choices) {
-        new Choices(sel, { removeItemButton: false, shouldSort: false });
+      if (window.Choices && !select.choices) {
+        new Choices(select, { removeItemButton: false, shouldSort: false });
       }
     }, 50);
-  } else {
-    const q = createQuillEditor(controlWrap, {
-        placeholder: header.name?.trim() || 'Nhập nội dung...'
-    });
-    quillInstances.set(`${entryId}-${fieldIndex}`, q);
   }
-  return fieldWrapper;
+  // Text (Quill editor)
+  else {
+    // NEW: Thêm dấu * vào placeholder
+    const placeholderText = columnName + (isRequired ? ' *' : '');
+    const quill = createQuillEditor(control, placeholderText);
+    quillInstances.set(`${entryId}-${fieldIndex}`, quill);
+  }
+
+  return field;
 }
 
 function addEntry() {
@@ -397,75 +467,73 @@ function addEntry() {
   const container = $('entriesContainer');
   if (!container) return;
 
-  const entryDiv = document.createElement('div');
-  entryDiv.className = 'vg-entry no-toolbar';
-  entryDiv.id = `vg-entry-${entryCount}`;
-
-  entryDiv.innerHTML = `
+  const entry = document.createElement('div');
+  entry.className = 'vg-entry no-toolbar';
+  entry.id = `vg-entry-${entryCount}`;
+  entry.innerHTML = `
     <div class="vg-entry-header">
       <div class="vg-entry-number">${container.children.length + 1}</div>
       <div class="vg-entry-actions">
-        <button class="toggle-toolbar" data-entry-id="${entryCount}" type="button" aria-label="Hiện/Ẩn thanh công cụ">▤</button>
-        <button class="remove-entry" data-entry-id="${entryCount}" type="button" aria-label="Xóa vùng này">X</button>
+        <button class="toggle-toolbar" data-entry-id="${entryCount}" type="button">▤</button>
+        <button class="remove-entry" data-entry-id="${entryCount}" type="button">X</button>
       </div>
     </div>
     <div class="vg-entry-body"></div>
   `;
-  
-  const bodyDiv = entryDiv.querySelector('.vg-entry-body');
 
-  if (Array.isArray(currentCategoryHeaders) && currentCategoryHeaders.length) {
-    currentCategoryHeaders.forEach((h, idx) => bodyDiv.appendChild(_createFieldNode(entryCount, h, idx)));
+  const body = entry.querySelector('.vg-entry-body');
+
+  // Add fields based on category config
+  if (currentCategoryConfig?.header?.length) {
+    currentCategoryConfig.header.forEach((h, i) => {
+      body.appendChild(createField(entryCount, h, i));
+    });
   } else {
-    const q = createQuillEditor(bodyDiv);
-    quillInstances.set(String(entryCount), q);
+    const quill = createQuillEditor(body);
+    quillInstances.set(String(entryCount), quill);
   }
 
-  container.appendChild(entryDiv);
+  container.appendChild(entry);
   updateEntryNumbers();
-  
-  if ($('autoNextTheLoaiBietOnSwtich')?.checked && $('danhMucSelect')?.value === 'Biết Ơn') {
-    const theLoaiHeader = currentCategoryHeaders?.find(h => h.name === 'Thể Loại');
-    const options = theLoaiHeader?.listData;
 
-    if (options && options.length > 0) {
-      const selectElement = entryDiv.querySelector('.vg-field[data-header-name="Thể Loại"] select');
-      
-      if (selectElement) {
-        const numOptions = options.length;
-        const entryIndex = container.children.length;
-        const optionIndexToSelect = (entryIndex - 1) % numOptions;
-        const valueToSelect = options[optionIndexToSelect];
+  // Auto-select "Danh Mục" for "Biết Ơn" category (giữ nguyên logic cũ nhưng dùng field mới)
+  const categoryName = $('danhMucSelect')?.value;
+  if ($('autoNextTheLoaiBietOnSwtich')?.checked && categoryName === 'Biết Ơn') {
+    // Tìm field "Danh Mục" (trước đây là "Thể Loại")
+    const danhMucHeader = currentCategoryConfig?.header?.find(h => h.column === 'Danh Mục');
+    
+    if (danhMucHeader?.type === 'selectbox') {
+      const setValues = (danhMucHeader.set || '')
+        .split(';')
+        .map(v => v.trim())
+        .filter(v => v);
 
-        selectElement.value = valueToSelect;
+      if (setValues.length > 0) {
+        const select = entry.querySelector('.vg-field[data-header-column="Danh Mục"] select');
         
-        const currentField = selectElement.closest('.vg-field');
-        setTimeout(() => {
-            let nextField = currentField.nextElementSibling;
-            while(nextField && !nextField.classList.contains('vg-field')) {
-                nextField = nextField.nextElementSibling;
+        if (select) {
+          const entryIndex = container.children.length;
+          const optionIndex = (entryIndex - 1) % setValues.length;
+          select.value = setValues[optionIndex];
+
+          // Focus next field
+          setTimeout(() => {
+            const currentField = select.closest('.vg-field');
+            let next = currentField?.nextElementSibling;
+            while (next && !next.classList.contains('vg-field')) {
+              next = next.nextElementSibling;
             }
-            if (nextField) {
-                const nextEditor = nextField.querySelector('.ql-editor');
-                if (nextEditor) {
-                    nextEditor.focus();
-                }
-            }
-        }, 100);
-        return;
+            next?.querySelector('.ql-editor')?.focus();
+          }, 100);
+          return;
+        }
       }
     }
   }
 
-  // Logic focus mặc định
-  setTimeout(() => {
-    const firstEditor = entryDiv.querySelector('.ql-editor');
-    if (firstEditor) {
-        firstEditor.focus();
-    }
-  }, 200);
+  // Default focus
+  setTimeout(() => entry.querySelector('.ql-editor')?.focus(), 200);
 }
-
 
 function updateEntryNumbers() {
   document.querySelectorAll('.vg-entry-number').forEach((num, i) => {
@@ -473,98 +541,133 @@ function updateEntryNumbers() {
   });
 }
 
-// --- Password logic ---
-function savePass() {
-  const pass = $('txtPass')?.value;
-  if (!pass) return alert('Vui lòng nhập pass');
-  setStorage({ KEY: pass }, togglePasswordInput);
-}
-function togglePasswordInput() {
-  const divPassword = $('divPassword');
-  if (divPassword) {
-    const isHidden = divPassword.style.display === 'none';
-    divPassword.style.display = isHidden ? 'block' : 'none';
-    if (isHidden) showPass();
-  }
-}
-function showPass() { getStorage('KEY', r => { if ($('txtPass')) $('txtPass').value = r.KEY || ''; }); }
+// UPDATED: Chuyển thành hàm async để lấy 'id' từ cache
+async function collectData() {
+  // Dùng Promise để xử lý việc đọc cache bất đồng bộ
+  return new Promise(resolve => {
+    const selectedCategoryName = $('danhMucSelect')?.value;
 
-// --- Data Submission ---
-function collectData() {
-  const entries = [];
-  document.querySelectorAll('.vg-entry').forEach((entry, idx) => {
-    const entryId = Number(entry.id.split('-')[2]);
-    const fields = [];
-    const fieldNodes = entry.querySelectorAll('.vg-field');
+    // Đọc cache để lấy danh sách đầy đủ các danh mục
+    storage.get('danhMuc', cacheData => {
+      const categories = cacheData?.danhMuc || [];
+      // Tìm danh mục đang được chọn để lấy id
+      const selectedCategory = categories.find(c => c.table === selectedCategoryName);
+      const categoryId = selectedCategory ? selectedCategory.id : null;
 
-    if (fieldNodes.length > 0) {
-      fieldNodes.forEach((f, fi) => {
-        const headerName = f.dataset.headerName || '';
-        const headerIndex = Number(f.dataset.headerIndex);
-        if (f.querySelector('.ql-editor')) {
-          const q = quillInstances.get(`${entryId}-${fi}`);
-          fields.push({ index: headerIndex, name: headerName, type: 'quill', text: q?.getText().trim() || '', html: q?.root.innerHTML || '' });
-        } else if (f.querySelector('select')) {
-          const sel = f.querySelector('select');
-          fields.push({ index: headerIndex, name: headerName, type: 'select', value: sel.value });
-        } else if (f.querySelector('input[type=checkbox]')) {
-          const cb = f.querySelector('input[type=checkbox]');
-          fields.push({ index: headerIndex, name: headerName, type: 'checkbox', checked: cb.checked });
+      // --- Phần thu thập dữ liệu còn lại giữ nguyên như cũ ---
+      const entries = [];
+      document.querySelectorAll('.vg-entry').forEach((entry, idx) => {
+        const entryId = Number(entry.id.split('-')[2]);
+        const fields = [];
+        const fieldNodes = entry.querySelectorAll('.vg-field');
+
+        if (fieldNodes.length > 0) {
+          fieldNodes.forEach((f, fi) => {
+            const column = f.dataset.headerColumn || '';
+            const type = f.dataset.headerType || 'text';
+            let fieldValue;
+
+            if (type === 'text') {
+              const quill = quillInstances.get(`${entryId}-${fi}`);
+              fieldValue = quill?.root.innerHTML || '';
+            } else if (type === 'selectbox') {
+              fieldValue = f.querySelector('select')?.value || '';
+            } else if (type === 'checkbox') {
+              fieldValue = f.querySelector('input[type=checkbox]')?.checked || false;
+            }
+
+            fields.push({
+              column: column,
+              value: fieldValue
+            });
+          });
+        } else {
+          const quill = quillInstances.get(String(entryId));
+          if (quill) {
+            fields.push({
+              column: '',
+              value: quill.root.innerHTML
+            });
+          }
         }
+
+        entries.push({ soThuTu: idx + 1, fields });
       });
-    } else {
-      const q = quillInstances.get(String(entryId));
-      if (q) fields.push({ index: 1, name: '', type: 'quill', text: q.getText().trim(), html: q.root.innerHTML });
-    }
-    entries.push({ soThuTu: idx + 1, fields });
+
+      // Tạo đối tượng JSON cuối cùng
+      const payload = {
+        id: categoryId, // 💡 THAM SỐ MỚI ĐƯỢC THÊM VÀO
+        thoiGianTao: new Date().toISOString(),
+        pass: $('txtPass')?.value,
+        danhMuc: selectedCategoryName,
+        duLieu: entries,
+        action: 'add'
+      };
+      
+      // Trả về kết quả sau khi đã hoàn tất
+      resolve(payload);
+    });
   });
-
-  const selectedDanhMuc = $('danhMucSelect')?.value;
-
-  return { 
-    tongSoMuc: entries.length, 
-    thoiGianTao: new Date().toISOString(), 
-    key: $('txtPass')?.value,
-    danhMuc: selectedDanhMuc,
-    duLieu: entries 
-  };
 }
 
+// UPDATED: Sửa đổi hoàn toàn hàm validateData
 function validateData(data) {
-  if (data.duLieu.length === 0) return 'Vui lòng thêm ít nhất một vùng!';
+  if (data.duLieu.length === 0) {
+    return 'Vui lòng thêm ít nhất một vùng!';
+  }
+
   for (let i = 0; i < data.duLieu.length; i++) {
-    const ent = data.duLieu[i];
-    for (const f of ent.fields) {
-      if (f.type === 'quill' && !f.text.trim()) {
-        return `Vui lòng nhập nội dung cho vùng ${i + 1}, trường "${f.name || f.index}"!`;
-      }
-      if (f.type === 'select' && !f.value) {
-        return `Vui lòng chọn giá trị cho vùng ${i + 1}, trường "${f.name || f.index}"!`;
+    const entry = data.duLieu[i];
+    for (const field of entry.fields) {
+      // Chỉ kiểm tra các trường được đánh dấu là bắt buộc
+      if (field.required) {
+        if (field.type === 'text' && !field.text.trim()) {
+          return `Vui lòng nhập nội dung cho trường "${field.column}" ở vùng ${i + 1}!`;
+        }
+        if (field.type === 'selectbox' && !field.value) {
+          return `Vui lòng chọn giá trị cho trường "${field.column}" ở vùng ${i + 1}!`;
+        }
+        // Có thể thêm kiểm tra cho checkbox nếu cần, ví dụ: if (field.type === 'checkbox' && !field.checked)
       }
     }
   }
-  return null;
+
+  return null; // Không có lỗi
 }
 
+// UPDATED: Thêm 'await' khi gọi hàm collectData
 async function submitData() {
-  const data = collectData();
+  // 💡 THÊM 'await' VÀO ĐÂY
+  const data = await collectData();
   const error = validateData(data);
-  if (error) return showNotification(error, 'error');
+  
+  if (error) {
+    showNotification(error, 'error');
+    return;
+  }
 
   const btn = $('submitBtn');
-  if (btn) { btn.disabled = true; btn.innerHTML = '🔄'; }
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '🔄';
+  }
 
-  console.log('Submitting data:', data);
+  // console.log(JSON.stringify(data));
   try {
-    const response = await fetch(API_URL, {
+    const response = await fetch(API, {
       method: 'POST',
       body: JSON.stringify(data)
     });
-    if (!response.ok) throw new Error(`Lỗi mạng: ${response.statusText}`);
+
+    if (!response.ok) {
+      throw new Error(`Lỗi mạng: ${response.statusText}`);
+    }
+
     const result = await response.json();
-    if (result?.code === 0) {
-      showNotification(result.content || 'Đã lưu thành công!', 'success');
-      clearForm();
+    
+    if (result?.code === 1) {
+      // showNotification('Đã lưu thành công!', 'success');
+      buildEntriesForSelected($('danhMucSelect')?.value);
       showCongrats();
     } else {
       throw new Error(result?.error || 'Lỗi không xác định từ server');
@@ -572,22 +675,167 @@ async function submitData() {
   } catch (err) {
     showNotification(`❌ Lỗi: ${err.message}`, 'error');
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '💾'; }
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '💾';
+    }
   }
 }
 
-function clearForm() {
-  const selectedCategory = $('danhMucSelect')?.value;
-  buildEntriesForSelected(selectedCategory);
+// === PASSWORD ===
+function savePass() {
+  const pass = $('txtPass')?.value;
+  if (!pass) {
+    alert('Vui lòng nhập pass');
+    return;
+  }
+  storage.set({ KEY: pass }, togglePasswordInput);
 }
 
-// --- UI Feedback (Notification, Confetti) ---
+function togglePasswordInput() {
+  const div = $('divPassword');
+  if (!div) return;
+  
+  const isHidden = div.style.display === 'none';
+  div.style.display = isHidden ? 'block' : 'none';
+  
+  if (isHidden) {
+    storage.get('KEY', r => {
+      if ($('txtPass')) $('txtPass').value = r.KEY || '';
+    });
+  }
+}
+
+// === UPDATE CATEGORIES ===
+// UPDATED: Xử lý trường hợp danh mục cũ bị xóa sau khi cập nhật
+async function updateCategories() {
+  const select = $('danhMucSelect');
+  const key = $('txtPass')?.value.trim();
+
+  if (!key) {
+    // Giữ nguyên logic cũ nếu không có key
+    updateCategoriesFromAPI();
+    return;
+  }
+  
+  // Lấy giá trị đang được chọn TRƯỚC KHI cập nhật
+  const oldSelectedValue = select?.value;
+
+  // Set loading state
+  if (select?.choices) {
+    const container = select.closest('.choices');
+    const placeholder = container?.querySelector('.choices__placeholder');
+    if (placeholder) placeholder.textContent = 'Đang tải...';
+  }
+
+  const success = await updateCategoriesFromAPI();
+
+  // Reset placeholder
+  if (select?.choices) {
+    const container = select.closest('.choices');
+    const placeholder = container?.querySelector('.choices__placeholder');
+    if (placeholder) placeholder.textContent = 'Chọn một danh mục...';
+  }
+
+  if (success) {
+    $('addBtn').disabled = false;
+    $('submitBtn').disabled = false;
+    
+    storage.get('danhMuc', data => {
+      const newCategories = data?.danhMuc || [];
+      let targetCategory = null;
+
+      if (newCategories.length > 0) {
+        // Kiểm tra xem lựa chọn cũ có còn tồn tại trong danh sách mới không
+        const oldCategoryStillExists = newCategories.some(c => c.table === oldSelectedValue);
+
+        if (oldCategoryStillExists) {
+          // Nếu còn, mục tiêu của chúng ta chính là nó
+          targetCategory = newCategories.find(c => c.table === oldSelectedValue);
+        } else {
+          // Nếu không, mặc định chọn mục đầu tiên trong danh sách mới
+          targetCategory = newCategories[0];
+          // VÀ CẬP NHẬT CACHE VỚI GIÁ TRỊ MỚI NÀY
+          storage.set({ [CACHE_DANH_MUC]: targetCategory.table });
+        }
+      }
+
+      if (targetCategory) {
+        // Cập nhật giao diện với danh mục hợp lệ
+        select.choices.setChoiceByValue(String(targetCategory.table));
+        applyTheme(targetCategory);
+        buildEntriesForSelected(targetCategory.table);
+      } else {
+        // Xử lý trường hợp danh sách mới trả về rỗng
+        storage.set({ [CACHE_DANH_MUC]: null }); // Xóa cache
+        applyTheme(null);
+        buildEntriesForSelected(null);
+        $('addBtn').disabled = true;
+        $('submitBtn').disabled = true;
+      }
+    });
+  } else {
+    // Nếu cập nhật thất bại, vẫn khởi tạo lại để tránh lỗi
+    initDanhMucSelect();
+  }
+}
+
+async function updateCategoriesFromAPI() {
+  const key = $('txtPass')?.value.trim();
+  if (!key) return false;
+
+  const btn = $('updateDanhMucBtn');
+  if (btn) btn.disabled = true;
+
+  try {
+    const response = await fetch(API, {
+      method: 'POST',
+      body: JSON.stringify({ pass: key, action: 'getDanhMuc' })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Lỗi mạng: ${response.statusText}`);
+    }
+
+    const resp = await response.json();
+
+    if (resp?.code !== 1) {
+      throw new Error(resp?.error || 'Server trả về lỗi.');
+    }
+
+    let payload = resp.data;
+    if (typeof payload === 'string') {
+      payload = JSON.parse(payload);
+    }
+
+    if (!Array.isArray(payload)) {
+      throw new Error('Dữ liệu trả về không hợp lệ.');
+    }
+
+    return new Promise(resolve => {
+      storage.set({ danhMuc: payload }, () => {
+        showNotification('Đã cập nhật danh sách danh mục!', 'success');
+        populateCategories(payload);
+        resolve(true);
+      });
+    });
+  } catch (err) {
+    showNotification(`Lỗi: ${err.message}`, 'error');
+    return false;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// === UI FEEDBACK ===
 function showNotification(message, type = 'info') {
   const notification = document.createElement('div');
   notification.className = `notification ${type}`;
   notification.textContent = message;
   document.body.appendChild(notification);
+  
   requestAnimationFrame(() => notification.classList.add('show'));
+  
   setTimeout(() => {
     notification.classList.remove('show');
     setTimeout(() => notification.remove(), 300);
@@ -598,93 +846,133 @@ function showCongrats() {
   const overlay = $('congratsOverlay');
   const canvas = $('confettiCanvas');
   if (!overlay || !canvas) return;
+
   overlay.style.display = 'flex';
   startConfetti(canvas);
+  
   setTimeout(() => {
     overlay.style.display = 'none';
     stopConfetti();
   }, 2200);
 }
 
+// === CONFETTI ===
 let confettiAnimationId = null;
+
 function startConfetti(canvas) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
+
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+
   const colors = ['#f87171', '#fbbf24', '#34d399', '#60a5fa', '#a78bfa'];
-  let particles = Array.from({ length: 100 }, () => ({
-    x: Math.random() * canvas.width, y: Math.random() * -canvas.height, r: Math.random() * 6 + 4,
-    d: Math.random() * 40 + 10, color: colors[Math.floor(Math.random() * colors.length)],
-    tilt: Math.random() * 10 - 10, tiltAngle: 0, tiltAngleIncremental: (Math.random() * 0.07) + 0.05
+  const particles = Array.from({ length: 100 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * -canvas.height,
+    r: Math.random() * 6 + 4,
+    d: Math.random() * 40 + 10,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    tilt: Math.random() * 10 - 10,
+    tiltAngle: 0,
+    tiltAngleIncremental: Math.random() * 0.07 + 0.05
   }));
+
   const draw = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
     particles.forEach(p => {
       ctx.beginPath();
-      ctx.lineWidth = p.r; ctx.strokeStyle = p.color;
+      ctx.lineWidth = p.r;
+      ctx.strokeStyle = p.color;
       ctx.moveTo(p.x + p.tilt + p.r / 3, p.y);
       ctx.lineTo(p.x + p.tilt, p.y + p.d / 3);
       ctx.stroke();
+
       p.y += (Math.cos(p.d) + 3 + p.r / 2) / 2;
       p.x += Math.sin(0.01 * p.d);
       p.tiltAngle += p.tiltAngleIncremental;
       p.tilt = Math.sin(p.tiltAngle) * 15;
-      if (p.y > canvas.height) { p.x = Math.random() * canvas.width; p.y = -10; }
+
+      if (p.y > canvas.height) {
+        p.x = Math.random() * canvas.width;
+        p.y = -10;
+      }
     });
+
     confettiAnimationId = requestAnimationFrame(draw);
   };
+
   draw();
 }
+
 function stopConfetti() {
-  if (confettiAnimationId) cancelAnimationFrame(confettiAnimationId);
-  const c = $('confettiCanvas');
-  if (c) c.getContext('2d')?.clearRect(0, 0, c.width, c.height);
+  if (confettiAnimationId) {
+    cancelAnimationFrame(confettiAnimationId);
+  }
+  const canvas = $('confettiCanvas');
+  if (canvas) {
+    canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
+  }
 }
 
-// --- API for Categories ---
-async function updateCategoriesFromAPI(options = {}) {
-  const { reloadAfter = false } = options;
-  const btn = $('updateDanhMucBtn');
+// === EVENT DELEGATION ===
+document.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
 
-  const key = $('txtPass')?.value.trim();
-  if (!key) {
-      return false;
-  }
+  const entryId = btn.dataset.entryId;
 
-  if (btn) { btn.disabled = true; }
-
-  try {
-    const response = await fetch(API_TYPE_URL, {
-      method: 'POST',
-      body: JSON.stringify({ key })
-    });
-    if (!response.ok) throw new Error(`Lỗi mạng: ${response.statusText}`);
-    const resp = await response.json();
-
-    if (resp?.code !== 0) {
-      throw new Error(resp?.error || 'Server trả về lỗi nhưng không có thông báo.');
-    }
-
-    let payload = resp.content;
-    if (typeof payload === 'string') {
-        try { payload = JSON.parse(payload); } catch (e) { throw new Error('Dữ liệu từ server không hợp lệ.'); }
-    }
-    if (!Array.isArray(payload)) {
-      throw new Error('Dữ liệu trả về không phải là một danh sách.');
-    }
+  if (btn.classList.contains('remove-entry') && entryId) {
+    $(`vg-entry-${entryId}`)?.remove();
     
-    setStorage({ danhMuc: payload }, () => {
-      showNotification('Đã cập nhật danh sách danh mục!', 'success');
-      populateDanhMucSelectFromData(payload);
-      if (reloadAfter) setTimeout(() => location.reload(), 400);
+    // Clean up Quill instances
+    Array.from(quillInstances.keys()).forEach(k => {
+      if (k.startsWith(`${entryId}-`) || k === String(entryId)) {
+        quillInstances.delete(k);
+      }
     });
-    return true;
-
-  } catch (err) {
-    showNotification(`Lỗi: ${err.message}`, 'error');
-    return false;
-  } finally {
-    if (btn) { btn.disabled = false; }
+    
+    updateEntryNumbers();
   }
-}
+
+  if (btn.classList.contains('toggle-toolbar') && entryId) {
+    $(`vg-entry-${entryId}`)?.classList.toggle('no-toolbar');
+  }
+});
+
+// === INIT ===
+document.addEventListener('DOMContentLoaded', () => {
+  // Set button content
+  if ($('addBtn')) $('addBtn').textContent = '+';
+  if ($('submitBtn')) $('submitBtn').textContent = '💾';
+  if ($('updateDanhMucBtn')) $('updateDanhMucBtn').textContent = '🔄';
+
+  // Event listeners
+  $('addBtn')?.addEventListener('click', addEntry);
+  $('submitBtn')?.addEventListener('click', submitData);
+  $('btnSavePass')?.addEventListener('click', savePass);
+  $('updateDanhMucBtn')?.addEventListener('click', updateCategories);
+
+  // Load auto-next switch state
+  const autoNextSwitch = $('autoNextTheLoaiBietOnSwtich');
+  if (autoNextSwitch) {
+    storage.get(CACHE_AUTO_NEXT, data => {
+      if (data[CACHE_AUTO_NEXT] != null) {
+        autoNextSwitch.checked = data[CACHE_AUTO_NEXT];
+      }
+    });
+    
+    autoNextSwitch.addEventListener('change', e => {
+      storage.set({ [CACHE_AUTO_NEXT]: e.target.checked });
+    });
+  }
+
+  // Load password
+  storage.get('KEY', r => {
+    if ($('txtPass')) $('txtPass').value = r.KEY || '';
+  });
+
+  // Initialize category select
+  initDanhMucSelect();
+});
