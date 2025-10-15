@@ -1,9 +1,44 @@
 /* =================================== */
+/* --- BIẾN TOÀN CỤC (CSS VARIABLES) --- */
+/* =================================== */
+:root {
+    /* Bảng màu */
+    --color-primary: #3b82f6;
+    --color-primary-hover: #2563eb;
+    --color-success: #22c55e;
+    --color-success-hover: #16a34a;
+    --color-warning: #f59e42;
+    --color-warning-hover: #ea580c;
+    --color-danger: #ef4444;
+    --color-danger-hover: #b91c1c;
+    --color-amber: #fbbf24;
+    --color-amber-hover: #d97706;
+
+    --color-text: #222;
+    --color-text-light: #555;
+    --color-border: #ccc;
+    --color-background: #f7f7fa;
+    --color-white: #fff;
+    --color-overlay: rgba(0, 0, 0, 0.7);
+
+    /* Kích thước & Bán kính */
+    --border-radius-sm: 5px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+
+    /* Đổ bóng */
+    --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.1);
+    --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* =================================== */
 /* --- CẤU TRÚC & LAYOUT CƠ BẢN --- */
 /* =================================== */
 body {
     font-family: Arial, sans-serif;
-    background: #f7f7fa;
+    background: var(--color-background);
     margin: 0;
     padding: 0;
     transition: background 0.5s ease-in-out;
@@ -11,8 +46,6 @@ body {
 .container {
     max-width: 700px;
     margin: 32px auto;
-    background: transparent;
-    box-shadow: none;
     padding: 24px 18px 32px 18px;
 }
 .content {
@@ -20,7 +53,7 @@ body {
 }
 
 /* =================================== */
-/* --- KHU VỰC PASSWORD & DANH MỤC --- */
+/* --- KHU VỰC ĐIỀU KHIỂN ĐẦU TRANG --- */
 /* =================================== */
 .passwordRow {
     margin-bottom: 18px;
@@ -33,10 +66,9 @@ body {
 }
 .passwordInput {
     padding: 6px 10px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-    /* --- SỬA ĐỔI: Thêm hiệu ứng đổ bóng --- */
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
 }
 .danhMuc-row {
     display: flex;
@@ -48,8 +80,7 @@ body {
     min-width: 320px;
     width: 100%;
     max-width: 100%;
-    /* --- SỬA ĐỔI: Thêm hiệu ứng đổ bóng --- */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
 }
 
 /* =================================== */
@@ -61,34 +92,32 @@ body {
     margin-bottom: 10px;
     justify-content: center;
 }
-.btn, .btnAdd, .btnSubmit, .btnUpdateDanhMuc {
+.btn {
     font-size: 1.4em;
     font-weight: bold;
     padding: 12px 22px;
     border: none;
-    border-radius: 5px;
+    border-radius: var(--border-radius-sm);
     cursor: pointer;
-    transition: all 0.2s; /* Sửa 'background' thành 'all' */
-    color: #fff;
-    /* --- SỬA ĐỔI: Thêm hiệu ứng đổ bóng --- */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    transition: all 0.2s;
+    color: var(--color-white);
+    box-shadow: var(--shadow-md);
 }
 .btn:hover:not(:disabled) {
-    transform: translateY(-2px); /* Thêm hiệu ứng nhấc lên khi hover */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
 }
 .btn:disabled {
     background-color: #9ca3af;
     cursor: not-allowed;
     box-shadow: none;
 }
-.btnSubmit { background: #22c55e; }
-.btnSubmit:hover:not(:disabled) { background: #16a34a; }
-.btnAdd { background: #3b82f6; }
-.btnAdd:hover:not(:disabled) { background: #2563eb; }
-.btnUpdateDanhMuc { background: #f59e42; }
-.btnUpdateDanhMuc:hover:not(:disabled) { background: #ea580c; }
-
+.btn--submit { background: var(--color-success); }
+.btn--submit:hover:not(:disabled) { background: var(--color-success-hover); }
+.btn--add { background: var(--color-primary); }
+.btn--add:hover:not(:disabled) { background: var(--color-primary-hover); }
+.btn--update { background: var(--color-warning); }
+.btn--update:hover:not(:disabled) { background: var(--color-warning-hover); }
 
 /* =================================== */
 /* --- KHUNG NHẬP LIỆU (ENTRY) --- */
@@ -99,12 +128,11 @@ body {
 .vg-entry {
     background: rgba(255, 255, 255, 0.65);
     backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
     border: 1px solid rgba(255, 255, 255, 0.25);
-    border-radius: 12px;
+    border-radius: var(--border-radius-lg);
     margin-bottom: 18px;
     padding: 14px 12px 10px 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-lg);
     display: flex;
     flex-direction: column;
 }
@@ -116,7 +144,7 @@ body {
 }
 .vg-entry-number {
     font-weight: bold;
-    color: #3b82f6;
+    color: var(--color-primary);
     font-size: 1.1em;
 }
 .vg-entry-actions {
@@ -125,18 +153,18 @@ body {
     gap: 6px;
 }
 .remove-entry, .toggle-toolbar {
-    color: #fff;
+    color: var(--color-white);
     border: none;
-    border-radius: 5px;
+    border-radius: var(--border-radius-sm);
     padding: 5px 10px;
     cursor: pointer;
     transition: background 0.2s;
 }
-.remove-entry { background: #ef4444; }
-.remove-entry:hover { background: #b91c1c; }
+.remove-entry { background: var(--color-danger); }
+.remove-entry:hover { background: var(--color-danger-hover); }
 .vg-entry:only-child .remove-entry { display: none; }
-.toggle-toolbar { background: #fbbf24; }
-.toggle-toolbar:hover { background: #d97706; }
+.toggle-toolbar { background: var(--color-amber); }
+.toggle-toolbar:hover { background: var(--color-amber-hover); }
 
 /* =================================== */
 /* --- CÁC TRƯỜNG NHẬP LIỆU (FIELD) --- */
@@ -148,63 +176,79 @@ body {
     margin-bottom: 10px;
 }
 .vg-field-label {
-    flex: 0 0 220px;
+    flex-shrink: 0;
+    width: 220px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     cursor: pointer;
+    font-size: 14px;
+    color: var(--color-text-light);
 }
 .vg-field-control {
-    flex: 1;
+    flex-grow: 1;
+}
+.vg-field--switch .vg-field-control {
+    flex-grow: 0;
+}
+.vg-field--switch .vg-field-label {
+    width: auto;
+}
+.required-indicator {
+    color: var(--color-danger);
+    font-weight: bold;
+    margin-left: 2px;
 }
 
-.vg-field.vg-field--switch .vg-field-control {
-    flex: 0 0 auto;
+/* --- Input, Select, Editor --- */
+.vg-input, .choices__inner {
+    width: 100%;
+    padding: 10px 15px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    font-size: 16px;
+    box-sizing: border-box;
 }
-.vg-field.vg-field--switch .vg-field-label {
-    flex: 0 1 auto;
+.vg-input:focus, .choices__inner.is-focused {
+    border-color: var(--color-primary);
+    outline: none;
 }
-
-
-/* --- Select/Combobox (Choices.js) --- */
 .choices__inner {
-    box-sizing: border-box !important;
-    border: 1px solid #ccc !important;
-    border-radius: 5px !important;
     min-height: 40px;
     display: flex !important;
     align-items: center !important;
-    padding: 0 12px !important;
-    transition: border-color 0.2s ease-in-out;
 }
-.choices__inner.is-focused {
-    border-color: #3b82f6 !important;
+.vg-input::placeholder {
+    font-style: italic;
+    font-family: inherit;
+    color: #999;
+    opacity: 1;
+    font-size: 0.9em;
 }
 
-/* --- Editor (Quill.js) --- */
 .editor-container {
     display: flex;
     flex-direction: column;
     min-height: 180px;
     height: 100%;
 }
+.ql-toolbar, .ql-container {
+    background-color: var(--color-white);
+}
 .ql-toolbar {
     flex-shrink: 0;
-    border-radius: 8px 8px 0 0;
+    border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
     border-bottom: none !important;
-    background-color: #fff;
 }
 .ql-container {
     flex-grow: 1;
-    border-radius: 0 0 8px 8px;
+    border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
     border-top: none !important;
-    background-color: #fff;
 }
-
 .vg-entry.no-toolbar .ql-toolbar { display: none; }
 .vg-entry.no-toolbar .ql-container {
-    border-radius: 8px !important;
-    border-top: 1px solid #ccc !important;
+    border-radius: var(--border-radius-md) !important;
+    border-top: 1px solid var(--color-border) !important;
 }
 
 /* =================================== */
@@ -227,23 +271,15 @@ body {
     height: 22px;
     flex-shrink: 0;
 }
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
+.switch input { opacity: 0; width: 0; height: 0; }
 .slider {
     position: absolute;
     cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background-color: #d1d5db;
     border-radius: 20px;
     transition: .2s;
-    /* --- SỬA ĐỔI: Thêm hiệu ứng đổ bóng --- */
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
 }
 .slider:before {
     position: absolute;
@@ -252,14 +288,13 @@ body {
     width: 16px;
     left: 3px;
     bottom: 3px;
-    background-color: white;
+    background-color: var(--color-white);
     border-radius: 50%;
     transition: .2s;
-    /* --- SỬA ĐỔI: Thêm hiệu ứng đổ bóng --- */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
 }
 input:checked + .slider {
-    background-color: #22c55e;
+    background-color: var(--color-success);
 }
 input:checked + .slider:before {
     transform: translateX(18px);
@@ -269,110 +304,50 @@ input:checked + .slider:before {
 /* --- GIAO DIỆN PHẢN HỒI (UI FEEDBACK) --- */
 /* =================================== */
 .notification {
-    position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
-    background: #fff; color: #222; border-radius: 6px; box-shadow: 0 2px 8px #0002;
-    padding: 12px 24px; opacity: 0; pointer-events: none; z-index: 1000;
+    position: fixed; top: 24px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-white);
+    color: var(--color-text);
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    padding: 12px 24px;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1000;
     transition: opacity 0.3s;
 }
-.notification.show { opacity: 1; pointer-events: auto; }
-.notification.success { border-left: 5px solid #22c55e; }
-.notification.error { border-left: 5px solid #ef4444; }
+.notification.show { opacity: 1; }
+.notification.success { border-left: 5px solid var(--color-success); }
+.notification.error { border-left: 5px solid var(--color-danger); }
 
-#congratsOverlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000;
-    display: none; align-items: center; justify-content: center; animation: fadeIn 0.4s;
-}
-#confettiCanvas {
-    position: absolute; inset: 0; width: 100vw; height: 100vh; pointer-events: none;
-}
-.congratsContent {
-    position: relative; background: #fff; border-radius: 16px; padding: 48px 32px;
-    font-size: 2rem; color: #22c55e; text-align: center; box-shadow: 0 4px 32px #0003;
-    animation: popIn 0.5s;
-}
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes popIn { 0% { transform: scale(0.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-
-
-/* =================================== */
-/* --- RESPONSIVE DESIGN --- */
-/* =================================== */
-@media (max-width: 600px) {
-    .container { max-width: 99vw; padding: 8px 2vw 16px 2vw; margin: 8px auto; }
-    .editor-container { min-height: 120px; }
-    .congratsContent { font-size: 1.2rem; padding: 24px 8px; }
-    .vg-field-label { flex-basis: 120px; }
-}
-
-
-/* Thêm vào file CSS của bạn */
-.required-indicator {
-    color: red;
-    font-weight: bold;
-    margin-left: 2px;
-}
-
-.vg-field-label .required-indicator {
-    display: inline; /* Đảm bảo nó nằm cùng hàng với label */
-}
-
-/* === LOADING OVERLAY STYLE === */
-/* === LOADING OVERLAY STYLE (FIXED) === */
 #loadingOverlay {
-    /* Trạng thái mặc định: ẩn */
-    display: none; 
-    
-    /* Che phủ toàn bộ màn hình */
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    
-    /* Màu nền đen mờ */
-    background-color: rgba(0, 0, 0, 0.7);
-    
-    /* Đảm bảo nó nằm trên cùng */
+    position: fixed; inset: 0;
+    background-color: var(--color-overlay);
     z-index: 9999; 
-    
-    /* Hiệu ứng mờ dần khi xuất hiện/biến mất */
     opacity: 0;
     transition: opacity 0.3s ease-in-out;
+    display: none;
+    justify-content: center;
+    align-items: center;
 }
-
-/* Tìm đến đoạn CSS này */
 #loadingOverlay.visible {
     display: flex;
     opacity: 1;
-    
-    /* THÊM 2 DÒNG DƯỚI ĐÂY VÀO */
-    justify-content: center; /* Căn giữa theo chiều ngang */
-    align-items: center;    /* Căn giữa theo chiều dọc */
 }
-
 .loading-content {
     text-align: center;
-    color: white;
+    color: var(--color-white);
 }
-
-/* Vòng tròn xoay */
 .loader {
-    border: 5px solid #f3f3f3; /* Màu nền của vòng */
-    border-top: 5px solid #3498db; /* Màu của phần xoay */
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid var(--color-primary);
     border-radius: 50%;
     width: 50px;
     height: 50px;
     animation: spin 1s linear infinite;
-    margin: 0 auto 20px auto; /* Căn giữa và tạo khoảng cách với quote */
+    margin: 0 auto 20px auto;
 }
-
-/* Animation cho vòng xoay */
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* Định dạng cho câu quote */
+@keyframes spin { 100% { transform: rotate(360deg); } }
 #loadingQuote {
     font-size: 1.1em;
     font-style: italic;
@@ -380,37 +355,39 @@ input:checked + .slider:before {
     line-height: 1.5;
 }
 
-/* Style cho các input mới */
-.vg-input {
-    width: 100%;
-    padding: 10px 15px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 16px;
-    box-sizing: border-box; /* Quan trọng để padding không làm vỡ layout */
+#congratsOverlay {
+    position: fixed; inset: 0;
+    background: var(--color-overlay);
+    z-index: 2000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.4s;
 }
-
-.vg-input:focus {
-    border-color: #888;
-    outline: none;
+#confettiCanvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
 }
-
-/* Style cho label của trường 'time' */
-.vg-field-label {
-    display: block;
-    margin-bottom: 5px;
-    font-size: 14px;
-    color: #555;
+.congratsContent {
+    position: relative;
+    background: var(--color-white);
+    border-radius: var(--border-radius-lg);
+    padding: 48px 32px;
+    font-size: 2rem;
+    color: var(--color-success);
+    text-align: center;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.2);
+    animation: popIn 0.5s;
 }
+@keyframes fadeIn { from { opacity: 0; } }
+@keyframes popIn { 0% { transform: scale(0.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
-
-/*
- * CSS để đồng bộ style của placeholder
- */
-.vg-input::placeholder {
-    font-style: italic;
-    font-family: inherit;
-    color: #999;
-    opacity: 1;
-    font-size: 0.9em; /* --- Thêm dòng này để chữ nhỏ hơn --- */
+/* =================================== */
+/* --- RESPONSIVE DESIGN --- */
+/* =================================== */
+@media (max-width: 600px) {
+    .container { max-width: 100%; padding: 8px 4px; margin: 8px auto; }
+    .editor-container { min-height: 120px; }
+    .congratsContent { font-size: 1.2rem; padding: 24px 8px; }
+    .vg-field-label { flex-basis: 120px; }
 }
