@@ -1,5 +1,5 @@
 // === CONFIG ===
-const API = 'https://script.google.com/macros/s/AKfycbzxkH-kuFG-USCxrvUUbBfnu1f26CI4iP7ZVkVAt2azjHmKh_SNixJsvXDFX3-cC-C6Vg/exec';
+const API = 'https://script.google.com/macros/s/AKfycbwZ56wzWEfHd761IpfiWDjxkKvc3vM4RRXKR6aW9iRA3K9dUFmC7ndv3gBR9D_YwdxW/exec';
 const CACHE_DANH_MUC = 'selectedDanhMuc';
 const CACHE_AUTO_NEXT = 'autoNextSwitchState';
 
@@ -10,6 +10,48 @@ let currentCategoryConfig = null; // Lưu toàn bộ config của category đang
 
 // === HELPERS ===
 const $ = id => document.getElementById(id);
+
+// NEW: Hàm định dạng tiền tệ
+function formatMoney(value) {
+    // Chuyển giá trị thành chuỗi để xử lý
+    const stringValue = String(value);
+    // Xóa tất cả các ký tự không phải là số (phòng trường hợp đầu vào bị lỗi)
+    const cleanValue = stringValue.replace(/\D/g, '');
+    // Dùng Regex để thêm dấu chấm vào sau mỗi 3 chữ số
+    return cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+// === LOADING OVERLAY CONTROL ===
+
+// Danh sách các câu quotes bạn yêu thích
+const quotes = [
+    "Cách duy nhất để làm một công việc tuyệt vời là yêu những gì bạn làm.",
+    "Tương lai thuộc về những người tin vào vẻ đẹp của những giấc mơ.",
+    "Hãy là sự thay đổi mà bạn muốn thấy trên thế giới.",
+    "Hành trình vạn dặm bắt đầu bằng một bước chân.",
+    "Đừng đếm ngày, hãy làm cho mỗi ngày đều đáng giá.",
+    "Thành công không phải là cuối cùng, thất bại không phải là chết người: lòng can đảm đi tiếp mới là quan trọng."
+];
+
+function showLoadingOverlay() {
+    const overlay = $('loadingOverlay');
+    const quoteEl = $('loadingQuote');
+    if (!overlay || !quoteEl) return;
+
+    // 1. Chọn một câu quote ngẫu nhiên
+    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+    quoteEl.textContent = randomQuote;
+
+    // 2. Thêm class 'visible' để kích hoạt CSS
+    overlay.classList.add('visible');
+}
+
+function hideLoadingOverlay() {
+    const overlay = $('loadingOverlay');
+    if (overlay) {
+        overlay.classList.remove('visible');
+    }
+}
 
 const storage = {
   isExtension: () => typeof chrome !== 'undefined' && chrome.storage?.local,
@@ -57,16 +99,6 @@ function createQuillEditor(container, placeholder = 'Nhập nội dung...') {
         [{ indent: '-1' }, { indent: '+1' }],
         ['clean']
       ]
-    }
-  });
-
-  // Fix focus issue
-  wrapper.addEventListener('click', e => {
-    if (e.target.tagName !== 'P') {
-      setTimeout(() => {
-        quill.focus();
-        quill.setSelection(quill.getLength(), 0, 'user');
-      }, 0);
     }
   });
 
@@ -335,14 +367,9 @@ function buildEntriesForSelected(categoryName) {
     if (!category) {
       currentCategoryConfig = null;
     } else {
-      // Lưu toàn bộ config và sort headers theo stt
       currentCategoryConfig = {
         ...category,
-        header: (category.header || []).slice().sort((a, b) => {
-          const sttA = parseInt(a.stt) || 0;
-          const sttB = parseInt(b.stt) || 0;
-          return sttA - sttB;
-        })
+        header: category.header || []
       };
     }
     
@@ -350,14 +377,12 @@ function buildEntriesForSelected(categoryName) {
   });
 }
 
-// UPDATED: Sửa đổi hàm createField
+// Thay thế hàm cũ bằng hàm này
 function createField(entryId, headerConfig, fieldIndex) {
   const field = document.createElement('div');
   field.className = 'vg-field';
   field.dataset.headerColumn = headerConfig.column || '';
-  field.dataset.headerStt = headerConfig.stt || fieldIndex + 1;
   field.dataset.headerType = headerConfig.type || 'text';
-  // NEW: Lưu trạng thái required vào dataset
   field.dataset.headerRequired = headerConfig.required || false; 
 
   const control = document.createElement('div');
@@ -367,6 +392,7 @@ function createField(entryId, headerConfig, fieldIndex) {
   const type = headerConfig.type || 'text';
   const columnName = headerConfig.column || '';
   const isRequired = headerConfig.required || false;
+  const placeholderText = columnName + (isRequired ? ' *' : '');
 
   // Checkbox/Switch
   if (type === 'checkbox') {
@@ -376,7 +402,6 @@ function createField(entryId, headerConfig, fieldIndex) {
     label.className = 'vg-field-label';
     label.textContent = columnName;
 
-    // NEW: Thêm dấu * nếu bắt buộc
     if (isRequired) {
       const requiredSpan = document.createElement('span');
       requiredSpan.className = 'required-indicator';
@@ -404,8 +429,7 @@ function createField(entryId, headerConfig, fieldIndex) {
     const select = document.createElement('select');
     const placeholder = document.createElement('option');
     placeholder.value = '';
-    // NEW: Thêm dấu * vào placeholder
-    placeholder.textContent = columnName + (isRequired ? ' *' : '');
+    placeholder.textContent = placeholderText;
     placeholder.disabled = true;
     placeholder.selected = true;
     
@@ -450,11 +474,65 @@ function createField(entryId, headerConfig, fieldIndex) {
         new Choices(select, { removeItemButton: false, shouldSort: false });
       }
     }, 50);
+    // ... (Phần logic event listener của selectbox giữ nguyên) ...
+  }
+
+// ... bên trong hàm createField
+  // CẬP NHẬT: Xử lý type 'time' với giá trị mặc định là ngày giờ hiện tại
+  else if (type === 'time') {
+    const timeInput = document.createElement('input');
+    timeInput.type = 'datetime-local';
+    timeInput.className = 'vg-input';
+
+    // 1. Lấy ngày giờ hiện tại
+    const now = new Date();
+
+    // 2. Điều chỉnh múi giờ
+    // toISOString() trả về giờ UTC, ta cần trừ đi phần chênh lệch múi giờ
+    // để có được giờ địa phương đúng theo định dạng ISO
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+
+    // 3. Chuyển đổi sang định dạng YYYY-MM-DDTHH:mm và đặt làm giá trị mặc định
+    // slice(0, 16) sẽ cắt chuỗi "2023-10-27T10:30:59.123Z" thành "2023-10-27T10:30"
+    const defaultValue = now.toISOString().slice(0, 16);
+    timeInput.value = defaultValue;
+    
+    control.appendChild(timeInput);
+  }
+// ...
+  // NEW: Xử lý cho type 'number'
+  else if (type === 'number') {
+    const numberInput = document.createElement('input');
+    numberInput.type = 'number';
+    numberInput.placeholder = placeholderText;
+    numberInput.className = 'vg-input'; // Thêm class để dễ dàng style CSS
+    
+    control.appendChild(numberInput);
+  }
+
+// ... bên trong hàm createField
+  // PHIÊN BẢN TỐI GIẢN: Chỉ dùng input thật và thư viện Cleave.js
+  else if (type === 'money') {
+    // 1. Chỉ tạo một ô input duy nhất
+    const moneyInput = document.createElement('input');
+    moneyInput.type = 'text';
+    moneyInput.inputMode = 'numeric';
+    moneyInput.placeholder = placeholderText;
+    moneyInput.className = 'vg-input';
+
+    control.appendChild(moneyInput);
+
+    // 2. Áp dụng Cleave.js để tự động định dạng
+    new Cleave(moneyInput, {
+        numeral: true,
+        numeralThousandsGroupStyle: 'thousand',
+        delimiter: '.',
+        numeralDecimalScale: 0,
+        numeralDecimalMark: ','
+    });
   }
   // Text (Quill editor)
   else {
-    // NEW: Thêm dấu * vào placeholder
-    const placeholderText = columnName + (isRequired ? ' *' : '');
     const quill = createQuillEditor(control, placeholderText);
     quillInstances.set(`${entryId}-${fieldIndex}`, quill);
   }
@@ -556,15 +634,19 @@ async function collectData() {
 
       // --- Phần thu thập dữ liệu còn lại giữ nguyên như cũ ---
       const entries = [];
+      // ...bên trong hàm collectData...
       document.querySelectorAll('.vg-entry').forEach((entry, idx) => {
         const entryId = Number(entry.id.split('-')[2]);
         const fields = [];
         const fieldNodes = entry.querySelectorAll('.vg-field');
 
         if (fieldNodes.length > 0) {
+          // THAY THẾ CODE BÊN TRONG VÒNG LẶP NÀY
           fieldNodes.forEach((f, fi) => {
             const column = f.dataset.headerColumn || '';
             const type = f.dataset.headerType || 'text';
+            // Lấy thông tin 'required' từ dataset
+            const required = f.dataset.headerRequired === 'true'; 
             let fieldValue;
 
             if (type === 'text') {
@@ -572,16 +654,32 @@ async function collectData() {
               fieldValue = quill?.root.innerHTML || '';
             } else if (type === 'selectbox') {
               fieldValue = f.querySelector('select')?.value || '';
-            } else if (type === 'checkbox') {
-              fieldValue = f.querySelector('input[type=checkbox]')?.checked || false;
+            } 
+            else if (type === 'checkbox') {
+              fieldValue = f.querySelector('input[type=checkbox]')?.checked || false;            
+            // NEW: Thêm xử lý cho type 'money'
+            // ... bên trong hàm collectData
+            // CẬP NHẬT: Xử lý cho type 'money'
+            } else if (type === 'money') {
+              // Logic này vẫn đúng: lấy giá trị và xóa các ký tự không phải số
+              const rawValue = f.querySelector('input')?.value || '';
+              fieldValue = rawValue.replace(/\D/g, '');
+            } 
+            else { 
+              // Dòng else này sẽ xử lý cho 'time', 'number' và các loại input đơn giản khác
+              fieldValue = f.querySelector('input')?.value || '';
             }
-
+            
+            // Đảm bảo gửi đủ thông tin 'required' và 'type'
             fields.push({
               column: column,
-              value: fieldValue
+              value: fieldValue,
+              required: required, // <-- Thêm dòng này
+              type: type        // <-- Thêm dòng này
             });
           });
         } else {
+          //... phần code còn lại giữ nguyên
           const quill = quillInstances.get(String(entryId));
           if (quill) {
             fields.push({
@@ -619,67 +717,72 @@ function validateData(data) {
   for (let i = 0; i < data.duLieu.length; i++) {
     const entry = data.duLieu[i];
     for (const field of entry.fields) {
-      // Chỉ kiểm tra các trường được đánh dấu là bắt buộc
+      // Giờ đây 'field.required' đã có giá trị đúng
       if (field.required) {
-        if (field.type === 'text' && !field.text.trim()) {
+        
+        // Kiểm tra cho trường text (Quill)
+        if (field.type === 'text' && (!field.value || field.value.trim() === '<p><br></p>')) {
           return `Vui lòng nhập nội dung cho trường "${field.column}" ở vùng ${i + 1}!`;
         }
+        
+        // Kiểm tra cho trường selectbox
         if (field.type === 'selectbox' && !field.value) {
           return `Vui lòng chọn giá trị cho trường "${field.column}" ở vùng ${i + 1}!`;
         }
-        // Có thể thêm kiểm tra cho checkbox nếu cần, ví dụ: if (field.type === 'checkbox' && !field.checked)
       }
     }
   }
 
   return null; // Không có lỗi
 }
-
 // UPDATED: Thêm 'await' khi gọi hàm collectData
 async function submitData() {
-  // 💡 THÊM 'await' VÀO ĐÂY
-  const data = await collectData();
-  const error = validateData(data);
+    // 💡 BƯỚC 1: HIỂN THỊ OVERLAY NGAY KHI NHẤN NÚT
+    showLoadingOverlay();
+
+    const data = await collectData();
+    const error = validateData(data);
   
-  if (error) {
-    showNotification(error, 'error');
-    return;
-  }
-
-  const btn = $('submitBtn');
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = '🔄';
-  }
-
-  // console.log(JSON.stringify(data));
-  try {
-    const response = await fetch(API, {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
-
-    if (!response.ok) {
-      throw new Error(`Lỗi mạng: ${response.statusText}`);
+    if (error) {
+        showNotification(error, 'error');
+        // Nếu có lỗi validation, cũng phải tắt overlay
+        hideLoadingOverlay(); 
+        return;
     }
 
-    const result = await response.json();
+    // Bạn không cần disable các nút riêng lẻ nữa vì overlay đã che toàn bộ giao diện
+    // const btnAdd = $('addBtn');
+    // ...
+
+    try {
+        const response = await fetch(API, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Lỗi mạng: ${response.statusText}`);
+        }
+
+        const result = await response.json();
     
-    if (result?.code === 1) {
-      // showNotification('Đã lưu thành công!', 'success');
-      buildEntriesForSelected($('danhMucSelect')?.value);
-      showCongrats();
-    } else {
-      throw new Error(result?.error || 'Lỗi không xác định từ server');
+        if (result?.code === 1) {
+            buildEntriesForSelected($('danhMucSelect')?.value);
+            showCongrats();
+        } else {
+            throw new Error(result?.error || 'Lỗi không xác định từ server');
+        }
+    } catch (err) {
+        showNotification(`❌ Lỗi: ${err.message}`, 'error');
+    } finally {
+        // 💡 BƯỚC 2: ẨN OVERLAY KHI MỌI THỨ KẾT THÚC (THÀNH CÔNG HOẶC THẤT BẠI)
+        hideLoadingOverlay();
+        
+        // Giữ lại logic re-enable nút để đảm bảo an toàn
+        $('addBtn').disabled = false;
+        $('submitBtn').disabled = false;
+        $('updateDanhMucBtn').disabled = false;
     }
-  } catch (err) {
-    showNotification(`❌ Lỗi: ${err.message}`, 'error');
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = '💾';
-    }
-  }
 }
 
 // === PASSWORD ===
@@ -784,8 +887,12 @@ async function updateCategoriesFromAPI() {
   const key = $('txtPass')?.value.trim();
   if (!key) return false;
 
-  const btn = $('updateDanhMucBtn');
-  if (btn) btn.disabled = true;
+  const btnAdd = $('addBtn');
+  const btnSubmit = $('submitBtn');
+  const btnCategory = $('updateDanhMucBtn');
+  btnAdd.disabled = true;
+  btnSubmit.disabled = true;
+  btnCategory.disabled = true;
 
   try {
     const response = await fetch(API, {
@@ -823,7 +930,9 @@ async function updateCategoriesFromAPI() {
     showNotification(`Lỗi: ${err.message}`, 'error');
     return false;
   } finally {
-    if (btn) btn.disabled = false;
+    btnAdd.disabled = false;
+    btnSubmit.disabled = false;
+    btnCategory.disabled = false;
   }
 }
 
@@ -839,7 +948,7 @@ function showNotification(message, type = 'info') {
   setTimeout(() => {
     notification.classList.remove('show');
     setTimeout(() => notification.remove(), 300);
-  }, 3000);
+  }, 10000);
 }
 
 function showCongrats() {
@@ -853,7 +962,7 @@ function showCongrats() {
   setTimeout(() => {
     overlay.style.display = 'none';
     stopConfetti();
-  }, 2200);
+  }, 3000);
 }
 
 // === CONFETTI ===
@@ -943,10 +1052,7 @@ document.addEventListener('click', e => {
 
 // === INIT ===
 document.addEventListener('DOMContentLoaded', () => {
-  // Set button content
-  if ($('addBtn')) $('addBtn').textContent = '+';
-  if ($('submitBtn')) $('submitBtn').textContent = '💾';
-  if ($('updateDanhMucBtn')) $('updateDanhMucBtn').textContent = '🔄';
+
 
   // Event listeners
   $('addBtn')?.addEventListener('click', addEntry);

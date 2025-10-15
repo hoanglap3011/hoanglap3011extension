@@ -23,9 +23,9 @@
         <div class="content">
             <div id="entriesContainer"></div>
             <div class="buttonsContainer">
-                <button class="btn btnAdd" id="addBtn" type="button"></button>
-                <button class="btn btnSubmit" id="submitBtn" type="button"></button>
-                <button class="btn btnUpdateDanhMuc" id="updateDanhMucBtn" type="button"></button>
+                <button class="btn btnAdd" id="addBtn" type="button">+</button>
+                <button class="btn btnSubmit" id="submitBtn" type="button">💾</button>
+                <button class="btn btnUpdateDanhMuc" id="updateDanhMucBtn" type="button">📁</button>
             </div>
 
             <div class="switchRow">
@@ -35,7 +35,14 @@
                     <span class="slider"></span>
                 </label>
             </div>
-            </div>
+            <div class="switchRow">
+                <label class="switchLabel" for="autoHideUnRequiredFieldSwtich">Ẩn trường không bắt buộc</label>
+                <label class="switch">
+                    <input type="checkbox" id="autoHideUnRequiredFieldSwtich" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>            
+        </div>
     </div>
     <div id="congratsOverlay" style="display:none;">
         <canvas id="confettiCanvas"></canvas>
@@ -45,6 +52,13 @@
     </div>
     <script src="choices.min.js" defer></script>
     <script src="quill.min.js" defer></script>
+    <script src="cleave.min.js"></script>
     <script src="vietgido.js" defer></script>
 </body>
 </html>
+<div id="loadingOverlay">
+    <div class="loading-content">
+        <div class="loader"></div>
+        <p id="loadingQuote"></p>
+    </div>
+</div>
