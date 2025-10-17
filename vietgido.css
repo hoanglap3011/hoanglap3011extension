@@ -201,6 +201,7 @@ body {
 }
 
 /* --- Input, Select, Editor --- */
+/* --- Input, Select, Editor --- */
 .vg-input, .choices__inner {
     width: 100%;
     padding: 10px 15px;
@@ -208,6 +209,12 @@ body {
     border-radius: var(--border-radius-sm);
     font-size: 16px;
     box-sizing: border-box;
+
+    /* == FIX LỖI HIỂN THỊ TRÊN IOS == */
+    -webkit-appearance: none;
+    appearance: none;
+    background-color: var(--color-white); /* Đảm bảo nền luôn trắng */
+    color: var(--color-text); /* Đảm bảo màu chữ chuẩn */
 }
 .vg-input:focus, .choices__inner.is-focused {
     border-color: var(--color-primary);
