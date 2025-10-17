@@ -12,7 +12,7 @@ const DATA = {
 let urlToOpen = "";
 
 const KEY_PASS = "key";
-const URL_GET_LINK = "https://script.google.com/macros/s/AKfycbw12YIV-Xr53lFPMbb2at7CP50jOHiCkPWA8ZMqbvbSti93BQZVOrJNzKNNisdPoIwWvw/exec";
+const URL_GET_LINK = "https://script.google.com/macros/s/AKfycbzZoNlP98YZVhHNh7HkO2MT0ToHzIB6wHD92sXD_opDD_RZti3UAJWe2CxZ_Jggje6czg/exec";
 const QUICK_URLS = {
   CALENDAR: "https://calendar.google.com/",
   PROBLEM: "https://docs.google.com/spreadsheets/d/1Ww9sdbQScZdNysDOvD8_1zCqxsi3r-K6FqIKLLoXSho/edit?gid=0#gid=0",
@@ -66,6 +66,7 @@ document.addEventListener("DOMContentLoaded", function () {
   updateQuickLinksFromCache();
   const clickHandlers = [
     ["btnEnter", togglePasswordInput],
+    ["btnVietGiDo", vietGiDo],
     ["btnSavePass", savePass],
     ["btnCalendar", () => window.open(QUICK_URLS.CALENDAR, '_self')],
     ["btnProblem", () => window.open(QUICK_URLS.PROBLEM, '_self')],
@@ -128,6 +129,59 @@ document.addEventListener("DOMContentLoaded", function () {
     categorySelect.value = "cauToan";
     setQuoteCategory("cauToan");
   }
+
+  // Thêm handler cho select box "To Do List New"
+  const selectToDoListNew = document.getElementById("btnToDoListNewSelect");
+  if (selectToDoListNew) {
+    selectToDoListNew.addEventListener("change", function () {
+      // Lấy text của option đã chọn
+      const selectedValue = this.options[this.selectedIndex].value;
+      let key = "";
+      const todayStr = getDDMMYYYYHienTai(); 
+      const { week, month, weekYear: year } = getInfoWeek(todayStr);
+      this.selectedIndex = 0; // Reset lại về lựa chọn ban đầu (text "✅ To Do List New")
+      switch (selectedValue) {
+        case "homNay":
+          key = "toDoListDay." + todayStr;
+          break;
+        case "ngayMai":
+          key = "toDoListDay." + getDDMMYYYYNgayMai();
+          break;
+        case "tuanNay":
+          key = "toDoListWeek." + week + "." + year;
+          break;
+        case "tuanSau":
+          const dayStrAfter7Day = getDDMMYYYY7NgaySau();
+          const { week: nextWeek, weekYear: nextYear } = getInfoWeek(dayStrAfter7Day);
+          key = "toDoListWeek." + nextWeek + "." + nextYear;
+          break;  
+        case "thangNay":
+          key = "toDoListMonth." + month + "." + year;
+          break;     
+        case "thangSau":
+          const nextMonthStr = getNextMonthFormatted();
+          key = "toDoListMonth." + nextMonthStr;
+          break;   
+        case "namNay":
+          key = "toDoListYear." + year;
+          break;   
+        case "namSau":
+          key = "toDoListYear." + (year + 1);
+          break;
+        case "ngay":
+          return chonNgayToDoList();
+        case "tuan":
+          return chonNgayToDoList();                                                                                                    
+        case "thang":
+          return chonNgayToDoList();
+        case "nam":
+          return chonNgayToDoList();
+        case "2weeks":
+          return getToDoList2Weeks();            
+      }
+      openToDoList(key);      
+    });
+  }  
 });
 
 function addClick(id, handler) {
@@ -469,35 +523,6 @@ function getStorage(keys, cb) {
 }
 
 
-function getInfoWeek(dateStr) {
-    const [day, month, year] = dateStr.split('.').map(Number);
-    const inputDate = new Date(year, month - 1, day);
-    const dayOfWeek = (inputDate.getDay() + 6) % 7; // 0 = Monday
-    const monday = new Date(inputDate);
-    monday.setDate(inputDate.getDate() - dayOfWeek);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    const tempDate = new Date(monday);
-    tempDate.setDate(tempDate.getDate() + 3); // Thursday
-    const weekYear = tempDate.getFullYear();
-    const firstThursday = new Date(weekYear, 0, 4);
-    const firstThursdayDay = (firstThursday.getDay() + 6) % 7;
-    firstThursday.setDate(firstThursday.getDate() - firstThursdayDay + 3);
-    const diffInDays = (monday - firstThursday) / (1000 * 60 * 60 * 24);
-    const weekNumber = 1 + Math.round(diffInDays / 7);
-    const monthStr = String(sunday.getMonth() + 1).padStart(2, '0');
-    const formatDate = (d) =>
-        String(d.getDate()).padStart(2, '0') + '.' +
-        String(d.getMonth() + 1).padStart(2, '0') + '.' +
-        d.getFullYear();
-    return {
-        week: weekNumber,
-        month: monthStr,
-        startOfWeek: formatDate(monday),
-        endOfWeek: formatDate(sunday),
-        weekYear: weekYear
-    };
-}
 
 function getCurrentDateFormatted() {
   const today = new Date();
@@ -542,4 +567,312 @@ function showChecklistOpenButton() {
   document.getElementById("btnClosePopupChecklist").addEventListener("click", () => {
     popup.remove();
   });
+}
+
+function vietGiDo(){
+  window.open("vietgido.html", '_blank');
+}
+
+function getInfoWeek(dateStr) {
+    const date = parseDate(dateStr);
+
+    // 0 = Monday
+    const dayOfWeek = (date.getDay() + 6) % 7;
+
+    // Monday và Sunday
+    const monday = new Date(date);
+    monday.setDate(date.getDate() - dayOfWeek);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    // Tính tuần theo ISO 8601
+    const thursday = new Date(monday);
+    thursday.setDate(monday.getDate() + 3);
+    const weekYear = thursday.getFullYear();
+
+    const firstThursday = new Date(weekYear, 0, 4);
+    const firstThursdayDay = (firstThursday.getDay() + 6) % 7;
+    firstThursday.setDate(firstThursday.getDate() - firstThursdayDay + 3);
+
+    const diffInDays = (monday - firstThursday) / (1000 * 60 * 60 * 24);
+    const weekNumber = 1 + Math.round(diffInDays / 7);
+
+    // Tạo mảng các ngày trong tuần theo định dạng dd.MM.yyyy
+    const daysOfWeek = [];
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        daysOfWeek.push(formatDate(d));
+    }
+
+    return {
+        week: weekNumber,
+        month: String(sunday.getMonth() + 1).padStart(2, '0'),
+        startOfWeek: formatDate(monday),
+        endOfWeek: formatDate(sunday),
+        weekYear,
+        daysOfWeek
+    };
+}
+
+function formatDate(d) {
+    return [
+        String(d.getDate()).padStart(2, '0'),
+        String(d.getMonth() + 1).padStart(2, '0'),
+        d.getFullYear()
+    ].join('.');
+}
+
+function parseDate(dateStr) {
+    const [day, month, year] = dateStr.split('.').map(Number);
+    return new Date(year, month - 1, day);
+}
+
+function getDDMMYYYYHienTai() {
+  const today = new Date();
+  const day = String(today.getDate()).padStart(2, '0');
+  const month = String(today.getMonth() + 1).padStart(2, '0'); 
+  const year = today.getFullYear();
+  return `${day}.${month}.${year}`;
+}
+
+function getDDMMYYYY7NgaySau() {
+  const today = new Date();
+  const futureDate = new Date(today);
+  
+  // Cộng thêm 7 ngày
+  futureDate.setDate(futureDate.getDate() + 7);
+  
+  // Lấy ngày, tháng, năm
+  const day = String(futureDate.getDate()).padStart(2, '0');
+  const month = String(futureDate.getMonth() + 1).padStart(2, '0'); // Tháng bắt đầu từ 0
+  const year = futureDate.getFullYear();
+  
+  return `${day}.${month}.${year}`;
+}
+
+function getDDMMYYYYNgayMai() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1); // Cộng thêm 1 ngày
+  const day = String(tomorrow.getDate()).padStart(2, '0');
+  const month = String(tomorrow.getMonth() + 1).padStart(2, '0'); 
+  const year = tomorrow.getFullYear();
+  return `${day}.${month}.${year}`;
+}
+
+function getNextMonthFormatted() {
+  const today = new Date();
+  const nextMonth = new Date(today);
+  nextMonth.setMonth(nextMonth.getMonth() + 1);
+  const month = String(nextMonth.getMonth() + 1).padStart(2, '0');
+  const year = nextMonth.getFullYear();
+  return `${month}.${year}`;
+}
+
+function chonNgayToDoList() {
+  flatpickr("#datepicker", {
+    defaultDate: new Date(),
+    dateFormat: "d.m.Y",
+    locale: "vn",
+    position: "below",
+    onChange: function (selectedDates, dateStr, instance) {
+      const key = "toDoListDay." + dateStr
+      openToDoList(key);
+    }
+  }).open();
+}
+
+function openToDoList(keyToDoList){
+  // First try to read the cached aggregated "todolist"
+  getStorage(['todolist'], (obj) => {
+    const raw = obj['todolist'];
+    if (raw) {
+      try {
+        const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (Array.isArray(arr)) {
+          const foundObj = arr.find(item => item && Object.prototype.hasOwnProperty.call(item, keyToDoList));
+          if (foundObj) {
+            urlToOpen = foundObj[keyToDoList];
+            if (urlToOpen) {
+              window.open(urlToOpen, '_blank');
+              return;
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Lỗi khi parse todolist từ cache', e);
+        // fallthrough to fetching from server
+      }
+    }
+
+    // If we reach here, either there is no "todolist" in cache or we didn't find the key
+    // Call fetchLinkToDoListAndStore which will merge the retrieved url into 'todolist'
+    fetchLinkToDoListAndStore(keyToDoList, () => {
+      // After fetch/merge, read 'todolist' and try to find the key again
+      getStorage(['todolist'], (obj2) => {
+        const raw2 = obj2['todolist'];
+        if (raw2) {
+          try {
+            const arr2 = typeof raw2 === 'string' ? JSON.parse(raw2) : raw2;
+            if (Array.isArray(arr2)) {
+              const foundObj2 = arr2.find(item => item && Object.prototype.hasOwnProperty.call(item, keyToDoList));
+              if (foundObj2) {
+                urlToOpen = foundObj2[keyToDoList];
+                if (urlToOpen) window.open(urlToOpen, '_blank');
+                return;
+              }
+            }
+          } catch (e) {
+            console.error('Lỗi khi parse todolist sau khi fetch', e);
+          }
+        }
+        // If still not found, optionally alert
+        alert('Không tìm thấy đường link trong todolist sau khi gọi API');
+      });
+    });
+  });
+}
+
+function fetchLinkToDoListAndStore(toDoListName, callback) {
+  const pass = document.getElementById("txtPass").value;
+  if (!pass || pass.length === 0) {
+    togglePasswordInput();
+    return;
+  }
+
+  const el = document.getElementById('btnToDoListNewSelect');
+  let text = el.options[0].innerHTML;
+  el.options[0].innerHTML = 'Đang tải... ⏳';
+  el.disabled = true;  
+
+  // POST request with JSON body
+  fetch(URL_GET_LINK, {
+    method: 'POST',
+    body: JSON.stringify({
+      pass: pass,
+      action: 'getCustomToDoList',
+      toDoListName: toDoListName
+    })
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Lỗi khi gọi API');
+      }
+      return response.json();
+    })
+    .then(result => {
+      const code = result.code;
+      if (code === -1) {
+        // Error from server
+        const errMsg = result.error || 'Có lỗi xảy ra';
+        alert('Lỗi: ' + errMsg);
+        return;
+      }
+
+      // Success path
+      // The URL is returned directly in result.data (per request)
+      const url = result.data;
+
+      if (url) {
+        // Merge into aggregated 'todolist' cache (no longer saving individual key)
+        try {
+          getStorage(['todolist'], (obj) => {
+            const raw = obj['todolist'];
+            let arr = [];
+            if (raw) {
+              try {
+                arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                if (!Array.isArray(arr)) arr = [];
+              } catch (e) {
+                console.error('Không parse được todolist hiện có, sẽ ghi đè mới', e);
+                arr = [];
+              }
+            }
+
+            const idx = arr.findIndex(item => item && Object.prototype.hasOwnProperty.call(item, toDoListName));
+            if (idx >= 0) {
+              // replace existing entry
+              arr[idx] = { [toDoListName]: url };
+            } else {
+              // append new entry
+              arr.push({ [toDoListName]: url });
+            }
+
+            // Save the merged todolist as JSON string
+            setStorage({ ['todolist']: JSON.stringify(arr) }, () => {
+              if (typeof callback === 'function') callback();
+            });
+          });
+        } catch (e) {
+          console.error('Lỗi khi merge todolist', e);
+          // still call callback so caller can proceed
+          if (typeof callback === 'function') callback();
+        }
+      } else {
+        alert('Không tìm thấy trường url trong dữ liệu trả về');
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Lỗi khi gọi API');
+    }).finally(() => {
+      el.options[0].innerHTML = text;
+      el.disabled = false;      
+    });
+}
+
+function getToDoList2Weeks() {
+  const pass = document.getElementById("txtPass").value;
+  if (!pass || pass.length === 0) {
+    togglePasswordInput();
+    return;
+  }
+
+  const el = document.getElementById('btnToDoListNewSelect');
+  let text = el.options[0].innerHTML;
+  el.options[0].innerHTML = 'Đang tải... ⏳';
+  el.disabled = true;    
+
+  fetch(URL_GET_LINK, {
+    method: 'POST',
+    body: JSON.stringify({
+      pass: pass,
+      action: 'getListToDoList',
+    })
+  })
+    .then(response => {
+      if (!response.ok) throw new Error('Lỗi khi gọi API');
+      return response.json();
+    })
+    .then(result => {
+      // If server returned an error code, show it
+      if (result && result.code === -1) {
+        const errMsg = result.error || 'Có lỗi xảy ra';
+        alert('Lỗi: ' + errMsg);
+        return;
+      }
+
+      // Prefer result.data when available; otherwise, fallback to result itself
+      const dataArray = Array.isArray(result.data) ? result.data : (Array.isArray(result) ? result : []);
+
+      // Transform from [{code: 'key', url: '...'}, ...]
+      // into [{ 'key': '...'}, ...]
+      const transformed = dataArray.map(item => {
+        const code = item && (item.code || item.key);
+        const url = item && (item.url || item.value || item.data);
+        return code ? { [code]: url || '' } : null;
+      }).filter(Boolean);
+
+      // Store as JSON string so it can be parsed when reading from cache
+      setStorage({ ['todolist']: JSON.stringify(transformed) });
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Lỗi khi gọi API ' + err);
+    })
+    .finally(() => {
+      el.options[0].innerHTML = text;
+      el.disabled = false;      
+    })
+    ;
 }

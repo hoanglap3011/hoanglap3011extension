@@ -35,6 +35,17 @@
       vertical-align: middle;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    select.a-like {
+      -webkit-appearance: none; /* Tắt giao diện mặc định của Chrome/Safari */
+      -moz-appearance: none;    /* Tắt giao diện mặc định của Firefox */
+      appearance: none;         /* Tắt giao diện mặc định */
+      /* Đảm bảo option đầu tiên (bị vô hiệu) hiển thị đúng màu */
+      color: blue; 
+    }
+    /* Khi một option được chọn, nó có thể đổi màu, ta reset lại */
+    select.a-like:valid {
+      color: blue;
+    }
   </style>
 </head>
 <body>
@@ -75,20 +86,31 @@
   <div id="link-container" class="container-fluid px-4">
     <div class="row">
       <!-- Danh sách button giữ nguyên, chỉ rút gọn cú pháp -->
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnDiary">🖊️ Nhật ký</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnChecklist">✅ Checklist</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnToDoList">☑️ To Do List</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnVietGiDo">🖊️ Viết Gì Đó</button></div>
+      <div class="col-6 col-md-3 mb-3">
+        <select id="btnToDoListNewSelect" class="a-like">
+          <option value="" disabled selected>✅ To Do List New</option>
+          <option value="homNay">Hôm nay</option>
+          <option value="ngayMai">Ngày mai</option>
+          <option value="tuanNay">Tuần này</option>
+          <option value="tuanSau">Tuần sau</option>
+          <option value="thangNay">Tháng này</option>
+          <option value="thangSau">Tháng sau</option>
+          <option value="namNay">Năm nay</option>
+          <option value="namSau">Năm sau</option>
+          <option value="ngay">Ngày</option>
+          <option value="tuan">Tuần</option>
+          <option value="thang">Tháng</option>
+          <option value="nam">Năm</option>
+          <option value="2weeks">Cập nhật 2 tuần</option>
+        </select>
+      </div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnCalendar"><img src="https://ssl.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_24_2x.png" alt="Google Calendar" style="vertical-align:text-bottom; height:1.2em;"> Lịch</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnDiaryDay">📅 Nhật ký ngày</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnChecklistDay">📅 Checklist Ngày</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnMuctieu">🎯 Goal</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnRanh"> 🛋️ Rảnh</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnNote">💡 Note</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnThisWeek">📒 This week</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnPreviousWeek">📁 Previous Week</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnToDoListNextWeek">Plan Next week</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnProblem">❗ Vấn đề</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnSodscd">🛠️ SODSCD</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">📅 Tổng hợp ngày</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyTuan">🗓️ Tổng hợp tuần</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnNhacHocTap">🎵 Nhạc học tập</button></div>
