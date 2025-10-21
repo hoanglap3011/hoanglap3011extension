@@ -14,6 +14,7 @@ let urlToOpen = "";
 const KEY_PASS = "key";
 const URL_GET_LINK = "https://script.google.com/macros/s/AKfycbzZoNlP98YZVhHNh7HkO2MT0ToHzIB6wHD92sXD_opDD_RZti3UAJWe2CxZ_Jggje6czg/exec";
 const QUICK_URLS = {
+  TODOLIST_ALL: "https://docs.google.com/spreadsheets/d/1ODqzKCpG_uZ_3YckZMiXNvhE6xGGulUEy7nICsdAQHo/edit",
   CALENDAR: "https://calendar.google.com/",
   PROBLEM: "https://docs.google.com/spreadsheets/d/1Ww9sdbQScZdNysDOvD8_1zCqxsi3r-K6FqIKLLoXSho/edit?gid=0#gid=0",
   SODSCD: "https://docs.google.com/document/d/12oVFyqe-yWjuwTW2YN74WPQl6N9xOcaR8KONvH81Ksg/edit?tab=t.0",
@@ -68,6 +69,7 @@ document.addEventListener("DOMContentLoaded", function () {
     ["btnEnter", togglePasswordInput],
     ["btnVietGiDo", vietGiDo],
     ["btnSavePass", savePass],
+    ["btnToDoListTong", () => window.open(QUICK_URLS.TODOLIST_ALL, '_self')],
     ["btnCalendar", () => window.open(QUICK_URLS.CALENDAR, '_self')],
     ["btnProblem", () => window.open(QUICK_URLS.PROBLEM, '_self')],
     ["btnSodscd", () => window.open(QUICK_URLS.SODSCD, '_self')],
