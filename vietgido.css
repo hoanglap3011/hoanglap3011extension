@@ -163,8 +163,7 @@ body {
 .remove-entry { background: var(--color-danger); }
 .remove-entry:hover { background: var(--color-danger-hover); }
 .vg-entry:only-child .remove-entry { display: none; }
-.toggle-toolbar { background: var(--color-amber); }
-.toggle-toolbar:hover { background: var(--color-amber-hover); }
+
 
 /* =================================== */
 /* --- CÁC TRƯỜNG NHẬP LIỆU (FIELD) --- */
@@ -252,8 +251,10 @@ body {
     border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
     border-top: none !important;
 }
-.vg-entry.no-toolbar .ql-toolbar { display: none; }
-.vg-entry.no-toolbar .ql-container {
+#entriesContainer.hide-all-toolbars .ql-toolbar {
+    display: none;
+}
+#entriesContainer.hide-all-toolbars .editor-container .ql-container {
     border-radius: var(--border-radius-md) !important;
     border-top: 1px solid var(--color-border) !important;
 }
@@ -397,4 +398,9 @@ input:checked + .slider:before {
     .editor-container { min-height: 120px; }
     .congratsContent { font-size: 1.2rem; padding: 24px 8px; }
     .vg-field-label { flex-basis: 120px; }
+}
+
+/* Ẩn các trường không bắt buộc khi switch được kích hoạt */
+#entriesContainer.hide-unrequired-fields .vg-field[data-header-required="false"] {
+    display: none;
 }

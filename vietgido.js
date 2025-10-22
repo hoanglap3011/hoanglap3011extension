@@ -4,16 +4,13 @@
 const VietGidoApp = {
   // --- Cấu hình & Hằng số ---
   config: {
-    API: 'https://script.google.com/macros/s/AKfycbxELUGDubp53WVQCO_XVnEQ2UUvyr6oaXJh_P2iEMS_wVVetvw5HmXw5ZlAQ0dlTuRP/exec',
+    API: 'https://script.google.com/macros/s/AKfycbw_hbZ7PqBs1xyTS0bTQKsuwo1A72zVK4W1fnm79l9exbWDlakqAHT8W3lA_9kQ7rj-tA/exec',
     CACHE_DANH_MUC: 'selectedDanhMuc',
     CACHE_AUTO_NEXT: 'autoNextSwitchState',
-    QUOTES: [
-      "Cách duy nhất để làm một công việc tuyệt vời là yêu những gì bạn làm.",
-      "Tương lai thuộc về những người tin vào vẻ đẹp của những giấc mơ.",
-      "Hãy là sự thay đổi mà bạn muốn thấy trên thế giới.",
-      "Hành trình vạn dặm bắt đầu bằng một bước chân.",
-      "Đừng đếm ngày, hãy làm cho mỗi ngày đều đáng giá."
-    ]
+    CACHE_SHOW_TOOLBAR: 'showToolbarSwitchState', // <-- THÊM DÒNG NÀY
+    CACHE_HIDE_UNREQUIRED: 'hideUnrequiredSwitchState', // <-- THÊM DÒNG NÀY
+    CACHE_QUOTES: 'vietgido_quotes', 
+    
   },
 
   // --- Trạng thái của ứng dụng ---
@@ -41,7 +38,10 @@ const VietGidoApp = {
   // --- SETUP & KHỞI TẠO ---
   // =================================================================
   cacheDomElements() {
-    const ids = ['danhMucSelect', 'entriesContainer', 'addBtn', 'submitBtn', 'updateDanhMucBtn', 'txtPass', 'divPassword', 'btnSavePass', 'autoNextTheLoaiBietOnSwtich', 'loadingOverlay', 'loadingQuote', 'congratsOverlay', 'confettiCanvas'];
+    const ids = ['danhMucSelect', 'entriesContainer', 'addBtn', 'submitBtn', 'updateDanhMucBtn', 'txtPass', 'divPassword', 'btnSavePass', 'autoNextTheLoaiBietOnSwtich', 'loadingOverlay', 'loadingQuote', 'congratsOverlay', 'confettiCanvas',
+      'toggleAllToolbarsSwitch' // <-- THÊM ID MỚI VÀO ĐÂY
+      , 'autoHideUnRequiredFieldSwtich'
+    ];
     ids.forEach(id => this.dom[id] = document.getElementById(id));
   },
 
@@ -58,6 +58,14 @@ const VietGidoApp = {
         this.helpers.storage.set({ [this.config.CACHE_AUTO_NEXT]: e.target.checked });
       });
     }
+
+    if (this.dom.toggleAllToolbarsSwitch) {
+      this.dom.toggleAllToolbarsSwitch.addEventListener('change', this.handlers.onToggleAllToolbars.bind(this));
+    }
+
+    if (this.dom.autoHideUnRequiredFieldSwtich) {
+      this.dom.autoHideUnRequiredFieldSwtich.addEventListener('change', this.handlers.onToggleHideUnrequired.bind(this));
+    }
   },
 
   loadInitialState() {
@@ -68,6 +76,33 @@ const VietGidoApp = {
     });
     this.helpers.storage.get('KEY', r => {
       if (this.dom.txtPass) this.dom.txtPass.value = r.KEY || '';
+    });
+
+    this.helpers.storage.get(this.config.CACHE_SHOW_TOOLBAR, data => {
+      // Mặc định là OFF (ẩn toolbar) để duy trì hành vi cũ
+      let show = data[this.config.CACHE_SHOW_TOOLBAR];
+      if (show == null) {
+        show = false;
+      }
+      if (this.dom.toggleAllToolbarsSwitch) {
+        this.dom.toggleAllToolbarsSwitch.checked = show;
+      }
+      // Áp dụng trạng thái lên UI khi tải trang
+      this.ui.applyToolbarVisibility.call(this, show);
+    });
+
+    this.helpers.storage.get(this.config.CACHE_HIDE_UNREQUIRED, data => {
+      let hideUnrequired = data[this.config.CACHE_HIDE_UNREQUIRED];
+      // Mặc định là 'true' (checked) theo file HTML
+      if (hideUnrequired == null) {
+        hideUnrequired = true;
+      }
+
+      if (this.dom.autoHideUnRequiredFieldSwtich) {
+        this.dom.autoHideUnRequiredFieldSwtich.checked = hideUnrequired;
+      }
+      // Áp dụng trạng thái lên UI
+      this.ui.applyFieldVisibility.call(this, hideUnrequired);
     });
   },
 
@@ -139,8 +174,6 @@ const VietGidoApp = {
           }
         });
         this.render.updateEntryNumbers.call(this);
-      } else if (btn.classList.contains('toggle-toolbar')) {
-        entryElement?.classList.toggle('no-toolbar');
       }
     },
 
@@ -188,41 +221,64 @@ const VietGidoApp = {
     // Thay thế toàn bộ hàm này trong VietGidoApp.handlers
     async updateCategories() {
       this.ui.setButtonsState.call(this, false);
+      this.ui.showLoadingOverlay.call(this); // <-- 1. HIỆN OVERLAY
+
       const oldSelectedValue = this.dom.danhMucSelect?.value;
-      if (this.dom.danhMucSelect?.choices) {
-        const placeholder = this.dom.danhMucSelect.parentElement.querySelector('.choices__placeholder');
-        if (placeholder) placeholder.textContent = 'Đang tải...';
-      }
+      let success = false; // Dùng để theo dõi trạng thái cuối cùng
 
-      const success = await this.data.updateCategoriesFromAPI.call(this);
+      try {
+        if (this.dom.danhMucSelect?.choices) {
+          const placeholder = this.dom.danhMucSelect.parentElement.querySelector('.choices__placeholder');
+          if (placeholder) placeholder.textContent = 'Đang tải...';
+        }
 
-      if (this.dom.danhMucSelect?.choices) {
-        const placeholder = this.dom.danhMucSelect.parentElement.querySelector('.choices__placeholder');
-        if (placeholder) placeholder.textContent = 'Chọn một danh mục...';
-      }
+        // Gọi hàm lấy dữ liệu, 'success' sẽ là true/false
+        success = await this.data.updateCategoriesFromAPI.call(this);
 
-      if (success) {
-        this.helpers.storage.get('danhMuc', data => {
-          const newCategories = data?.danhMuc || [];
-          let targetCategory = newCategories.find(c => c.table === oldSelectedValue) || newCategories[0];
+        if (this.dom.danhMucSelect?.choices) {
+          const placeholder = this.dom.danhMucSelect.parentElement.querySelector('.choices__placeholder');
+          if (placeholder) placeholder.textContent = 'Chọn một danh mục...';
+        }
 
-          if (targetCategory) {
-            this.dom.danhMucSelect.choices.setChoiceByValue(String(targetCategory.table));
-            this.ui.applyTheme.call(this, targetCategory);
-            this.render.buildEntriesForSelected.call(this, targetCategory.table);
-            if (oldSelectedValue !== targetCategory.table) {
-              this.helpers.storage.set({ [this.config.CACHE_DANH_MUC]: targetCategory.table });
+        if (success) {
+          this.helpers.storage.get('danhMuc', data => {
+            const newCategories = data?.danhMuc || [];
+            let targetCategory = newCategories.find(c => c.table === oldSelectedValue) || newCategories[0];
+
+            if (targetCategory) {
+              this.dom.danhMucSelect.choices.setChoiceByValue(String(targetCategory.table));
+              this.ui.applyTheme.call(this, targetCategory);
+              this.render.buildEntriesForSelected.call(this, targetCategory.table);
+              if (oldSelectedValue !== targetCategory.table) {
+                this.helpers.storage.set({ [this.config.CACHE_DANH_MUC]: targetCategory.table });
+              }
+            } else {
+              this.helpers.storage.set({ [this.config.CACHE_DANH_MUC]: null });
+              this.ui.applyTheme.call(this, null);
+              this.render.buildEntriesForSelected.call(this, null);
             }
-          } else {
-            this.helpers.storage.set({ [this.config.CACHE_DANH_MUC]: null });
-            this.ui.applyTheme.call(this, null);
-            this.render.buildEntriesForSelected.call(this, null);
-          }
-        });
+          });
+        }
+      } catch (err) {
+        // Mặc dù updateCategoriesFromAPI đã tự xử lý lỗi,
+        // chúng ta vẫn log ở đây để đề phòng
+        console.error("Lỗi trong quá trình updateCategories:", err);
+        success = false;
+      } finally {
+        this.ui.hideLoadingOverlay.call(this); // <-- 2. ẨN OVERLAY
+        // 3. Cập nhật trạng thái nút dựa trên 'success'
+        this.ui.setButtonsState.call(this, success, true);
       }
-
-      // Dòng đã được sửa lỗi
-      this.ui.setButtonsState.call(this, success, true);
+    },
+    onToggleAllToolbars(e) {
+      const isChecked = e.target.checked;
+      this.helpers.storage.set({ [this.config.CACHE_SHOW_TOOLBAR]: isChecked });
+      this.ui.applyToolbarVisibility.call(this, isChecked);
+    },
+    onToggleHideUnrequired(e) {
+      const hideUnrequired = e.target.checked; // ON (checked) = true = Ẩn
+      this.helpers.storage.set({ [this.config.CACHE_HIDE_UNREQUIRED]: hideUnrequired });
+      this.ui.applyFieldVisibility.call(this, hideUnrequired);
     }
   },
 
@@ -260,13 +316,12 @@ const VietGidoApp = {
     addEntry() {
       this.state.entryCount++;
       const entry = document.createElement('div');
-      entry.className = 'vg-entry no-toolbar';
+      entry.className = 'vg-entry';
       entry.id = `vg-entry-${this.state.entryCount}`;
       entry.innerHTML = `
                 <div class="vg-entry-header">
                   <div class="vg-entry-number"></div>
                   <div class="vg-entry-actions">
-                    <button class="toggle-toolbar" data-entry-id="${this.state.entryCount}" type="button">▤</button>
                     <button class="remove-entry" data-entry-id="${this.state.entryCount}" type="button">X</button>
                   </div>
                 </div>
@@ -311,16 +366,18 @@ const VietGidoApp = {
 
       switch (headerConfig.type) {
         case 'checkbox':
-          this.render._createCheckboxField.call(this, field, control, entryId, headerConfig);
+          this.render._createCheckboxField.call(this, field, control, entryId, headerConfig, fieldIndex);
           break;
         case 'selectbox':
           this.render._createSelectField.call(this, control, headerConfig);
           break;
         case 'date':
-          this.render._createDateField.call(this, control);
+          // UPDATED: Truyền cả headerConfig
+          this.render._createDateField.call(this, control, headerConfig);
           break;
         case 'time':
-          this.render._createTimeField.call(this, control);
+          // UPDATED: Truyền cả headerConfig
+          this.render._createTimeField.call(this, control, headerConfig);
           break;
         case 'number':
           this.render._createNumberField.call(this, control, headerConfig);
@@ -328,14 +385,23 @@ const VietGidoApp = {
         case 'money':
           this.render._createMoneyField.call(this, control, headerConfig);
           break;
-        default: // 'text'
-          const quill = this.render._createQuillEditor.call(this, control, this.helpers.getPlaceholderText(headerConfig));
+        case 'richtext':
+          // UPDATED: Truyền cả headerConfig
+          const quill = this.render._createQuillEditor.call(this, control, headerConfig);
           this.state.quillInstances.set(`${entryId}-${fieldIndex}`, quill);
+          break;
+        case 'textarea':
+          this.render._createTextAreaField.call(this, control, headerConfig);
+          break;
+        case 'text':
+        default:
+          this.render._createTextField.call(this, control, headerConfig);
+          break;
       }
       return field;
     },
 
-    _createCheckboxField(field, control, entryId, headerConfig) {
+    _createCheckboxField(field, control, entryId, headerConfig, fieldIndex) {
       field.classList.add('vg-field--switch');
       const label = document.createElement('label');
       label.className = 'vg-field-label';
@@ -350,8 +416,14 @@ const VietGidoApp = {
       switchLabel.className = 'switch';
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
-      checkbox.id = `checkbox-${entryId}-${this.state.entryCount}`;
+      checkbox.id = `checkbox-${entryId}-${fieldIndex}`;
       label.htmlFor = checkbox.id;
+
+      // UPDATED: Thêm logic preset
+      if (headerConfig.preset) {
+        checkbox.checked = (headerConfig.preset === true || String(headerConfig.preset).toLowerCase() === 'true');
+      }
+
       const slider = document.createElement('span');
       slider.className = 'slider';
       switchLabel.append(checkbox, slider);
@@ -365,13 +437,21 @@ const VietGidoApp = {
       placeholder.value = '';
       placeholder.textContent = this.helpers.getPlaceholderText(headerConfig);
       placeholder.disabled = true;
-      placeholder.selected = true;
+      placeholder.selected = true; // Mặc định chọn placeholder
       select.appendChild(placeholder);
+
       (headerConfig.set || '').split(';').map(v => v.trim()).filter(Boolean).forEach(v => {
         const option = document.createElement('option');
         option.value = option.textContent = v;
         select.appendChild(option);
       });
+
+      // UPDATED: Thêm logic preset
+      // Gán giá trị preset. Trình duyệt sẽ tự động chọn option khớp
+      if (headerConfig.preset) {
+        select.value = headerConfig.preset;
+      }
+
       control.appendChild(select);
       setTimeout(() => {
         if (window.Choices && !select.choices) {
@@ -380,44 +460,63 @@ const VietGidoApp = {
       }, 50);
     },
 
-
-    // NEW: Hàm tạo trường nhập ngày tháng năm
-    _createDateField(control) {
+    // UPDATED: Hàm được viết lại hoàn toàn
+    _createDateField(control, headerConfig) {
       const dateInput = document.createElement('input');
       dateInput.type = 'date';
       dateInput.className = 'vg-input';
 
-      // Tạo giá trị mặc định là ngày hiện tại theo định dạng "YYYY-MM-DD"
-      const now = new Date();
-      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-      dateInput.value = now.toISOString().slice(0, 10);
+      const preset = headerConfig.preset;
+      if (preset) {
+        if (String(preset).toLowerCase() === 'now') {
+          // Xử lý 'now'
+          const now = new Date();
+          now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+          dateInput.value = now.toISOString().slice(0, 10);
+        } else {
+          // Xử lý giá trị cụ thể (ví dụ: "2025-10-22")
+          dateInput.value = preset;
+        }
+      }
+      // Nếu không có preset, value sẽ rỗng (theo yêu cầu)
 
       control.appendChild(dateInput);
     },
-
-
-    _createTimeField(control) {
+    // UPDATED: Hàm được viết lại hoàn toàn
+    _createTimeField(control, headerConfig) {
       const timeInput = document.createElement('input');
-      // THAY ĐỔI 1: Đổi type từ 'datetime-local' thành 'time'
       timeInput.type = 'time';
       timeInput.className = 'vg-input';
 
-      // THAY ĐỔI 2: Tạo giá trị mặc định theo định dạng "HH:mm"
-      const now = new Date();
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-
-      timeInput.value = `${hours}:${minutes}`;
+      const preset = headerConfig.preset;
+      if (preset) {
+        if (String(preset).toLowerCase() === 'now') {
+          // Xử lý 'now'
+          const now = new Date();
+          const hours = String(now.getHours()).padStart(2, '0');
+          const minutes = String(now.getMinutes()).padStart(2, '0');
+          timeInput.value = `${hours}:${minutes}`;
+        } else {
+          // Xử lý giá trị cụ thể (ví dụ: "12:30")
+          timeInput.value = preset;
+        }
+      }
+      // Nếu không có preset, value sẽ rỗng (theo yêu cầu)
 
       control.appendChild(timeInput);
     },
-
 
     _createNumberField(control, headerConfig) {
       const numberInput = document.createElement('input');
       numberInput.type = 'number';
       numberInput.placeholder = this.helpers.getPlaceholderText(headerConfig);
       numberInput.className = 'vg-input';
+
+      // UPDATED: Thêm logic preset
+      if (headerConfig.preset) {
+        numberInput.value = headerConfig.preset;
+      }
+
       control.appendChild(numberInput);
     },
 
@@ -427,6 +526,12 @@ const VietGidoApp = {
       moneyInput.inputMode = 'numeric';
       moneyInput.placeholder = this.helpers.getPlaceholderText(headerConfig);
       moneyInput.className = 'vg-input';
+
+      // UPDATED: Thêm logic preset
+      if (headerConfig.preset) {
+        moneyInput.value = headerConfig.preset;
+      }
+
       control.appendChild(moneyInput);
       new Cleave(moneyInput, {
         numeral: true,
@@ -436,20 +541,60 @@ const VietGidoApp = {
         numeralDecimalMark: ','
       });
     },
+    _createTextField(control, headerConfig) {
+      const textInput = document.createElement('input');
+      textInput.type = 'text';
+      textInput.placeholder = this.helpers.getPlaceholderText(headerConfig);
+      textInput.className = 'vg-input';
 
-    _createQuillEditor(container, placeholder = 'Nhập nội dung...') {
+      // UPDATED: Thêm logic preset
+      if (headerConfig.preset) {
+        textInput.value = headerConfig.preset;
+      }
+
+      control.appendChild(textInput);
+    },
+
+    _createTextAreaField(control, headerConfig) {
+      const textArea = document.createElement('textarea');
+      textArea.rows = 4;
+      textArea.placeholder = this.helpers.getPlaceholderText(headerConfig);
+      textArea.className = 'vg-input';
+
+      // UPDATED: Thêm logic preset
+      if (headerConfig.preset) {
+        textArea.value = headerConfig.preset;
+      }
+
+      control.appendChild(textArea);
+    },
+
+    // UPDATED: Thay đổi chữ ký hàm và thêm logic preset
+    _createQuillEditor(container, headerConfig) {
+      // Lấy placeholder từ helper
+      const placeholder = this.helpers.getPlaceholderText(headerConfig);
+
       const wrapper = document.createElement('div');
       const editorDiv = document.createElement('div');
       editorDiv.className = 'editor-container';
       wrapper.appendChild(editorDiv);
       container.appendChild(wrapper);
-      return new Quill(editorDiv, {
+
+      const quill = new Quill(editorDiv, {
         theme: 'snow',
-        placeholder,
+        placeholder, // Sử dụng placeholder đã tính toán
         modules: {
           toolbar: [['bold', 'italic', 'underline'], [{ list: 'ordered' }, { list: 'bullet' }], [{ indent: '-1' }, { indent: '+1' }], ['clean']]
         }
       });
+
+      // UPDATED: Thêm logic preset
+      if (headerConfig.preset) {
+        // Gán nội dung HTML từ preset vào Quill
+        quill.pasteHTML(headerConfig.preset);
+      }
+
+      return quill;
     }
   },
 
@@ -468,10 +613,9 @@ const VietGidoApp = {
           const type = fieldNode.dataset.headerType;
           let value;
 
-          if (type === 'text') {
+          if (type === 'richtext') {
             const quill = this.state.quillInstances.get(`${entryId}-${fieldIdx}`);
             const rawValue = quill?.root.innerHTML || '';
-            // Nếu vùng soạn thảo trống, gửi đi chuỗi rỗng thay vì '<p><br></p>'
             value = (rawValue.trim() === '<p><br></p>') ? '' : rawValue;
           }
           else if (type === 'selectbox') {
@@ -481,8 +625,9 @@ const VietGidoApp = {
           } else if (type === 'money') {
             value = (fieldNode.querySelector('input')?.value || '').replace(/\D/g, '');
           } else {
-            value = fieldNode.querySelector('input')?.value || '';
-
+            // UPDATED: Sửa selector để bắt cả 'input' và 'textarea'
+            const inputElement = fieldNode.querySelector('input, textarea');
+            value = inputElement?.value || '';
           }
           return {
             column: fieldNode.dataset.headerColumn,
@@ -503,14 +648,16 @@ const VietGidoApp = {
         action: 'add'
       };
     },
-
     validateData(data) {
       if (data.duLieu.length === 0) return 'Vui lòng thêm ít nhất một vùng!';
       for (let i = 0; i < data.duLieu.length; i++) {
         const entry = data.duLieu[i];
         for (const field of entry.fields) {
           if (field.required) {
-            if (field.type === 'text' && (!field.value || field.value.trim() === '<p><br></p>')) {
+            if (field.type === 'richtext' && (!field.value || field.value.trim() === '<p><br></p>')) {
+              return `Vui lòng nhập nội dung cho trường "${field.column}" ở vùng ${i + 1}!`;
+            }
+            if ((field.type === 'text' || field.type === 'textarea') && !field.value) {
               return `Vui lòng nhập nội dung cho trường "${field.column}" ở vùng ${i + 1}!`;
             }
             if (field.type === 'selectbox' && !field.value) {
@@ -522,7 +669,7 @@ const VietGidoApp = {
       return null;
     },
 
-    async updateCategoriesFromAPI() {
+async updateCategoriesFromAPI() {
       const key = this.dom.txtPass?.value.trim();
       if (!key) return false;
 
@@ -535,13 +682,33 @@ const VietGidoApp = {
         const resp = await response.json();
         if (resp?.code !== 1) throw new Error(resp?.error || 'Server trả về lỗi.');
 
+        // --- CẬP NHẬT LOGIC TỪ ĐÂY ---
         let payload = (typeof resp.data === 'string') ? JSON.parse(resp.data) : resp.data;
-        if (!Array.isArray(payload)) throw new Error('Dữ liệu trả về không hợp lệ.');
+        
+        // Payload giờ là 1 object { danhMuc: [], quotes: [] }
+        if (typeof payload !== 'object' || payload === null) {
+          throw new Error('Dữ liệu trả về không hợp lệ.');
+        }
 
-        await new Promise(resolve => this.helpers.storage.set({ danhMuc: payload }, resolve));
-        this.ui.showNotification.call(this, 'Đã cập nhật danh sách danh mục!', 'success');
-        this.render.populateCategories.call(this, payload);
+        const categories = payload.danhMuc;
+        const quotes = payload.quotes; // Lấy mảng quotes mới
+
+        if (!Array.isArray(categories)) {
+          throw new Error('Dữ liệu "danhMuc" trả về không phải là mảng.');
+        }
+
+        // Lưu cả hai vào cache
+        await new Promise(resolve => this.helpers.storage.set({ 
+          danhMuc: categories,
+          [this.config.CACHE_QUOTES]: quotes || [] // Lưu cả quotes
+        }, resolve));
+        
+        this.ui.showNotification.call(this, 'Đã cập nhật danh sách danh mục & quotes!', 'success');
+        
+        // Chỉ populate categories như cũ
+        this.render.populateCategories.call(this, categories); 
         return true;
+        // --- KẾT THÚC CẬP NHẬT ---
       } catch (err) {
         this.ui.showNotification.call(this, `Lỗi: ${err.message}`, 'error');
         return false;
@@ -601,10 +768,30 @@ const VietGidoApp = {
       }, 3000);
     },
 
-    showLoadingOverlay() {
-      const randomQuote = this.config.QUOTES[Math.floor(Math.random() * this.config.QUOTES.length)];
-      this.dom.loadingQuote.textContent = randomQuote;
+showLoadingOverlay() {
+      // 1. Hiển thị overlay và spinner ngay lập tức
       this.dom.loadingOverlay.classList.add('visible');
+      
+      // 2. Xóa quote cũ (để xử lý trường hợp cache rỗng)
+      this.dom.loadingQuote.textContent = ''; 
+
+      // 3. Lấy quotes từ cache và gán text
+      try {
+        this.helpers.storage.get(this.config.CACHE_QUOTES, data => {
+          const quotes = data[this.config.CACHE_QUOTES];
+          
+          if (Array.isArray(quotes) && quotes.length > 0) {
+            const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+            if (this.dom.loadingQuote) {
+              this.dom.loadingQuote.textContent = randomQuote;
+            }
+          }
+          // Nếu không có quotes trong cache, textContent sẽ vẫn rỗng (theo yêu cầu)
+        });
+      } catch (e) {
+        console.warn("Không thể tải quotes từ cache:", e);
+        // Bỏ qua lỗi, không hiển thị quote
+      }
     },
 
     hideLoadingOverlay() {
@@ -619,6 +806,27 @@ const VietGidoApp = {
         this.dom.congratsOverlay.style.display = 'none';
         this.helpers.stopConfetti.call(this);
       }, 2200);
+    },
+
+    // THÊM MỚI HÀM NÀY
+    applyToolbarVisibility(show) {
+      if (this.dom.entriesContainer) {
+        // 'hide-all-toolbars' là class chúng ta định nghĩa trong CSS
+        // toggle(className, force)
+        // Nếu show = true, force = false -> class bị xóa (toolbar hiện)
+        // Nếu show = false, force = true -> class được thêm (toolbar ẩn)
+        this.dom.entriesContainer.classList.toggle('hide-all-toolbars', !show);
+      }
+    },
+
+    // THÊM MỚI TẠI ĐÂY
+    applyFieldVisibility(hideUnrequired) {
+      if (this.dom.entriesContainer) {
+        // --- LOGIC ĐÃ ĐẢO NGƯỢC ---
+        // hideUnrequired = true (ON) -> Thêm class 'hide-unrequired-fields'
+        // hideUnrequired = false (OFF) -> Xóa class
+        this.dom.entriesContainer.classList.toggle('hide-unrequired-fields', hideUnrequired);
+      }
     }
   },
 

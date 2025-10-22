@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Address Autocomplete (Google Places) — Example</title>
+<style>
+  body { font-family: system-ui, Arial, sans-serif; padding: 24px; background:#f7fafc; color:#0f172a; }
+  .addr-card { max-width:720px; margin:0 auto; background:#fff; padding:20px; border-radius:8px; box-shadow:0 6px 18px rgba(2,6,23,0.06); }
+  label { display:block; margin-bottom:8px; font-weight:600; }
+  .input-wrap { position:relative; }
+  input[type="text"] { width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:16px; }
+  .meta { margin-top:12px; font-size:14px; color:#334155; }
+  .btn { margin-top:12px; display:inline-block; padding:8px 12px; background:#2563eb; color:white; border-radius:6px; text-decoration:none; cursor:pointer; border:none; }
+  .result { margin-top:14px; background:#f1f5f9; padding:12px; border-radius:6px; font-family:monospace; white-space:pre-wrap; }
+  /* small helper for warnings */
+  .warn { color:#b45309; font-size:13px; margin-top:8px; }
+</style>
+</head>
+<body>
+  <div class="addr-card">
+    <h2>Nhập địa chỉ (Autocomplete)</h2>
+    <p class="meta">Gõ vào ô rồi chọn gợi ý — sau khi chọn, component lưu thông tin địa chỉ Google Maps.</p>
+
+    <div>
+      <label for="autocomplete">Địa chỉ</label>
+      <div class="input-wrap">
+        <input id="autocomplete" type="text" placeholder="VD: 10 Downing Street, London" autocomplete="off" />
+      </div>
+      <div id="warning" class="warn" style="display:none;"></div>
+    </div>
+
+    <button id="saveBtn" class="btn">Lưu địa chỉ (show in UI)</button>
+
+    <div id="output" class="result" aria-live="polite"></div>
+
+    <!-- Hidden inputs you can submit với form -->
+    <form id="hiddenForm" style="display:none;">
+      <input type="hidden" name="formatted_address" id="h_formatted_address">
+      <input type="hidden" name="place_id" id="h_place_id">
+      <input type="hidden" name="lat" id="h_lat">
+      <input type="hidden" name="lng" id="h_lng">
+      <!-- thêm các trường cần thiết khác -->
+    </form>
+  </div>
+
+  <!-- Load Google Maps JS with Places library. Thay YOUR_API_KEY_HERE bằng API key của bạn -->
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&libraries=places&v=weekly"
+    async
+    defer></script>
+
+  <script>
+  // Wait until Google Maps script is loaded
+  function initAutocompleteWhenReady() {
+    if (!window.google || !google.maps || !google.maps.places) {
+      // chưa sẵn sàng: thử lại sau một chút
+      setTimeout(initAutocompleteWhenReady, 200);
+      return;
+    }
+
+    const input = document.getElementById('autocomplete');
+    const warning = document.getElementById('warning');
+    const output = document.getElementById('output');
+
+    // Tạo autocomplete; bạn có thể giới hạn phạm vi (componentRestrictions) hoặc types.
+    const autocomplete = new google.maps.places.Autocomplete(input, {
+      // types: ['geocode'], // hoặc ['establishment'] nếu muốn doanh nghiệp
+      // componentRestrictions: { country: "vn" }, // giới hạn quốc gia: 'vn'
+      fields: ["place_id", "formatted_address", "geometry", "address_components", "name"]
+    });
+
+    // Session token: recommended for billing/accuracy (nếu bạn xử lý server-side, gửi token server)
+    // const sessionToken = new google.maps.places.AutocompleteSessionToken();
+
+    let lastSelectedPlace = null;
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (!place || !place.place_id) {
+        warning.style.display = 'block';
+        warning.textContent = 'Không lấy được place details — vui lòng chọn gợi ý trong danh sách.';
+        return;
+      }
+      warning.style.display = 'none';
+      lastSelectedPlace = place;
+      // Show summary in UI
+      showPlace(place);
+      // Fill hidden inputs for form submit
+      document.getElementById('h_formatted_address').value = place.formatted_address || '';
+      document.getElementById('h_place_id').value = place.place_id || '';
+      if (place.geometry && place.geometry.location) {
+        document.getElementById('h_lat').value = place.geometry.location.lat();
+        document.getElementById('h_lng').value = place.geometry.location.lng();
+      }
+    });
+
+    function showPlace(place) {
+      const obj = {
+        place_id: place.place_id || null,
+        name: place.name || null,
+        formatted_address: place.formatted_address || null,
+        latitude: place.geometry && place.geometry.location ? place.geometry.location.lat() : null,
+        longitude: place.geometry && place.geometry.location ? place.geometry.location.lng() : null,
+        address_components: place.address_components || []
+      };
+      output.textContent = JSON.stringify(obj, null, 2);
+    }
+
+    // Example: Lưu / gửi lên server khi click lưu
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      if (!lastSelectedPlace) {
+        alert('Vui lòng chọn một gợi ý địa điểm trước khi lưu.');
+        return;
+      }
+
+      // Ví dụ: gửi dữ liệu về server
+      const payload = {
+        place_id: lastSelectedPlace.place_id,
+        formatted_address: lastSelectedPlace.formatted_address,
+        lat: lastSelectedPlace.geometry.location.lat(),
+        lng: lastSelectedPlace.geometry.location.lng(),
+        address_components: lastSelectedPlace.address_components
+      };
+
+      // 1) Demo: show payload (bạn có thể thay bằng fetch POST tới server của bạn)
+      console.log('Payload gửi lên server:', payload);
+      alert('Đã chuẩn bị payload — check console để xem chi tiết. (Ở project thật: gửi payload lên server bằng fetch).');
+    });
+
+    // Optional: press Enter to prevent form submit (nếu trong form)
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        // tránh submit form nếu muốn chọn gợi ý
+        e.preventDefault();
+      }
+    });
+
+    // ready
+    console.log('Google Places Autocomplete ready');
+  }
+
+  // Start the init loop
+  initAutocompleteWhenReady();
+  </script>
+</body>
+</html>
