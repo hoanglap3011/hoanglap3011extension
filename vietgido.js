@@ -4,7 +4,7 @@
 const VietGidoApp = {
   // --- Cấu hình & Hằng số ---
   config: {
-    API: 'https://script.google.com/macros/s/AKfycbw_hbZ7PqBs1xyTS0bTQKsuwo1A72zVK4W1fnm79l9exbWDlakqAHT8W3lA_9kQ7rj-tA/exec',
+    API: 'https://script.google.com/macros/s/AKfycbzw6kjQ3SD0yQbDUQ0FGg8aitmtEcs2Y7zEFLSGAeEGYjyh9gbxo88HO6TENRILYnEThg/exec',
     CACHE_DANH_MUC: 'selectedDanhMuc',
     CACHE_AUTO_NEXT: 'autoNextSwitchState',
     CACHE_SHOW_TOOLBAR: 'showToolbarSwitchState', // <-- THÊM DÒNG NÀY
