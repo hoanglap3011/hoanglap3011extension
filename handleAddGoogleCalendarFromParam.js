@@ -1,6 +1,21 @@
-(function handleAddGoogleCalendar() {
+(async function () {
   const TIME_LOAD_PAGE_ADDCALENDAR = 1000;
   const TIME_LOAD_GOOGLE_MAP = 1000;
+
+  function removeDiacritics(str) {
+    if (!str) return "";
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function getQueryParam(name) {
+    const params = new URLSearchParams(window.location.search);
+    return params.get(name) || "";
+  }
+
+  const rawQ = decodeURIComponent(getQueryParam("calendar") || "");
+  if (!rawQ) return;
+  const typeCalendar = removeDiacritics(rawQ).toLowerCase().replace(/\s+/g, " ").trim();
+
 
   setTimeout(() => {
     const inputElement = document.querySelector('input[aria-label="Thêm vị trí"]');
@@ -37,10 +52,14 @@
               const liElements = document.querySelectorAll('li');
               let targetLi = null;
               liElements.forEach((li) => {
-                if (li.textContent.includes("Lịch thi đấu bóng đá")) {
+                if (li.textContent.includes("Lịch thi đấu bóng đá") && typeCalendar === "lichthidau") {
                   targetLi = li;
                   return;
                 }
+                if (li.textContent.includes("Sự kiện từ Ticketbox") && typeCalendar === "ticketbox") {
+                  targetLi = li;
+                  return;
+                }                
               });
               if (targetLi) {
                 targetLi.click();

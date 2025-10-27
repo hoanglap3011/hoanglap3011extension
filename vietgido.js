@@ -9,7 +9,7 @@ const VietGidoApp = {
     CACHE_AUTO_NEXT: 'autoNextSwitchState',
     CACHE_SHOW_TOOLBAR: 'showToolbarSwitchState', // <-- THÊM DÒNG NÀY
     CACHE_HIDE_UNREQUIRED: 'hideUnrequiredSwitchState', // <-- THÊM DÒNG NÀY
-    CACHE_QUOTES: 'vietgido_quotes', 
+    CACHE_QUOTES: 'quotes', 
     
   },
 

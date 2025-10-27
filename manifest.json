@@ -1,63 +1,49 @@
 {
   "manifest_version": 3,
-  "name": "Extension của Lập",
-  "version": "1.0",
-  "description": "Extension của Lập",
+  "name": "Lập's Extension",
+  "version": "1.6",
+  "description": "extension của Lập",
   "permissions": [
-    "activeTab",
-    "tabs",
-    "scripting",
-    "windows",
-    "storage",
-    "notifications"
+    "activeTab", "storage"
   ],
-  "action": {
-    "default_icon": "icon.png"
-  },
-  "icons": {
-    "16": "icon.png",
-    "32": "icon.png",
-    "48": "icon.png",
-    "128": "icon.png"
-  },
+  "host_permissions": [
+    "*://script.google.com/*"
+  ],
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "matches": ["*://*.youtube.com/*", "*://youtube.com/*"],
+      "js": [
+        "config.js","handleYouTube.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://*.google.com/search*","*://google.com/search*"],
+      "js": ["handleGoogleSearch.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://*.ticketbox.vn/*", "*://ticketbox.vn/*"],
+      "js": ["handleTicketbox.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://calendar.google.com/calendar/u/0/r/eventedit?ofe=true*"],
+      "js": ["handleAddGoogleCalendarFromParam.js"],
       "run_at": "document_idle"
     }
   ],
-  "host_permissions": [
-    "<all_urls>"
-  ],
   "web_accessible_resources": [
     {
-      "resources": ["add.png", "hoanglap3011.html", "popup.html", "popup.css", "teams.js"],
-      "matches": ["<all_urls>"]
-    }
-  ],
-  "commands": {
-    "open_hoanglap3011": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+P"
-      },
-      "description": "Mở trang chủ của extension hoanglap3011"
+      "resources": ["football-teams.json","handleFootballMatch.js","add.png"],
+      "matches": ["*://*.google.com/*","*://google.com/*"]
     },
-    "open_panel": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+K"
-      },
-      "description": "Mở panel"
-    }
-    ,"call_api_and_open_tab": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+L"
-      },
-      "description": "Gọi API, lấy link từ JSON và mở tab mới"
-    }
-  }
+    {
+      "resources": ["add.png"],
+      "matches": ["*://*.ticketbox.vn/*", "*://ticketbox.vn/*"]
+    }  
+  ]
 }
