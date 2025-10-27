@@ -52,21 +52,36 @@
     const getRandomQuote = async () => {
         const defaultQuote = `<i style="color: var(--yt-spec-text-secondary);">Đang xử lý yêu cầu...</i>`;
         try {
-            const result = await chrome.storage.local.get("quotes");
-            if (!result.quotes) return defaultQuote;
-            const quotesArray = result.quotes;
+            // DÙNG HẰNG SỐ
+            const result = await chrome.storage.local.get(CACHE_QUOTES);
+            
+            // DÙNG HẰNG SỐ
+            if (!result[CACHE_QUOTES]) return defaultQuote;
+            
+            // DÙNG HẰNG SỐ
+            const quotesArray = result[CACHE_QUOTES];
+            
             if (Array.isArray(quotesArray) && quotesArray.length > 0) {
                 const randomIndex = Math.floor(Math.random() * quotesArray.length);
                 return `<i style="color: var(--yt-spec-text-secondary); text-align: center; display: block;">${quotesArray[randomIndex]}</i>`;
             }
-        } catch (e) { console.error("[Ext] Lỗi khi đọc 'quotes' từ chrome.storage:", e); }
+        } catch (e) { 
+            console.error(`[Ext] Lỗi khi đọc '${CACHE_QUOTES}' từ chrome.storage:`, e); 
+        }
         return defaultQuote;
     };
     const getApiPass = async () => {
         try {
-            const result = await chrome.storage.local.get("pass");
-            if (result.pass !== undefined) { return result.pass; }
-        } catch (e) { console.error("[Ext] Lỗi khi đọc 'pass' từ storage:", e); }
+            // DÙNG HẰNG SỐ
+            const result = await chrome.storage.local.get(CACHE_PASS);
+            
+            // DÙNG HẰNG SỐ
+            if (result[CACHE_PASS] !== undefined) { 
+                return result[CACHE_PASS]; 
+            }
+        } catch (e) { 
+            console.error(`[Ext] Lỗi khi đọc '${CACHE_PASS}' từ storage:`, e); 
+        }
         return "hihi"; 
     };
 
@@ -103,14 +118,18 @@
         const input = document.getElementById(MODAL_INPUT_ID);
         const saveButton = document.getElementById(MODAL_SAVE_ID);
         if (!input || !saveButton) return;
+        
         setModalControlsDisabled(true);
         saveButton.innerHTML = `<div class="my-ext-button-loader"></div>`;
+        
         try {
-            await chrome.storage.local.set({ pass: input.value });
+            // DÙNG CÚ PHÁP [Computed Property Name]
+            await chrome.storage.local.set({ [CACHE_PASS]: input.value });
+            
             saveButton.textContent = "Đã lưu!";
             setTimeout(onCloseKeyClick, 1000);
         } catch (e) {
-            console.error("[Ext] Lỗi khi lưu 'pass':", e);
+            console.error(`[Ext] Lỗi khi lưu '${CACHE_PASS}':`, e);
             saveButton.textContent = "Lỗi!";
             setTimeout(() => {
                 setModalControlsDisabled(false); 
@@ -201,10 +220,10 @@
         contentBox.innerHTML = await getRandomQuote(); 
         const currentPass = await getApiPass();
         try {
-            const response = await fetch(API_URL, {
+            const response = await fetch(API, {
                 method: "POST",
                 body: JSON.stringify({
-                    code: shortUrl, action: API_ACTION, pass: currentPass
+                    code: shortUrl, action: API_ACTION_GET_SUMMARY_BY_CODE, pass: currentPass
                 })
             });
             if (!response.ok) throw new Error("Lỗi mạng hoặc API");
@@ -253,28 +272,34 @@
             if (button) button.innerHTML = "Tóm tắt"; 
         }
     };
-    // ... (Hàm fetchQuotes giữ nguyên) ...
     const fetchQuotes = async (shortUrl, button) => {
         if (!button) return;
+        
         const contentBox = document.getElementById(CONTENT_ELEMENT_ID);
         if (!contentBox) return;
+
         setMainButtonsDisabled(true);
         button.innerHTML = `<div class="my-ext-button-loader"></div>`;
         contentBox.innerHTML = await getRandomQuote();
+
         const currentPass = await getApiPass();
         let statusText = "Quotes";
+
         try {
-            const response = await fetch(API_URL, {
+            const response = await fetch(API, {
                 method: "POST",
                 body: JSON.stringify({
                     code: shortUrl, action: API_ACTION_GET_QUOTES, pass: currentPass
                 })
             });
             if (!response.ok) throw new Error("Lỗi mạng hoặc API");
+            
             const data = await response.json();
             if (data.code == 1) {
-                await chrome.storage.local.set({ quotes: data.data });
-                console.log("[Ext] Đã lưu quotes mới vào storage.");
+                // DÙNG CÚ PHÁP [Computed Property Name]
+                await chrome.storage.local.set({ [CACHE_QUOTES]: data.data });
+                
+                console.log(`[Ext] Đã lưu '${CACHE_QUOTES}' mới vào storage.`);
                 statusText = "Đã lưu!";
             } else {
                 console.error("[Ext] API trả lỗi khi lấy quotes:", data.error);
@@ -313,7 +338,7 @@
             color: "var(--yt-spec-text-primary)", fontFamily: "Roboto, Arial, sans-serif",
             fontSize: "14px", zIndex: "10",
             display: 'flex', flexDirection: 'column',
-            height: PANEL_FIXED_HEIGHT, 
+            height: YOUTUBE_PANEL_FIXED_HEIGHT, 
             maxHeight: "40vh"
         });
         
@@ -323,7 +348,7 @@
             <h3 style="
                 margin: 0 0 10px 0; font-size: 16px; font-weight: bold;
                 flex-shrink: 0;
-            ">Tóm Tắt</h3>
+            ">Extension của Lập</h3>
             
             <div id="${CONTENT_ELEMENT_ID}" style="
                 margin: 0 0 12px 0; 

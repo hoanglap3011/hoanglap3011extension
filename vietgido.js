@@ -4,13 +4,14 @@
 const VietGidoApp = {
   // --- Cấu hình & Hằng số ---
   config: {
-    API: 'https://script.google.com/macros/s/AKfycbzw6kjQ3SD0yQbDUQ0FGg8aitmtEcs2Y7zEFLSGAeEGYjyh9gbxo88HO6TENRILYnEThg/exec',
-    CACHE_DANH_MUC: 'selectedDanhMuc',
-    CACHE_AUTO_NEXT: 'autoNextSwitchState',
-    CACHE_SHOW_TOOLBAR: 'showToolbarSwitchState', // <-- THÊM DÒNG NÀY
-    CACHE_HIDE_UNREQUIRED: 'hideUnrequiredSwitchState', // <-- THÊM DÒNG NÀY
-    CACHE_QUOTES: 'quotes', 
-    
+    API: API,
+    API_ACTION_ADD_VIETGIDO: API_ACTION_ADD_VIETGIDO,
+    API_ACTION_GET_DANHMUC_QUOTES: API_ACTION_GET_DANHMUC_QUOTES,
+    CACHE_DANH_MUC: CACHE_DANH_MUC,
+    CACHE_AUTO_NEXT: CACHE_AUTO_NEXT,
+    CACHE_SHOW_TOOLBAR: CACHE_SHOW_TOOLBAR,
+    CACHE_HIDE_UNREQUIRED: CACHE_HIDE_UNREQUIRED,
+    CACHE_QUOTES: CACHE_QUOTES,
   },
 
   // --- Trạng thái của ứng dụng ---
@@ -645,7 +646,7 @@ const VietGidoApp = {
         pass: this.dom.txtPass?.value,
         danhMuc: selectedCategoryName,
         duLieu: entries,
-        action: 'add'
+        action: this.config.API_ACTION_ADD_VIETGIDO
       };
     },
     validateData(data) {
@@ -676,7 +677,7 @@ async updateCategoriesFromAPI() {
       try {
         const response = await fetch(this.config.API, {
           method: 'POST',
-          body: JSON.stringify({ pass: key, action: 'getDanhMuc' })
+          body: JSON.stringify({ pass: key, action: this.config.API_ACTION_GET_DANHMUC_QUOTES })
         });
         if (!response.ok) throw new Error(`Lỗi mạng: ${response.statusText}`);
         const resp = await response.json();

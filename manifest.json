@@ -4,7 +4,7 @@
   "version": "1.6",
   "description": "extension của Lập",
   "permissions": [
-    "activeTab", "storage"
+    "activeTab", "storage","tabs"
   ],
   "host_permissions": [
     "*://script.google.com/*"
@@ -45,5 +45,14 @@
       "resources": ["add.png"],
       "matches": ["*://*.ticketbox.vn/*", "*://ticketbox.vn/*"]
     }  
-  ]
+  ],
+  "commands": {
+    "open_my_page": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+L",
+        "mac": "Command+Shift+L"
+      },
+      "description": "Mở file hoanglap3011.html"
+    }
+  }  
 }

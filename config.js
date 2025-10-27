@@ -1,11 +1,19 @@
-// =======================================================
-// --- CẤU HÌNH API DÙNG CHUNG ---
-// =======================================================
-
-const API_URL = "https://script.google.com/macros/s/AKfycbxHXviwK6sQEU1v1TjVCKGByY40ka3fNAVBQ9fEZ8PJW_msRr0qp6bpwRT3oqO5UG7i6w/exec"; 
-const API_ACTION = "getSummaryByCode";
+// api
+const API = "https://script.google.com/macros/s/AKfycbz4DvVrBby1lxAJYfCQxJojnOhJdw_gMi4osHa1WnohBjxC4DEt3M0Wz6mr4tH8U1LW/exec";
+const API_ACTION_GET_SUMMARY_BY_CODE = "getSummaryByCode";
 const API_ACTION_GET_QUOTES = "getQuotes";
+const API_ACTION_ADD_VIETGIDO = "addVietGiDo";
+const API_ACTION_GET_DANHMUC_QUOTES = "getDanhMucAndQuote";
 
-// *** MỚI: Chiều cao cố định cho panel ***
-// (Bạn có thể đổi giá trị này)
-const PANEL_FIXED_HEIGHT = "180px";
+// youtube
+const YOUTUBE_PANEL_FIXED_HEIGHT = "230px";
+
+// CACHE KEYS
+const CACHE_PASS = "pass";
+const CACHE_QUOTES = "quotes";
+
+// vietgido
+const CACHE_DANH_MUC = 'selectedDanhMuc';
+const CACHE_AUTO_NEXT = 'autoNextSwitchState';
+const CACHE_SHOW_TOOLBAR = 'showToolbarSwitchState';
+const CACHE_HIDE_UNREQUIRED = 'hideUnrequiredSwitchState';
