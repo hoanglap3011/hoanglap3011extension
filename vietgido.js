@@ -12,6 +12,7 @@ const VietGidoApp = {
     CACHE_SHOW_TOOLBAR: CACHE_SHOW_TOOLBAR,
     CACHE_HIDE_UNREQUIRED: CACHE_HIDE_UNREQUIRED,
     CACHE_QUOTES: CACHE_QUOTES,
+    CACHE_PASS: CACHE_PASS,
   },
 
   // --- Trạng thái của ứng dụng ---
@@ -31,6 +32,7 @@ const VietGidoApp = {
   init() {
     this.cacheDomElements();
     this.setupEventListeners();
+this.state.urlParams = new URLSearchParams(window.location.search);    
     this.loadInitialState();
     this.initDanhMucSelect();
   },
@@ -75,8 +77,8 @@ const VietGidoApp = {
         this.dom.autoNextTheLoaiBietOnSwtich.checked = data[this.config.CACHE_AUTO_NEXT];
       }
     });
-    this.helpers.storage.get('KEY', r => {
-      if (this.dom.txtPass) this.dom.txtPass.value = r.KEY || '';
+    this.helpers.storage.get(this.config.CACHE_PASS, r => {
+      if (this.dom.txtPass) this.dom.txtPass.value = r[this.config.CACHE_PASS] || '';
     });
 
     this.helpers.storage.get(this.config.CACHE_SHOW_TOOLBAR, data => {
@@ -107,8 +109,11 @@ const VietGidoApp = {
     });
   },
 
-  initDanhMucSelect() {
+initDanhMucSelect() {
     if (!this.dom.danhMucSelect) return;
+
+    // 1. Đọc tham số 'danhMuc' từ state (đã lưu ở hàm init)
+    const paramDanhMuc = this.state.urlParams.get('danhMuc');
 
     if (window.Choices && !this.dom.danhMucSelect.choices) {
       this.dom.danhMucSelect.choices = new Choices(this.dom.danhMucSelect, {
@@ -121,6 +126,24 @@ const VietGidoApp = {
       const categories = data?.danhMuc || [];
       if (categories.length > 0) {
         this.render.populateCategories.call(this, categories);
+
+        // 2. LOGIC MỚI: Ưu tiên tham số URL
+        if (paramDanhMuc) {
+          const targetCategory = categories.find(c => c.table === paramDanhMuc);
+          if (targetCategory) {
+            // Tìm thấy -> Set giá trị từ URL và bỏ qua cache
+            this.dom.danhMucSelect.choices?.setChoiceByValue(targetCategory.table);
+            this.render.buildEntriesForSelected.call(this, targetCategory.table);
+            this.ui.applyTheme.call(this, targetCategory);
+            // Cập nhật cache thành giá trị mới này luôn
+            this.helpers.storage.set({ [this.config.CACHE_DANH_MUC]: targetCategory.table }); 
+            this.ui.setButtonsState.call(this, true);
+            return; // Xong việc, không cần chạy logic cache cũ
+          }
+          // Nếu không tìm thấy (param bị sai), cứ để nó chạy logic cache cũ ở dưới
+        }
+
+        // 3. LOGIC CŨ (chạy khi không có paramDanhMuc hoặc paramDanhMuc bị sai)
         this.helpers.storage.get(this.config.CACHE_DANH_MUC, cache => {
           const saved = cache[this.config.CACHE_DANH_MUC];
           const targetCategory = categories.find(c => c.table === saved) || categories[0];
@@ -132,8 +155,10 @@ const VietGidoApp = {
         });
         this.ui.setButtonsState.call(this, true);
       } else {
-        this.dom.danhMucSelect.choices?.setChoices([{ value: '', label: 'Cần cập nhật danh sách danh mục', disabled: true }], 'value', 'label', true);
-        this.ui.setButtonsState(false, true); // <-- Sửa ở đây
+        this.dom.danhMucSelect.choices?.setChoices([
+          { value: '', label: 'Cần cập nhật danh sách danh mục', disabled: true }
+        ], 'value', 'label', true);
+        this.ui.setButtonsState.call(this, false, true);
       }
     });
   },
@@ -189,7 +214,7 @@ const VietGidoApp = {
 
       this.ui.showLoadingOverlay.call(this);
       this.ui.setButtonsState.call(this, false);
-
+      
       try {
         const response = await fetch(this.config.API, { method: 'POST', body: JSON.stringify(data) });
         if (!response.ok) throw new Error(`Lỗi mạng: ${response.statusText}`);
@@ -216,7 +241,8 @@ const VietGidoApp = {
         alert('Vui lòng nhập pass');
         return;
       }
-      this.helpers.storage.set({ KEY: pass }, this.ui.togglePasswordInput.bind(this));
+      const cachePass = this.config.CACHE_PASS;
+      this.helpers.storage.set({ [cachePass]: pass }, this.ui.togglePasswordInput.bind(this));
     },
 
     // Thay thế toàn bộ hàm này trong VietGidoApp.handlers
@@ -365,38 +391,50 @@ const VietGidoApp = {
       control.className = 'vg-field-control';
       field.appendChild(control);
 
-      switch (headerConfig.type) {
+      // --- LOGIC TỰ ĐỘNG ĐIỀN DỮ LIỆU ---
+      const effectiveHeaderConfig = { ...headerConfig };
+      const columnName = effectiveHeaderConfig.column || '';
+      // Lấy giá trị từ URL param dựa trên tên cột
+      const urlValue = this.state.urlParams.get(columnName);
+
+      if (urlValue !== null) {
+        // Ghi đè giá trị 'preset' bằng giá trị từ URL
+        effectiveHeaderConfig.preset = urlValue;
+      }
+      // --- KẾT THÚC LOGIC TỰ ĐỘNG ĐIỀN ---
+      
+      // 5. Sử dụng 'effectiveHeaderConfig' (đã có thể bị ghi đè)
+      switch (effectiveHeaderConfig.type) {
         case 'checkbox':
-          this.render._createCheckboxField.call(this, field, control, entryId, headerConfig, fieldIndex);
+          this.render._createCheckboxField.call(this, field, control, entryId, effectiveHeaderConfig, fieldIndex);
           break;
         case 'selectbox':
-          this.render._createSelectField.call(this, control, headerConfig);
+          // Hàm này sẽ tự động chọn 'youtube' vì preset đã được gán
+          this.render._createSelectField.call(this, control, effectiveHeaderConfig);
           break;
         case 'date':
-          // UPDATED: Truyền cả headerConfig
-          this.render._createDateField.call(this, control, headerConfig);
+          this.render._createDateField.call(this, control, effectiveHeaderConfig);
           break;
         case 'time':
-          // UPDATED: Truyền cả headerConfig
-          this.render._createTimeField.call(this, control, headerConfig);
+          this.render._createTimeField.call(this, control, effectiveHeaderConfig);
           break;
         case 'number':
-          this.render._createNumberField.call(this, control, headerConfig);
+          this.render._createNumberField.call(this, control, effectiveHeaderConfig);
           break;
         case 'money':
-          this.render._createMoneyField.call(this, control, headerConfig);
+          this.render._createMoneyField.call(this, control, effectiveHeaderConfig);
           break;
         case 'richtext':
-          // UPDATED: Truyền cả headerConfig
-          const quill = this.render._createQuillEditor.call(this, control, headerConfig);
+          const quill = this.render._createQuillEditor.call(this, control, effectiveHeaderConfig);
           this.state.quillInstances.set(`${entryId}-${fieldIndex}`, quill);
           break;
         case 'textarea':
-          this.render._createTextAreaField.call(this, control, headerConfig);
+          this.render._createTextAreaField.call(this, control, effectiveHeaderConfig);
           break;
         case 'text':
         default:
-          this.render._createTextField.call(this, control, headerConfig);
+          // Hàm này sẽ tự động điền shortUrl vào 'title' và 'code'
+          this.render._createTextField.call(this, control, effectiveHeaderConfig);
           break;
       }
       return field;
@@ -671,13 +709,13 @@ const VietGidoApp = {
     },
 
 async updateCategoriesFromAPI() {
-      const key = this.dom.txtPass?.value.trim();
-      if (!key) return false;
+      const pass = this.dom.txtPass?.value.trim();
+      if (!pass) return false;
 
       try {
         const response = await fetch(this.config.API, {
           method: 'POST',
-          body: JSON.stringify({ pass: key, action: this.config.API_ACTION_GET_DANHMUC_QUOTES })
+          body: JSON.stringify({ pass: pass, action: this.config.API_ACTION_GET_DANHMUC_QUOTES })
         });
         if (!response.ok) throw new Error(`Lỗi mạng: ${response.statusText}`);
         const resp = await response.json();
@@ -721,18 +759,22 @@ async updateCategoriesFromAPI() {
   // --- UI (Hiệu ứng & giao diện) ---
   // =================================================================
   ui: {
-    setButtonsState(enabled, keepUpdateBtn = enabled) {
-      this.dom.addBtn.disabled = !enabled;
-      this.dom.submitBtn.disabled = !enabled;
-      this.dom.updateDanhMucBtn.disabled = !keepUpdateBtn;
+    setButtonsState: function(enabled, keepUpdateBtn = enabled) {
+        if (!this.dom) return; // Add guard clause
+        const app = this.dom.addBtn ? this : VietGidoApp; // Get correct context
+        
+        app.dom.addBtn.disabled = !enabled;
+        app.dom.submitBtn.disabled = !enabled;
+        app.dom.updateDanhMucBtn.disabled = !keepUpdateBtn;
     },
 
     togglePasswordInput() {
       const isHidden = this.dom.divPassword.style.display === 'none';
       this.dom.divPassword.style.display = isHidden ? 'block' : 'none';
       if (isHidden) {
-        this.helpers.storage.get('KEY', r => {
-          if (this.dom.txtPass) this.dom.txtPass.value = r.KEY || '';
+        const cachePass = this.config.CACHE_PASS;
+        this.helpers.storage.get(cachePass, r => {
+          if (this.dom.txtPass) this.dom.txtPass.value = r[cachePass] || '';
         });
       }
     },
