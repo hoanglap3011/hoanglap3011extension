@@ -88,13 +88,14 @@
     };
 
 
-    // === HÀM GỌI PROXY AI ĐỂ TÓM TẮT ===
+// === HÀM GỌI PROXY AI ĐỂ TÓM TẮT ===
     /**
      * Gọi Google App Script để tóm tắt nội dung bài viết (an toàn).
      * @param {string} content Nội dung bài viết cần tóm tắt.
+     * @param {string} postUrl URL của bài viết (để gửi lên làm 'code').
      * @returns {Promise<string>} Kết quả tóm tắt (hoặc thông báo lỗi).
      */
-    const summarizePostContent = async (content) => {
+    const summarizePostContent = async (content, postUrl) => { // <-- THÊM postUrl
         // 1. Kiểm tra URL proxy
         if (!PROXY_URL || PROXY_URL === "PROXY_URL_NOT_FOUND_IN_CONFIG") {
             return "Lỗi cấu hình: Không tìm thấy URL Proxy (biến API trong config.js).";
@@ -110,7 +111,8 @@
         const payloadObject = {
             pass: pass,
             action: 'tomTatByAI',
-            content: content
+            content: content,
+            code: postUrl // <-- THÊM TRƯỜNG MỚI THEO YÊU CẦU
         };
 
         try {
@@ -148,7 +150,6 @@
             return `Lỗi kết nối đến Google App Script: ${error.message}`;
         }
     };
-
 
     /**
      * Hàm chính để quét và chèn nút.
@@ -202,53 +203,42 @@
         });
     };
 
-    /**
-     * Tách logic lấy thông tin bài viết ra hàm riêng
-     * Hàm này là ASYNC để xử lý "Xem thêm"
-     */
+// === HÀM getPostInfo (ĐÃ SỬA LỖI FALLBACK) ===
     const getPostInfo = async (post) => {
         
         // === 1. LẤY TÁC GIẢ (VÀ GROUP) ===
+        // (Giữ nguyên logic lấy author/group từ dòng 197 - 263... )
         let authorName = 'Không tìm thấy tác giả';
         let authorUrl = 'Không tìm thấy URL tác giả';
         let groupName = null;
         let groupUrl = null;
 
-        // Method 1: Dùng aria-labelledby (Đáng tin cậy nhất)
         const authorLabelId = post.getAttribute('aria-labelledby');
         if (authorLabelId) {
-            const labelEl = document.getElementById(authorLabelId); // Đây là element có ID (thường là H4)
+            const labelEl = document.getElementById(authorLabelId); 
             if (labelEl) {
                 const mainLinkEl = labelEl.querySelector('a');
                 
-                // KIỂM TRA XEM ĐÂY CÓ PHẢI BÀI ĐĂNG GROUP KHÔNG
                 if (mainLinkEl && (mainLinkEl.href.includes('/groups/') || mainLinkEl.href.includes('/gaming/'))) {
-                    // ĐÂY LÀ BÀI ĐĂNG GROUP (hoặc GROUP GAMING)
                     groupName = labelEl.innerText.trim();
                     groupUrl = mainLinkEl.href;
 
-                    // Bây giờ, tìm link tác giả thật (có chứa /user/ hoặc là link thứ 2 trong header)
-                    // Thêm [tabindex="0"] để bỏ qua link avatar
-                    const authorLinkEl = post.querySelector('a[href*="/user/"][tabindex="0"], a[href*="?id="][tabindex="0"]'); // Mở rộng tìm cả user ID
+                    const authorLinkEl = post.querySelector('a[href*="/user/"][tabindex="0"], a[href*="?id="][tabindex="0"]');
                     if (authorLinkEl) {
                         authorName = authorLinkEl.innerText.trim();
                         authorUrl = authorLinkEl.href;
                     } else {
                         authorName = "Không tìm thấy tác giả (trong group)";
-                        // authorUrl đã được set mặc định
                     }
                 } else if (mainLinkEl) {
-                    // ĐÂY LÀ BÀNG ĐĂNG CÁ NHÂN (HOẶC PAGE)
                     authorName = labelEl.innerText.trim();
                     authorUrl = mainLinkEl.href;
                 } else {
-                    // Fallback nếu có labelEl nhưng không có link (hiếm)
                     authorName = labelEl.innerText.trim();
                 }
             }
         }
 
-        // Method 2: Fallback về logic cũ nếu Method 1 thất bại
         if (authorName === 'Không tìm thấy tác giả') {
             const authorEl = post.querySelector('h4 a, strong a'); 
             if (authorEl) {
@@ -257,52 +247,39 @@
             }
         }
 
-        // Làm sạch authorUrl (Loại bỏ tracking params)
         if (authorUrl && authorUrl.startsWith('http')) {
             try {
                 const url = new URL(authorUrl);
-                authorUrl = url.origin + url.pathname; // Chỉ lấy domain + path
-            } catch (e) {
-                console.warn("[Ext] Không thể parse authorUrl, dùng giá trị gốc.", e);
-            }
+                authorUrl = url.origin + url.pathname; 
+            } catch (e) { /* Bỏ qua lỗi */ }
         }
-        // Làm sạch groupUrl (nếu có)
         if (groupUrl && groupUrl.startsWith('http')) {
             try {
                 const url = new URL(groupUrl);
-                groupUrl = url.origin + url.pathname; // Chỉ lấy domain + path
-            } catch (e) {
-                console.warn("[Ext] Không thể parse groupUrl, dùng giá trị gốc.", e);
-            }
+                groupUrl = url.origin + url.pathname; 
+            } catch (e) { /* Bỏ qua lỗi */ }
         }
         
         // === 2. THỜI GIAN & URL BÀI VIẾT ===
+        // (Giữ nguyên logic lấy thời gian từ dòng 265 - 307... )
         let timeText = 'Không tìm thấy thời gian';
         let postUrl = 'Không tìm thấy URL bài viết';
         let timeEl = null;
 
-        // Tìm TẤT CẢ các link khớp, và lấy cái CUỐI CÙNG (thường là timestamp permalink)
         const timeEls = post.querySelectorAll('a[href*="/posts/"], a[href*="?story_fbid="], a[href*="/videos/"], a[href*="/watch/"]');
         
         if (timeEls.length > 0) {
-            // Lấy cái cuối cùng
             timeEl = timeEls[timeEls.length - 1]; 
-            postUrl = timeEl.href; // URL thì chắc chắn đúng
-
-            // === QUÉT NGƯỢC LÊN CÁC THẺ CHA ĐỂ TÌM THUỘC TÍNH TITLE/ARIA-LABEL (TOOLTIP) ===
+            postUrl = timeEl.href; 
             let found = false;
             let currentEl = timeEl;
             let count = 0;
-
-            // Quét thẻ hiện tại và 4 thẻ cha mẹ (tổng cộng 5 cấp)
             while (currentEl && count < 5) {
-                // Ưu tiên Title (Tooltip)
                 if (currentEl.title && currentEl.title.length > 5) {
                     timeText = currentEl.title;
                     found = true;
                     break;
                 }
-                // Sau đó là Aria-Label (thường chứa thời gian đầy đủ)
                 if (currentEl.getAttribute('aria-label') && currentEl.getAttribute('aria-label').length > 5) {
                     timeText = currentEl.getAttribute('aria-label');
                     found = true;
@@ -311,8 +288,6 @@
                 currentEl = currentEl.parentElement;
                 count++;
             }
-            
-            // Nếu không tìm thấy trong thẻ cha, thử quét sâu các thẻ con
             if (!found) {
                 const allChildren = timeEl.querySelectorAll('*');
                 for(const child of allChildren) {
@@ -328,62 +303,42 @@
                     }
                 }
             }
-
-            // Fallback cuối cùng là innerText
             if (!found && timeEl.innerText.length > 0) {
                  timeText = timeEl.innerText.trim();
             }
         }
-
-        // Làm sạch postUrl
         if (postUrl && postUrl.startsWith('http')) {
              try {
                 const url = new URL(postUrl);
                 postUrl = url.origin + url.pathname; 
-            } catch (e) {
-                console.warn("[Ext] Không thể parse postUrl, dùng giá trị gốc.", e);
-            }
+            } catch (e) { /* Bỏ qua lỗi */ }
         }
 
         // === 3. NỘI DUNG (LOGIC TỰ ĐỘNG CLICK "XEM THÊM") ===
         let postContent = "";
-        let messageBlock = post.querySelector('div[data-ad-preview="message"]');
         
-        // TRƯỜNG HỢP 1: Cấu trúc thông thường (có data-ad-preview="message")
-        if (messageBlock) {
-            // Log hiện tại là: [Ext] Không tìm thấy 'data-ad-preview="message"'. Dùng logic cũ.
-            // Đoạn này không chạy nếu có log trên.
-        } else {
-            // TRƯỜNG HỢP 2: Group hoặc các cấu trúc khác (Không có data-ad-preview)
-            console.log("[Ext] Không tìm thấy 'data-ad-preview=\"message\"'. Thử tìm khối nội dung thay thế.");
-            // Selector phổ biến cho nội dung bài viết trong các cấu trúc phức tạp (group, page)
-            // Tìm đến thẻ div có vai trò là content block (thường là anh em của block like/comment)
-            messageBlock = post.querySelector('div[role="article"] > div:nth-child(2) > div:nth-child(2) > div:nth-child(2), div[data-testid="post_message"]');
+        // --- THAY ĐỔI LỚN BẮT ĐẦU TỪ ĐÂY ---
+
+ // (Bên trong hàm getPostInfo)
+
+        // 1. TÌM MESSAGE BLOCK
+        // Chúng ta sẽ gộp tất cả các selector có thể có vào một chuỗi
+        const contentSelectors = [
+            'div[data-ad-preview="message"]',                 // Selector cũ cho timeline
+            'div[data-testid="post_message"]',                // Selector cũ cho group
+            '[data-testid="story-text-content"]',             // Selector tiềm năng
+            '[data-testid="post_text"]',                      // Selector tiềm năng mới
             
-            if (!messageBlock) {
-                 console.warn("[Ext] ⚠️ Thất bại khi tìm khối nội dung thay thế. Sử dụng logic fallback đơn giản.");
-                 // Fallback: Tìm TẤT CẢ các đoạn văn bản trong bài viết.
-                 const contentElements = post.querySelectorAll('div[dir="auto"]');
-                 contentElements.forEach(el => {
-                     const role = el.getAttribute('role');
-                     const hasSeeMore = el.querySelector('div[role="button"]');
-                     if (role !== 'button' && !hasSeeMore) {
-                         postContent += el.innerText + "\n";
-                     }
-                 });
-                 return {
-                     authorName,
-                     authorUrl,
-                     groupName,
-                     groupUrl,
-                     timeText,
-                     postUrl,
-                     postContent: postContent.trim() || "Không tìm thấy nội dung text."
-                 };
-            }
-            // Nếu tìm thấy khối thay thế, tiếp tục xử lý như bình thường ở dưới
-        }
+            // === THÊM SELECTOR MỚI VÀO ĐÂY ===
+            'div[class="html-div xdj266r x14z9mp xat24cr x1lziwak x1l90r2v xv54qhq xf7dkkf x1iorvi4"]'
+            
+        ];
         
+        let messageBlock = post.querySelector(contentSelectors.join(', '));
+        
+// ... (phần còn lại của code giữ nguyên)
+        
+        // 2. XỬ LÝ
         if (messageBlock) {
             // A. Tìm nút "Xem thêm" BÊN TRONG khối message
             const seeMoreButton = Array.from(messageBlock.querySelectorAll('div[role="button"]'))
@@ -393,7 +348,6 @@
             if (seeMoreButton) {
                 console.log("[Ext] 'Xem thêm' detected. Clicking and waiting 500ms...");
                 seeMoreButton.click();
-                // Chờ 500ms để Facebook mở rộng nội dung
                 await new Promise(resolve => setTimeout(resolve, 500)); 
                 console.log("[Ext] Waited 500ms. Now scraping expanded content.");
             }
@@ -411,40 +365,38 @@
             // XỬ LÝ EMOJI
             clone.querySelectorAll('img[alt]').forEach(emoji => {
                 if (emoji.alt) {
-                    // Thay thế <img> bằng một text node chứa nội dung 'alt'
                     emoji.replaceWith(document.createTextNode(emoji.alt));
                 } else {
-                    // Xóa img nếu không có alt để tránh rác
                     emoji.remove();
                 }
             });
             
             // XỬ LÝ XUỐNG DÒNG
-            // Facebook dùng các <div dir="auto"> cho mỗi dòng/đoạn.
-            // Lấy text của từng div và join lại bằng ký tự xuống dòng.
             const paragraphDivs = clone.querySelectorAll('div[dir="auto"]');
             if (paragraphDivs.length > 0) {
                 postContent = Array.from(paragraphDivs)
-                    .map(p => p.innerText) // Không .trim() ở đây để giữ thụt đầu dòng (nếu có)
-                    .join('\n'); // Nối lại bằng dấu xuống dòng thật
+                    .map(p => p.innerText) 
+                    .join('\n'); 
             } else {
-                // Fallback nếu cấu trúc khác (ví dụ: không có 'div[dir="auto"]' lồng nhau)
                 postContent = clone.innerText.trim(); 
             }
+        } else {
+            // 3. THẤT BẠI (ĐÃ XÓA LOGIC FALLBACK CŨ)
+            console.error("[Ext] ⚠️ THẤT BẠI: Không thể tìm thấy khối nội dung (messageBlock). Cần cập nhật contentSelectors.");
+            postContent = "Lỗi: Không tìm thấy khối nội dung. (Cần cập nhật selector cho phiên bản Facebook này)";
         }
         
         // 4. Trả về đối tượng
         return {
             authorName,
             authorUrl,
-            groupName, // <-- THÊM MỚI
-            groupUrl,  // <-- THÊM MỚI
+            groupName,
+            groupUrl,
             timeText,
             postUrl,
-            postContent: postContent || "Không tìm thấy nội dung text."
+            postContent: postContent.trim() // Đã có postContent (dữ liệu hoặc thông báo lỗi)
         };
     };
-
 
     /**
      * Hàm tạo và chèn nút
@@ -496,6 +448,7 @@
             
             // 2. Lấy thông tin bài viết (bao gồm nội dung)
             const postInfo = await getPostInfo(post);
+            console.log(`[Ext] Thông tin bài viết thu thập được:`, postInfo);
 
             // 3. KIỂM TRA ĐỘ DÀI
             const postContentLength = postInfo.postContent.length;
@@ -511,15 +464,22 @@
                 return; // Dừng xử lý
             }
 
+// ... (bên trong summarizeBtn.onclick) ...
+
             // 4. Gọi AI thông qua Proxy
             let summaryText = 'Không thể tóm tắt.';
             
             if (postInfo.postContent && postContentLength > 50) { // Chỉ tóm tắt nếu nội dung đủ dài (safety check)
                 console.log(`[Ext] Đang gửi ${postContentLength} ký tự nội dung đến Proxy App Script...`);
-                summaryText = await summarizePostContent(postInfo.postContent); // <--- SỬ DỤNG HÀM PROXY MỚI
+                
+                // === SỬA DÒNG NÀY ===
+                summaryText = await summarizePostContent(postInfo.postContent, postInfo.postUrl); // <-- THÊM postInfo.postUrl
+            
             } else {
                  summaryText = 'Nội dung bài viết quá ngắn hoặc không tìm thấy để tóm tắt.';
             }
+
+            // 5. HIỂN THỊ KẾT QUẢ TRONG POPUP
 
             // 5. HIỂN THỊ KẾT QUẢ TRONG POPUP
             // Luôn gọi showSummaryPopup, bất kể là kết quả tóm tắt hay lỗi

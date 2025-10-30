@@ -15,6 +15,7 @@ const KEY_PASS = "key";
 const URL_GET_LINK = "https://script.google.com/macros/s/AKfycbzZoNlP98YZVhHNh7HkO2MT0ToHzIB6wHD92sXD_opDD_RZti3UAJWe2CxZ_Jggje6czg/exec";
 const QUICK_URLS = {
   TODOLIST_ALL: "https://docs.google.com/spreadsheets/d/1ODqzKCpG_uZ_3YckZMiXNvhE6xGGulUEy7nICsdAQHo/edit",
+  PARKING_LOT: "https://docs.google.com/spreadsheets/d/1wJioap23Z4zkycu-xdbaAyunw8mEvKrVON8isa3KQBs/edit?gid=1922680355#gid=1922680355",
   CALENDAR: "https://calendar.google.com/",
   PROBLEM: "https://docs.google.com/spreadsheets/d/1Ww9sdbQScZdNysDOvD8_1zCqxsi3r-K6FqIKLLoXSho/edit?gid=0#gid=0",
   SODSCD: "https://docs.google.com/document/d/12oVFyqe-yWjuwTW2YN74WPQl6N9xOcaR8KONvH81Ksg/edit?tab=t.0",
@@ -68,6 +69,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const clickHandlers = [
     ["btnEnter", togglePasswordInput],
     ["btnVietGiDo", vietGiDo],
+    ["btnToDoListThisWeek", openToDoListThisWeek],
+    ["btnToDoListWeekCustom", openToDoListWeekCustom],
+    ["btnParkingLot", () => window.open(QUICK_URLS.PARKING_LOT, '_self')],
     ["btnSavePass", savePass],
     ["btnToDoListTong", () => window.open(QUICK_URLS.TODOLIST_ALL, '_self')],
     ["btnCalendar", () => window.open(QUICK_URLS.CALENDAR, '_self')],
@@ -185,6 +189,77 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }  
 });
+
+function openToDoListWeekCustom(){
+  flatpickr("#datepicker", {
+    defaultDate: new Date(),
+    dateFormat: "d.m.Y",
+    locale: "vn",
+    position: "below",
+    onChange: function (selectedDates, dateStr, instance) {
+      fetchLinkToDoListWeek(dateStr, (url) => {
+        window.open(url, '_blank');
+      });
+    }
+  }).open();
+
+}
+
+function openToDoListThisWeek(){  
+  getStorage([CACHE_TODOLIST_THISWEEK], (obj) => {
+    const url = obj[CACHE_TODOLIST_THISWEEK];
+    if (url) {
+      window.open(url, '_blank');
+      return;
+    }
+    const todayStr = getDDMMYYYYHienTai(); 
+    fetchLinkToDoListWeek(todayStr, (url) => {
+      setStorage({ [CACHE_TODOLIST_THISWEEK]: url }, () => {
+      });
+      window.open(url, '_blank');
+    });
+  });
+}
+
+function fetchLinkToDoListWeek(dayStr, callback) {
+  const pass = document.getElementById("txtPass").value;
+  if (!pass || pass.length === 0) {
+    togglePasswordInput();
+    return;
+  }
+  fetch(API, {
+    method: 'POST',
+    body: JSON.stringify({
+      pass: pass,
+      action: API_ACTION_GET_TODOLIST_THISWEEK,
+      dayStr: dayStr
+    })
+  })
+    .then(response => {
+      if (!response.ok) {
+        alert('Lỗi khi gọi API');
+        throw new Error("Lỗi khi gọi API");
+      }
+      return response.json();
+    })
+    .then(result => {
+      const code = result.code;
+      if (code !== 1) {
+        const errMsg = result.error || 'Có lỗi xảy ra';
+        alert('Lỗi: ' + errMsg);
+        return;
+      }
+      const url = result.data;
+      if (typeof callback === 'function') {
+        callback(url);
+      }      
+    })
+    .catch(err => {
+      alert('Lỗi khi gọi API: ' + err);
+    }).finally(() => {  
+    });
+}
+
 
 function addClick(id, handler) {
   const el = document.getElementById(id);

@@ -58,12 +58,19 @@
     }  
   ],
   "commands": {
-    "open_my_page": {
+    "open_hoanglap3011": {
       "suggested_key": {
         "default": "Ctrl+Shift+L",
         "mac": "Command+Shift+L"
       },
       "description": "Mở file hoanglap3011.html"
-    }
+    },
+    "open_vietgido": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+V",
+        "mac": "Command+Shift+V"
+      },
+      "description": "Mở file vietgido.html"
+    }    
   }  
 }
