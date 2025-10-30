@@ -1,12 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Lập's Extension",
-  "version": "1.7",
+  "version": "1.6",
   "description": "extension của Lập",
   "permissions": [
-    "activeTab",
-    "storage",
-    "tabs"
+    "activeTab", "storage","tabs"
   ],
   "host_permissions": [
     "*://script.google.com/*"
@@ -16,43 +14,25 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "*://*.youtube.com/*",
-        "*://youtube.com/*"
-      ],
+      "matches": ["*://*.youtube.com/*", "*://youtube.com/*"],
       "js": [
-        "config.js",
-        "handleYouTube.js"
+        "config.js","handleYouTube.js"
       ],
       "run_at": "document_idle"
     },
     {
-      "matches": [
-        "*://*.google.com/search*",
-        "*://google.com/search*"
-      ],
-      "js": [
-        "handleGoogleSearch.js"
-      ],
+      "matches": ["*://*.google.com/search*","*://google.com/search*"],
+      "js": ["handleGoogleSearch.js"],
       "run_at": "document_idle"
     },
     {
-      "matches": [
-        "*://*.ticketbox.vn/*",
-        "*://ticketbox.vn/*"
-      ],
-      "js": [
-        "handleTicketbox.js"
-      ],
+      "matches": ["*://*.ticketbox.vn/*", "*://ticketbox.vn/*"],
+      "js": ["handleTicketbox.js"],
       "run_at": "document_idle"
     },
     {
-      "matches": [
-        "*://calendar.google.com/calendar/u/0/r/eventedit?ofe=true*"
-      ],
-      "js": [
-        "handleAddGoogleCalendarFromParam.js"
-      ],
+      "matches": ["*://calendar.google.com/calendar/u/0/r/eventedit?ofe=true*"],
+      "js": ["handleAddGoogleCalendarFromParam.js"],
       "run_at": "document_idle"
     },
     {
@@ -61,6 +41,7 @@
         "*://facebook.com/*"
       ],
       "js": [
+        "config.js",
         "handleFacebook.js"
       ],
       "run_at": "document_idle"
@@ -68,19 +49,21 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": [
-        "football-teams.json",
-        "handleFootballMatch.js",
-        "add.png"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
-    }
+      "resources": ["football-teams.json","handleFootballMatch.js","add.png"],
+      "matches": ["*://*.google.com/*","*://google.com/*"]
+    },
+    {
+      "resources": ["add.png"],
+      "matches": ["*://*.ticketbox.vn/*", "*://ticketbox.vn/*"]
+    }  
   ],
-  "action": {
-    "default_title": "Lập's Extension",
-    "default_popup": "popup.html"
-  }
+  "commands": {
+    "open_my_page": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+L",
+        "mac": "Command+Shift+L"
+      },
+      "description": "Mở file hoanglap3011.html"
+    }
+  }  
 }
-
