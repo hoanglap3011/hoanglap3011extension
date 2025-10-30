@@ -1,5 +1,5 @@
 // api
-const API = "https://script.google.com/macros/s/AKfycby9m4Exj3U4L8OA8Be7Oidu6CwVZRIaZpnOoKdBigVA7m9UQvzfUASFQ9tO6DzkBHTh/exec11";
+const API = "https://script.google.com/macros/s/AKfycby9m4Exj3U4L8OA8Be7Oidu6CwVZRIaZpnOoKdBigVA7m9UQvzfUASFQ9tO6DzkBHTh/exec";
 const API_ACTION_GET_SUMMARY_BY_CODE = "getSummaryByCode";
 const API_ACTION_GET_QUOTES = "getQuotes";
 const API_ACTION_ADD_VIETGIDO = "addVietGiDo";
