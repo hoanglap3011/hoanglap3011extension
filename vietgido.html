@@ -1,33 +1,38 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Viết Gì Đó</title>
     <link rel="stylesheet" href="library/choices.min.css" />
     <link rel="stylesheet" href="library/quill.snow.min.css">
+    <link rel="stylesheet" href="loadingOverlay.css">
     <link rel="stylesheet" href="vietgido.css">
 </head>
+
 <body>
     <main class="container">
         <div id="divPassword" class="passwordRow" style="display:none;">
             <div class="passwordInner">
-                <input id="txtPass" type="password" placeholder="Nhập password..." class="passwordInput" aria-label="Password" autocomplete="off">
+                <input id="txtPass" type="password" placeholder="Nhập password..." class="passwordInput"
+                    aria-label="Password" autocomplete="off">
                 <button id="btnSavePass" type="button" class="btn" aria-label="Lưu Password">💾</button>
             </div>
         </div>
 
         <div class="danhMuc-row">
             <select id="danhMucSelect"></select>
-        </div>        
+        </div>
 
         <div class="content">
             <div id="entriesContainer"></div>
-            
+
             <div class="buttonsContainer">
                 <button id="addBtn" type="button" class="btn btn--add" aria-label="Thêm vùng nhập liệu">+</button>
                 <button id="submitBtn" type="button" class="btn btn--submit" aria-label="Lưu dữ liệu">💾</button>
-                <button id="updateDanhMucBtn" type="button" class="btn btn--update" aria-label="Cập nhật danh mục">📁</button>
+                <button id="updateDanhMucBtn" type="button" class="btn btn--update"
+                    aria-label="Cập nhật danh mục">📁</button>
             </div>
 
             <div class="switchRow">
@@ -44,7 +49,7 @@
                     <span class="slider"></span>
                 </label>
             </div>
-            
+
             <div class="switchRow">
                 <label for="toggleAllToolbarsSwitch" class="switchLabel">Hiển thị Toolbar Soạn Thảo</label>
                 <label class="switch">
@@ -52,9 +57,9 @@
                     <span class="slider"></span>
                 </label>
             </div>
-            </div>
-    </main>          
         </div>
+    </main>
+    </div>
     </main>
 
     <div id="loadingOverlay">
@@ -73,7 +78,9 @@
     <script src="library/choices.min.js" defer></script>
     <script src="library/quill.min.js" defer></script>
     <script src="library/cleave.min.js"></script>
+    <script src="loadingOverlay.js" defer></script>
     <script src="config.js" defer></script>
     <script src="vietgido.js" defer></script>
 </body>
+
 </html>

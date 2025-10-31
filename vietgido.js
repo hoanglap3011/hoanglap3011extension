@@ -30,6 +30,16 @@ const VietGidoApp = {
    * Khởi tạo ứng dụng
    */
   init() {
+// --- THÊM MỚI TẠI ĐÂY ---
+    // Khởi tạo Loading Overlay Utility
+    // Lưu ý: hàm getStorage của vietgido nằm trong 'this.helpers.storage'
+    // và cần 'bind(this.helpers.storage)' để giữ đúng ngữ cảnh 'this'.
+    const getStorageFunc = this.helpers.storage.get.bind(this.helpers.storage);
+    LoadingOverlayUtil.init({
+        getStorageFunc: getStorageFunc,
+        cacheQuotesKey: this.config.CACHE_QUOTES
+    });
+    // --- KẾT THÚC THÊM MỚI ---    
     this.cacheDomElements();
     this.setupEventListeners();
 this.state.urlParams = new URLSearchParams(window.location.search);    
@@ -212,7 +222,7 @@ initDanhMucSelect() {
         return;
       }
 
-      this.ui.showLoadingOverlay.call(this);
+      LoadingOverlayUtil.show(); // <-- THÊM DÒNG NÀY
       this.ui.setButtonsState.call(this, false);
       
       try {
@@ -226,7 +236,7 @@ initDanhMucSelect() {
       } catch (err) {
         this.ui.showNotification.call(this, `❌ Lỗi: ${err.message}`, 'error');
       } finally {
-        this.ui.hideLoadingOverlay.call(this);
+        LoadingOverlayUtil.hide();
         this.ui.setButtonsState.call(this, true);
       }
     },
@@ -248,7 +258,7 @@ initDanhMucSelect() {
     // Thay thế toàn bộ hàm này trong VietGidoApp.handlers
     async updateCategories() {
       this.ui.setButtonsState.call(this, false);
-      this.ui.showLoadingOverlay.call(this); // <-- 1. HIỆN OVERLAY
+      LoadingOverlayUtil.show();
 
       const oldSelectedValue = this.dom.danhMucSelect?.value;
       let success = false; // Dùng để theo dõi trạng thái cuối cùng
@@ -292,7 +302,7 @@ initDanhMucSelect() {
         console.error("Lỗi trong quá trình updateCategories:", err);
         success = false;
       } finally {
-        this.ui.hideLoadingOverlay.call(this); // <-- 2. ẨN OVERLAY
+        LoadingOverlayUtil.hide();
         // 3. Cập nhật trạng thái nút dựa trên 'success'
         this.ui.setButtonsState.call(this, success, true);
       }
@@ -811,35 +821,6 @@ async updateCategoriesFromAPI() {
       }, 3000);
     },
 
-showLoadingOverlay() {
-      // 1. Hiển thị overlay và spinner ngay lập tức
-      this.dom.loadingOverlay.classList.add('visible');
-      
-      // 2. Xóa quote cũ (để xử lý trường hợp cache rỗng)
-      this.dom.loadingQuote.textContent = ''; 
-
-      // 3. Lấy quotes từ cache và gán text
-      try {
-        this.helpers.storage.get(this.config.CACHE_QUOTES, data => {
-          const quotes = data[this.config.CACHE_QUOTES];
-          
-          if (Array.isArray(quotes) && quotes.length > 0) {
-            const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-            if (this.dom.loadingQuote) {
-              this.dom.loadingQuote.textContent = randomQuote;
-            }
-          }
-          // Nếu không có quotes trong cache, textContent sẽ vẫn rỗng (theo yêu cầu)
-        });
-      } catch (e) {
-        console.warn("Không thể tải quotes từ cache:", e);
-        // Bỏ qua lỗi, không hiển thị quote
-      }
-    },
-
-    hideLoadingOverlay() {
-      this.dom.loadingOverlay.classList.remove('visible');
-    },
 
     showCongrats() {
       if (!this.dom.congratsOverlay || !this.dom.confettiCanvas) return;

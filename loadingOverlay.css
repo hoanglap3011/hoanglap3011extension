@@ -1,0 +1,41 @@
+/* loadingOverlay.css */
+#loadingOverlay {
+    position: fixed; inset: 0;
+    background-color: rgba(0, 0, 0, 0.7); 
+    z-index: 9999; 
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+#loadingOverlay.visible {
+    display: flex;
+    opacity: 1;
+}
+.loading-content {
+    text-align: center;
+    color: #fff; 
+}
+.loader {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #3b82f6; 
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite; 
+    margin: 0 auto 20px auto;
+}
+#loadingQuote {
+    font-size: 1.1em;
+    font-style: italic;
+    max-width: 400px;
+    line-height: 1.5;
+}
+
+/* Lưu ý: Bạn cần @keyframes 'spin' 
+  Nếu nó chưa có ở file CSS chung, hãy thêm vào:
+*/
+@keyframes spin { 
+    100% { transform: rotate(360deg); } 
+}
