@@ -862,9 +862,9 @@ async updateCategoriesFromAPI() {
       isExtension: () => typeof chrome !== 'undefined' && chrome.storage?.local,
       isObject(value) {
         return (
-          value !== null &&
-          typeof value === 'object' &&
-          !Array.isArray(value)
+          value !== null 
+          && typeof value === 'object' 
+          // && !Array.isArray(value)
         );
       },
       get(keys, cb) {
