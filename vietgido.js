@@ -883,7 +883,7 @@ async updateCategoriesFromAPI() {
           chrome.storage.local.set(obj, cb);
         } else {
           Object.entries(obj).forEach(([k, v]) =>
-            localStorage.setItem(k, isObject(v)? JSON.stringify(v): v)
+            localStorage.setItem(k, this.isObject(v) ? JSON.stringify(v) : v)
           );
           cb?.();
         }
