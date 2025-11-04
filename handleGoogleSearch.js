@@ -37,7 +37,7 @@
     const matched = aliasList.some((alias) => q.includes(alias));
     if (matched) {
       // set URLs for assets
-      const iconUrl = chrome.runtime.getURL("add.png");
+      const iconUrl = chrome.runtime.getURL("image/add.png");
       const dataUrl = chrome.runtime.getURL("football-teams.json");
 
       document.documentElement.dataset.extAddIcon = iconUrl;

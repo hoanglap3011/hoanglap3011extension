@@ -858,6 +858,13 @@ async updateCategoriesFromAPI() {
   // --- HELPERS (Hàm hỗ trợ) ---
   // =================================================================
   helpers: {
+    isObject(value) {
+      return (
+        value !== null &&
+        typeof value === 'object' &&
+        !Array.isArray(value)
+      );
+    },
     storage: {
       isExtension: () => typeof chrome !== 'undefined' && chrome.storage?.local,
       get(keys, cb) {
@@ -876,7 +883,7 @@ async updateCategoriesFromAPI() {
           chrome.storage.local.set(obj, cb);
         } else {
           Object.entries(obj).forEach(([k, v]) =>
-            localStorage.setItem(k, JSON.stringify(v))
+            localStorage.setItem(k, isObject(v)? JSON.stringify(v): v)
           );
           cb?.();
         }

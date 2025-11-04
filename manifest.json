@@ -49,11 +49,11 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["football-teams.json","handleFootballMatch.js","add.png"],
+      "resources": ["football-teams.json","handleFootballMatch.js","image/add.png"],
       "matches": ["*://*.google.com/*","*://google.com/*"]
     },
     {
-      "resources": ["add.png"],
+      "resources": ["image/add.png"],
       "matches": ["*://*.ticketbox.vn/*", "*://ticketbox.vn/*"]
     }  
   ],

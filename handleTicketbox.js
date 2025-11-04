@@ -2,7 +2,7 @@
     const TYPE_CALENDAR = "ticketbox";
 
     // 1. Lấy URL của icon từ extension (giống file handleGoogleSearch.js)
-    const ICON_URL = chrome.runtime.getURL("add.png");
+    const ICON_URL = chrome.runtime.getURL("image/add.png");
     if (!ICON_URL) {
         console.warn("⚠️ [Ext] Không thể lấy URL của add.png");
         return;
