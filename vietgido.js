@@ -860,21 +860,25 @@ async updateCategoriesFromAPI() {
   helpers: {
     storage: {
       isExtension: () => typeof chrome !== 'undefined' && chrome.storage?.local,
-      isObject(value) {
-        return (
-          value !== null 
-          && typeof value === 'object' 
-          // && !Array.isArray(value)
-        );
-      },
       get(keys, cb) {
         if (this.isExtension()) {
           chrome.storage.local.get(keys, cb);
         } else {
           const result = {};
-          (Array.isArray(keys) ? keys : [keys]).forEach(k =>
-            result[k] = JSON.parse(localStorage.getItem(k) || 'null')
-          );
+          (Array.isArray(keys) ? keys : [keys]).forEach(k => {
+            const raw = localStorage.getItem(k);
+            if (raw === null) {
+              result[k] = null;
+            } else {
+              try {
+                // Nếu raw là JSON (object/array/number/boolean/"string"), JSON.parse sẽ trả về giá trị đúng
+                result[k] = JSON.parse(raw);
+              } catch (e) {
+                // Nếu không parse được (ví dụ raw = abc), trả về nguyên chuỗi
+                result[k] = raw;
+              }
+            }
+          });
           cb(result);
         }
       },
@@ -882,9 +886,14 @@ async updateCategoriesFromAPI() {
         if (this.isExtension()) {
           chrome.storage.local.set(obj, cb);
         } else {
-          Object.entries(obj).forEach(([k, v]) =>
-            localStorage.setItem(k, this.isObject(v) ? JSON.stringify(v) : v)
-          );
+          Object.entries(obj).forEach(([k, v]) => {
+            // Nếu giá trị là chuỗi nguyên thủy thì lưu thẳng, còn lại stringify để giữ kiểu
+            if (typeof v === 'string') {
+              localStorage.setItem(k, v);
+            } else {
+              localStorage.setItem(k, JSON.stringify(v));
+            }
+          });
           cb?.();
         }
       }
