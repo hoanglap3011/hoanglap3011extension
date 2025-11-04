@@ -858,15 +858,15 @@ async updateCategoriesFromAPI() {
   // --- HELPERS (Hàm hỗ trợ) ---
   // =================================================================
   helpers: {
-    isObject(value) {
-      return (
-        value !== null &&
-        typeof value === 'object' &&
-        !Array.isArray(value)
-      );
-    },
     storage: {
       isExtension: () => typeof chrome !== 'undefined' && chrome.storage?.local,
+      isObject(value) {
+        return (
+          value !== null &&
+          typeof value === 'object' &&
+          !Array.isArray(value)
+        );
+      },
       get(keys, cb) {
         if (this.isExtension()) {
           chrome.storage.local.get(keys, cb);

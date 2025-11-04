@@ -75,8 +75,8 @@ document.addEventListener("DOMContentLoaded", function () {
     categorySelect.addEventListener("change", function () {
       setQuoteCategory(this.value);
     });
-    categorySelect.value = "cauToan";
-    setQuoteCategory("cauToan");
+    categorySelect.value = "haiHuoc";
+    setQuoteCategory("haiHuoc");
   }
 
 });
