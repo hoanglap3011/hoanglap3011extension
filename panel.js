@@ -212,20 +212,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function generateNoteIframe() {
   const iframe = document.getElementById('iframeNote');
-  const url = '/vietgido.html';
+  const url = './vietgido.html';  // Sử dụng đường dẫn tương đối
   iframe.src = url;
-  // const keyNote = getKeyNote();
-  // getStorage([keyNote], (obj) => {
-  //     const url = obj[keyNote];
-  //     if (!url) {
-  //       alert('Chưa có note');
-  //       return;
-  //     }
-  //     iframe.src = url;
-  //   }
-  // );
-  
-
 }
 
 function getKeyNote() {
