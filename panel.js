@@ -211,17 +211,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function generateNoteIframe() {
-  const iframe = document.getElementById('iframeNote')
-  const keyNote = getKeyNote();
-  getStorage([keyNote], (obj) => {
-      const url = obj[keyNote];
-      if (!url) {
-        alert('Chưa có note');
-        return;
-      }
-      iframe.src = url;
-    }
-  );
+  const iframe = document.getElementById('iframeNote');
+  const url = '/vietgido.html';
+  iframe.src = url;
+  // const keyNote = getKeyNote();
+  // getStorage([keyNote], (obj) => {
+  //     const url = obj[keyNote];
+  //     if (!url) {
+  //       alert('Chưa có note');
+  //       return;
+  //     }
+  //     iframe.src = url;
+  //   }
+  // );
   
 
 }
