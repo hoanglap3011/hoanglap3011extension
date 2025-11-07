@@ -209,6 +209,178 @@
             } else { alert("Vui lòng cho phép cửa sổ pop-up để xem tóm tắt."); }
         } catch (e) { console.error("[Ext] Lỗi khi mở popup:", e); }
     };
+
+
+
+// ... (Ngay sau hàm showSummaryPopup) ...
+
+    const HOMEPAGE_MESSAGE_ID = "my-ext-homepage-message-box";
+
+    /**
+     * HÀM MỚI 1: Tiêm CSS vĩnh viễn, chỉ
+     * ảnh hưởng đến trang chủ.
+     */
+    const injectPermanentHomepageHider = () => {
+        const styleId = "my-ext-permanent-homepage-hider";
+        // Nếu đã tiêm rồi thì bỏ qua
+        if (document.getElementById(styleId)) return;
+
+        const css = `
+            /* Ẩn lưới video CHỈ KHI nó nằm trong trang chủ */
+            ytd-browse[page-subtype="home"] ytd-rich-grid-renderer {
+                display: none !important;
+            }
+            
+            /* Ẩn kệ video CHỈ KHI nó nằm trong trang chủ */
+            ytd-browse[page-subtype="home"] ytd-rich-shelf-renderer {
+                display: none !important;
+            }
+
+            /* Ẩn filter CHỈ KHI nó nằm trong trang chủ */
+            ytd-browse[page-subtype="home"] #chips {
+                display: none !important;
+            }
+        `;
+        const style = document.createElement("style");
+        style.id = styleId;
+        style.textContent = css;
+        document.head.appendChild(style);
+        console.log("[Ext] Đã tiêm CSS vĩnh viễn (chống flash) cho trang chủ.");
+    };
+
+    /**
+     * HÀM MỚI 2: Chỉ tạo box thông điệp (đã tách ra)
+     */
+    const createMessageBox = () => {
+        const messageBox = document.createElement("div");
+        messageBox.id = HOMEPAGE_MESSAGE_ID;
+        
+        Object.assign(messageBox.style, {
+            color: 'var(--yt-spec-text-primary, #030303)',
+            padding: '40px 20px', margin: '16px 0', textAlign: 'center',
+            fontSize: '18px', fontWeight: '500', lineHeight: '1.6',
+            background: 'var(--yt-spec-background-secondary, #f9f9f9)',
+            borderRadius: '12px', border: '1px dashed var(--yt-spec-divider, #ddd)',
+        });
+
+        messageBox.innerHTML = `
+            Thời gian, năng lượng và cuộc sống là hữu hạn.<br>
+            Mỗi lựa chọn hôm nay đều ảnh hưởng đến ngày mai.<br><br>
+            <strong style="font-size: 20px; color: var(--yt-spec-call-to-action, #065fd4);">Hãy làm chủ YouTube.</strong><br>
+            Sử dụng nó một cách thông minh để phục vụ cho mục tiêu của bạn.
+        `;
+        return messageBox;
+    }
+
+    /**
+     * HÀM MỚI 3 (Sửa): Chỉ tiêm THÔNG ĐIỆP, không tiêm CSS
+     */
+    const injectHomepageMessage = () => {
+        if (document.getElementById(HOMEPAGE_MESSAGE_ID)) return;
+
+        // Selector phải thật cụ thể để tìm đúng nơi
+        const gridRenderer = document.querySelector('ytd-browse[page-subtype="home"] ytd-rich-grid-renderer');
+
+        if (gridRenderer && gridRenderer.parentNode) {
+            const messageBox = createMessageBox();
+            gridRenderer.parentNode.prepend(messageBox);
+        } else {
+            // Nếu không tìm thấy, thử lại sau 0.5s (phòng khi DOM chưa tải)
+            setTimeout(injectHomepageMessage, 500);
+        }
+    };
+
+    /**
+     * HÀM MỚI 4 (Sửa): Chỉ gỡ THÔNG ĐIỆP, không gỡ CSS
+     */
+    const removeHomepageMessage = () => {
+        const messageBox = document.getElementById(HOMEPAGE_MESSAGE_ID);
+        if (messageBox) {
+            messageBox.remove();
+        }
+    };
+
+    /**
+     * HÀM MỚI 5: Hàm kiểm tra (gọi hàm 3 và 4)
+     */
+    const checkHomepageVisibility = () => {
+        if (window.location.pathname === "/") {
+            injectHomepageMessage();
+        } else {
+            removeHomepageMessage();
+        }
+    };
+
+
+/**
+     * HÀM MỚI (ĐÃ NÂNG CẤP VÀ SỬA LỖI): Tiêm CSS VÀ Thêm thông điệp
+     */
+    const injectHomepageHider = () => {
+        const styleId = "my-ext-homepage-hider-style";
+        
+        // --- 1. Tiêm CSS (Như cũ) ---
+        if (!document.getElementById(styleId)) {
+            const css = `
+                /* Ẩn toàn bộ lưới video gợi ý trên trang chủ */
+                ytd-rich-grid-renderer { display: none !important; }
+                /* Ẩn các "kệ" video (như Shorts, Tin tức, v.v.) */
+                ytd-rich-shelf-renderer { display: none !important; }
+                /* (Tùy chọn) Ẩn luôn thanh filter (Tất cả, Âm nhạc, Trò chơi...) */
+                #chips { display: none !important; }
+            `;
+            const style = document.createElement("style");
+            style.id = styleId;
+            style.textContent = css;
+            document.head.appendChild(style);
+        }
+
+        // --- 2. Thêm Thông Điệp (Logic Mới) ---
+        // Nếu thông điệp đã tồn tại, không làm gì cả
+        if (document.getElementById(HOMEPAGE_MESSAGE_ID)) return;
+
+        // --- BẮT ĐẦU SỬA LỖI ---
+        // Cách tiếp cận mới: Tìm chính phần tử lưới video (mà chúng ta đang ẩn).
+        // Thông điệp sẽ được chèn vào TRƯỚC phần tử này.
+        const gridRenderer = document.querySelector('ytd-rich-grid-renderer');
+
+        if (gridRenderer && gridRenderer.parentNode) {
+            // Cách làm tốt nhất: Chèn thông điệp vào cha của gridRenderer
+            const messageBox = createMessageBox();
+            gridRenderer.parentNode.prepend(messageBox);
+
+        } else {
+            // Dự phòng: Nếu không thấy gridRenderer, thử lại selector cũ nhưng bỏ (>)
+            const fallbackContainer = document.querySelector('ytd-browse[page-subtype="home"] #contents');
+            if (fallbackContainer) {
+                const messageBox = createMessageBox();
+                fallbackContainer.prepend(messageBox);
+            } else {
+                console.error("[Ext] Không tìm thấy vị trí (gridRenderer hoặc #contents) để chèn thông điệp.");
+            }
+        }
+        // --- KẾT THÚC SỬA LỖI ---
+    };
+
+    /**
+     * HÀM MỚI (ĐÃ NÂNG CẤP): Gỡ bỏ CSS VÀ Thông điệp
+     */
+    const removeHomepageHider = () => {
+        // --- 1. Gỡ bỏ CSS (Như cũ) ---
+        const styleId = "my-ext-homepage-hider-style";
+        const styleElement = document.getElementById(styleId);
+        if (styleElement) {
+            styleElement.remove();
+        }
+
+        // --- 2. Gỡ bỏ Thông Điệp (Logic Mới) ---
+        const messageBox = document.getElementById(HOMEPAGE_MESSAGE_ID);
+        if (messageBox) {
+            messageBox.remove();
+        }
+    };
+
+
+
     
     /**
      * HÀM MỚI: Lấy tiêu đề video từ DOM
@@ -505,14 +677,31 @@
         }
     };
 
-    // Observer và chạy lần đầu (Không thay đổi)
+// --- BẮT ĐẦU CẬP NHẬT PHẦN KHỞI CHẠY ---
+
+    // 1. Tiêm CSS chống flash NGAY LẬP TỨC
+    injectPermanentHomepageHider();
+
+    // 2. Tạo Observer tổng
     const observer = new MutationObserver((mutations) => {
-        if (window.location.pathname !== "/watch") return;
-        setTimeout(scanAndInject, 300);
+        // Logic cho trang xem video (/watch)
+        if (window.location.pathname === "/watch") {
+            setTimeout(scanAndInject, 300);
+        }
+        
+        // Logic cho trang chủ (/)
+        checkHomepageVisibility();
     });
+
+    // 3. Bắt đầu quan sát
     observer.observe(document.body, { childList: true, subtree: true });
+
+    // 4. Chạy lần đầu khi tải trang
     setTimeout(() => {
-         if (window.location.pathname === "/watch") scanAndInject();
+         if (window.location.pathname === "/watch") {
+            scanAndInject();
+         }
+         checkHomepageVisibility();
     }, 1000);
 
 })();

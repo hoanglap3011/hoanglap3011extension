@@ -1,213 +1,204 @@
 (function () {
-    console.log("🚀 [Ext] Handle Facebook script loaded (v40 - Group Content Fix).");
+    console.log("🚀 [Ext] Handle Facebook script loaded (v42 - Centralized Config).");
 
-    // === CONFIG PROXY API URL ===
-    // Đọc MIN_SUMMARY_LENGTH từ config.js, nếu không có thì mặc định là 100
+    // === 1. CONFIG & CONSTANTS ===
+    
+    // Lấy từ config.js
     const PROXY_URL = (typeof API !== 'undefined' && API) ? API : "PROXY_URL_NOT_FOUND_IN_CONFIG";
     const MIN_LENGTH = (typeof MIN_SUMMARY_LENGTH !== 'undefined') ? MIN_SUMMARY_LENGTH : 100;
-    
-    const ANCHOR_SELECTOR = '[aria-label="Hành động với bài viết này"]';
-    const INJECTED_CLASS = "ext-summarize-btn";
-    const PROCESSED_MARKER = "data-ext-summarize-processed";
 
-    // === HÀM HIỂN THỊ POPUP ===
     /**
-     * Mở cửa sổ pop-up để hiển thị nội dung tóm tắt hoặc thông báo lỗi.
-     * @param {string} summaryContent Nội dung HTML/Text tóm tắt (hoặc lỗi).
-     * @param {object} postInfo Metadata bài viết.
-     * @param {boolean} isShortPost Cờ cho biết đây là thông báo bài viết ngắn.
+     * Đối tượng cấu hình tập trung.
+     * Mọi thay đổi về selector, thời gian, text... đều nên được thực hiện ở đây.
      */
-    const showSummaryPopup = (summaryContent, postInfo, isShortPost = false) => {
-        try {
-            const isError = summaryContent.includes("Lỗi");
-            
-            const popupWidth = 600, popupHeight = 500;
-            const left = (window.screen.width / 2) - (popupWidth / 2);
-            const top = (window.screen.height / 2) - (popupHeight / 2);
-            const popup = window.open("", "summaryPopup", `width=${popupWidth},height=${popupHeight},top=${top},left=${left},scrollbars=yes,resizable=yes`);
-            
-            if (popup) {
-                popup.document.open();
-                
-                // Chuẩn bị thông tin metadata (đã làm sạch)
-                const metadata = `
-                    <p style="border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px;">
-                        <strong>Tác giả:</strong> ${postInfo.authorName} (<a href="${postInfo.authorUrl}" target="_blank">Link</a>)<br>
-                        <strong>Nguồn:</strong> ${postInfo.groupName || 'Trang cá nhân/Fanpage'} ${postInfo.groupUrl ? `(<a href="${postInfo.groupUrl}" target="_blank">Link</a>)` : ''}<br>
-                        <strong>Thời gian:</strong> ${postInfo.timeText}
-                    </p>
-                `;
-                
-                // Thay đổi style dựa trên trạng thái
-                let titleText;
-                let titleColor;
-                let summaryBoxStyle;
-
-                if (isError) {
-                    titleText = "THÔNG BÁO LỖI";
-                    titleColor = "#f00";
-                    summaryBoxStyle = "background: #ffebeb; color: #cc0000; border: 1px solid #f00;";
-                } else if (isShortPost) {
-                    titleText = "THÔNG BÁO";
-                    titleColor = "#ff9800"; // Màu cam cho cảnh báo
-                    summaryBoxStyle = "background: #fff8e1; color: #ff9800; border: 1px solid #ff9800;";
-                } else {
-                    titleText = "Kết Quả Tóm Tắt (Gemini AI)";
-                    titleColor = "#1877f2";
-                    summaryBoxStyle = "background: #f0f2f5; color: #333;";
-                }
-
-
-                popup.document.write(`
-                    <html>
-                    <head>
-                        <title>${titleText} - ${postInfo.authorName}</title>
-                        <style>
-                            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; line-height: 1.6; background: #fff; color: #333; }
-                            h2 { color: ${titleColor}; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid ${titleColor}; }
-                            strong { font-weight: 600; }
-                            p { margin: 8px 0; }
-                            .summary-box { padding: 15px; border-radius: 8px; white-space: pre-wrap; word-wrap: break-word; ${summaryBoxStyle} }
-                        </style>
-                    </head>
-                    <body>
-                        <h2>${titleText}</h2>
-                        ${(isError || isShortPost) ? '' : metadata} 
-                        <div class="summary-box">${summaryContent}</div>
-                    </body>
-                    </html>
-                `);
-                popup.document.close();
-                popup.focus();
-            } else {
-                console.warn("[Ext] Vui lòng cho phép cửa sổ pop-up để xem tóm tắt.");
-            }
-        } catch (e) { 
-            console.error("[Ext] Lỗi khi mở popup:", e); 
-        }
-    };
-
-
-// === HÀM GỌI PROXY AI ĐỂ TÓM TẮT ===
-    /**
-     * Gọi Google App Script để tóm tắt nội dung bài viết (an toàn).
-     * @param {string} content Nội dung bài viết cần tóm tắt.
-     * @param {string} postUrl URL của bài viết (để gửi lên làm 'code').
-     * @returns {Promise<string>} Kết quả tóm tắt (hoặc thông báo lỗi).
-     */
-    const summarizePostContent = async (content, postUrl) => { // <-- THÊM postUrl
-        // 1. Kiểm tra URL proxy
-        if (!PROXY_URL || PROXY_URL === "PROXY_URL_NOT_FOUND_IN_CONFIG") {
-            return "Lỗi cấu hình: Không tìm thấy URL Proxy (biến API trong config.js).";
-        }
+    const CONFIG = {
+        // Selectors
+        ANCHOR_SELECTOR: '[aria-label="Hành động với bài viết này"]',
+        INJECTED_CLASS: "ext-summarize-btn",
+        PROCESSED_MARKER: "data-ext-summarize-processed",
         
-        // 2. Lấy giá trị 'pass' từ chrome.storage.local
-        const pass = await new Promise(resolve => {
-            // Cần có quyền 'storage' trong manifest.json
-            chrome.storage.local.get(['pass'], (result) => resolve(result.pass || ''));
-        });
-
-        // 3. Chuẩn bị payload dưới dạng đối tượng JSON
-        const payloadObject = {
-            pass: pass,
-            action: 'tomTatByAI',
-            content: content,
-            code: postUrl // <-- THÊM TRƯỜNG MỚI THEO YÊU CẦU
-        };
-
-        try {
-            const response = await fetch(PROXY_URL, {
-                method: 'POST',
-                // Sử dụng JSON.stringify NHƯ TRONG handleYouTube.js
-                // KHÔNG KHAI BÁO HEADERS
-                body: JSON.stringify(payloadObject) 
-            });
-
-            if (!response.ok) {
-                // Apps Script thường trả về 200, nhưng ta vẫn kiểm tra lỗi mạng
-                return `Lỗi Proxy: Phản hồi không thành công (${response.status} ${response.statusText})`;
-            }
-
-            const result = await response.json();
-            
-            // === LOGIC XỬ LÝ KẾT QUẢ GIỐNG handleYouTube.js ===
-            if (result.code !== 1) {
-                // Lỗi API/Xác thực/logic từ App Script
-                console.error("[Ext] Lỗi từ App Script/Gemini:", result.error, result.details);
-                return `Lỗi tóm tắt AI (Code ${result.code}): ${result.error || result.details || 'Lỗi không xác định'}`;
-            }
-
-            // Nếu code = 1, lấy nội dung tóm tắt từ trường 'data' (đã được thống nhất)
-            if (result.data) {
-                // Chúng ta sẽ giả định nội dung tóm tắt là text thuần túy
-                return result.data.replace(/\n/g, '<br>'); // Thay thế ký tự xuống dòng bằng <br> cho HTML
-            } else {
-                return "AI không thể tóm tắt nội dung này (kết quả thành công nhưng không có trường 'data').";
-            }
-
-        } catch (error) {
-            console.error("[Ext] Lỗi trong quá trình fetch Proxy:", error);
-            return `Lỗi kết nối đến Google App Script: ${error.message}`;
-        }
+        // Files
+        BLOCKLIST_FILE_NAME: 'facebook_blocklist.json',
+        
+        // Timers (tính bằng mili-giây)
+        DEBOUNCE_TIME: 300,        // Thời gian chờ sau khi DOM thay đổi
+        INITIAL_SCAN_DELAY: 1500,  // Thời gian chờ quét lần đầu
+        SEE_MORE_CLICK_DELAY: 500, // Thời gian chờ sau khi click "Xem thêm"
+        
+        // Logic
+        HEADER_SCAN_LENGTH: 200,   // Số ký tự quét ở đầu bài viết để block
+        
+        // UI
+        POPUP_WIDTH: 600,
+        POPUP_HEIGHT: 500
     };
+    
+    // === 2. APPLICATION STATE ===
+    
+    /** @type {string[]} */
+    let g_blockList = []; // Biến toàn cục lưu danh sách đen
+
+    // === 3. CORE LOGIC (LOGIC CHÍNH & ĐIỀU PHỐI) ===
+    
+    /**
+     * Tải danh sách từ khóa đen từ file JSON.
+     */
+    async function loadBlocklist() {
+        try {
+            const url = chrome.runtime.getURL(CONFIG.BLOCKLIST_FILE_NAME);
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`File blocklist not found: ${response.statusText}`);
+            }
+            
+            g_blockList = await response.json();
+            console.log("[Ext] Tải blocklist thành công:", g_blockList);
+            
+        } catch (error) {
+            // ĐÃ CHUYỂN SANG CONSOLE.LOG
+            console.log(`[Ext] LỖI: Không thể tải ${CONFIG.BLOCKLIST_FILE_NAME}.`, error);
+            console.log("[Ext] Hãy đảm bảo file này tồn tại ở thư mục gốc của extension.");
+        }
+    }
 
     /**
-     * Hàm chính để quét và chèn nút.
+     * Hàm chính, quét tìm bài đăng mới.
      */
     let scanCounter = 0;
     const scanAndAttachFacebook = () => {
         scanCounter++;
-        // console.log(`[Ext] Quét lần thứ ${scanCounter}...`);
-
-        // 1. Tìm TẤT CẢ các nút "3 chấm" trên toàn trang
-        const anchorButtons = document.querySelectorAll(ANCHOR_SELECTOR);
-
-        if (anchorButtons.length === 0) {
-            // console.log("[Ext] Không tìm thấy nút anchor (3 chấm) nào.");
-            return;
-        }
+        // Dùng CONFIG
+        const anchorButtons = document.querySelectorAll(CONFIG.ANCHOR_SELECTOR);
+        if (anchorButtons.length === 0) return;
 
         anchorButtons.forEach((anchorButton, index) => {
+            const post = anchorButton.closest('div[aria-labelledby]');
             
-            // 2. Leo cấp DOM để tìm container
-            let targetContainer = null;
-            let beforeElement = null;
-            let wrapper = null;
+            // Dùng CONFIG
+            if (!post || post.hasAttribute(CONFIG.PROCESSED_MARKER)) {
+                return;
+            }
+            
+            // Dùng CONFIG
+            post.setAttribute(CONFIG.PROCESSED_MARKER, "1");
 
-            // TÌM THẤY NÚT "3 CHẤM"
-            // Leo 2 cấp (div.button -> div.wrapper -> div.container)
+            if (shouldBlockPost(post)) {
+                post.style.display = 'none';
+                return;
+            }
+            
+            let targetContainer = null, beforeElement = null, wrapper = null;
             wrapper = anchorButton.parentElement;
-            if (wrapper) wrapper = wrapper.parentElement; 
-
+            if (wrapper) wrapper = wrapper.parentElement;
             if (wrapper && wrapper.parentElement) {
                 targetContainer = wrapper.parentElement;
-                // Chèn vào TRƯỚC wrapper của nút 3 chấm
                 beforeElement = wrapper;
-            } else {
-                console.warn(`[Ext] ⚠️ Lỗi logic 3 chấm: Không tìm thấy container.`, anchorButton);
-                return;
-            }
-            
-
-            // 3. Kiểm tra xem container này đã được xử lý chưa
-            if (!targetContainer || targetContainer.hasAttribute(PROCESSED_MARKER)) {
-                // Container không hợp lệ HOẶC đã được xử lý
-                return;
             }
 
-            // 4. Đánh dấu container là đã xử lý
-            targetContainer.setAttribute(PROCESSED_MARKER, "1");
-
-            // 5. Chèn nút
-            injectButton(targetContainer, beforeElement, index);
+            if (targetContainer) {
+                injectButton(targetContainer, beforeElement, post, index);
+            }
         });
     };
 
-// === HÀM getPostInfo (ĐÃ SỬA LỖI FALLBACK) ===
-    const getPostInfo = async (post) => {
+    /**
+     * Kiểm tra xem bài đăng có nên bị ẩn không.
+     */
+    function shouldBlockPost(post) {
+        if (g_blockList.length === 0) return false; 
+
+        // Dùng CONFIG
+        const headerText = (post.innerText || '').substring(0, CONFIG.HEADER_SCAN_LENGTH);
+
+        const isBlocked = g_blockList.some(keyword => headerText.includes(keyword));
+
+        if (isBlocked) {
+            console.log("[Ext] Phát hiện khối cần ẩn. Đang ẩn:", headerText.replace(/\n/g, " "));
+        }
+        return isBlocked;
+    }
+
+    /**
+     * Tạo và chèn nút "Tóm Tắt".
+     */
+    const injectButton = (targetContainer, beforeElement, post, index) => {
         
-        // === 1. LẤY TÁC GIẢ (VÀ GROUP) ===
-        // (Giữ nguyên logic lấy author/group từ dòng 197 - 263... )
+        const summarizeBtn = document.createElement("div");
+        summarizeBtn.innerText = "Tóm Tắt";
+        summarizeBtn.title = "Tóm tắt bài viết này (bởi Lập's Ext)";
+        // Dùng CONFIG
+        summarizeBtn.className = CONFIG.INJECTED_CLASS;
+
+        Object.assign(summarizeBtn.style, {
+            cursor: "pointer", padding: "8px", borderRadius: "6px",
+            fontWeight: "bold", fontSize: "13px",
+            color: "var(--primary-text-color, #050505)",
+            lineHeight: "1", display: "flex",
+            alignItems: "center", justifyContent: "center"
+        });
+        summarizeBtn.onmouseover = () => { summarizeBtn.style.backgroundColor = "var(--hover-overlay, #EBEDF0)"; };
+        summarizeBtn.onmouseout = () => { summarizeBtn.style.backgroundColor = "transparent"; };
+
+        summarizeBtn.onclick = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const originalText = summarizeBtn.innerText;
+            summarizeBtn.innerText = "Đang tóm tắt...";
+            summarizeBtn.style.pointerEvents = 'none';
+
+            console.log("[Ext] Đang lấy thông tin bài viết (có thể mất 0.5s)...");
+            const postInfo = await getPostInfo(post);
+            console.log(`[Ext] Thông tin bài viết thu thập được:`, postInfo);
+
+            const postContentLength = postInfo.postContent.length;
+            if (postContentLength < MIN_LENGTH) {
+                const shortMessage = `Bài viết này quá ngắn (${postContentLength} ký tự, giới hạn là ${MIN_LENGTH} ký tự). Không cần tóm tắt.`;
+                
+                // ĐÃ CHUYỂN SANG CONSOLE.LOG
+                console.log(`[Ext] ⚠️ ${shortMessage}`);
+                showSummaryPopup(shortMessage, postInfo, true);
+                
+                summarizeBtn.innerText = originalText;
+                summarizeBtn.style.pointerEvents = 'auto';
+                return;
+            }
+
+            console.log(`[Ext] Đang gửi ${postContentLength} ký tự nội dung đến Proxy App Script...`);
+            const summaryText = await summarizePostContent(postInfo.postContent, postInfo.postUrl);
+            
+            showSummaryPopup(summaryText, postInfo); 
+            
+            summarizeBtn.innerText = originalText;
+            summarizeBtn.style.pointerEvents = 'auto';
+        };
+
+        targetContainer.insertBefore(summarizeBtn, beforeElement);
+    };
+
+    // === 4. DATA SCRAPING (CÀO DỮ LIỆU) ===
+
+    /**
+     * HÀM CHÍNH: Lấy tất cả thông tin bài viết
+     */
+    const getPostInfo = async (post) => {
+        const authorInfo = _getAuthorAndGroup(post);
+        const timeInfo = _getTimeAndUrl(post);
+        const postContent = await _getPostContent(post); 
+
+        return {
+            ...authorInfo,
+            ...timeInfo,
+            postContent
+        };
+    };
+
+    /**
+     * HÀM CON 1: Lấy thông tin Tác giả và Nhóm
+     */
+    function _getAuthorAndGroup(post) {
+        // ... (Logic hàm này không đổi) ...
         let authorName = 'Không tìm thấy tác giả';
         let authorUrl = 'Không tìm thấy URL tác giả';
         let groupName = null;
@@ -260,8 +251,14 @@
             } catch (e) { /* Bỏ qua lỗi */ }
         }
         
-        // === 2. THỜI GIAN & URL BÀI VIẾT ===
-        // (Giữ nguyên logic lấy thời gian từ dòng 265 - 307... )
+        return { authorName, authorUrl, groupName, groupUrl };
+    }
+
+    /**
+     * HÀM CON 2: Lấy thông tin Thời gian và URL bài viết
+     */
+    function _getTimeAndUrl(post) {
+        // ... (Logic hàm này không đổi) ...
         let timeText = 'Không tìm thấy thời gian';
         let postUrl = 'Không tìm thấy URL bài viết';
         let timeEl = null;
@@ -314,55 +311,44 @@
             } catch (e) { /* Bỏ qua lỗi */ }
         }
 
-        // === 3. NỘI DUNG (LOGIC TỰ ĐỘNG CLICK "XEM THÊM") ===
+        return { timeText, postUrl };
+    }
+
+    /**
+     * HÀM CON 3: Lấy nội dung bài viết (với logic click "Xem thêm")
+     */
+    async function _getPostContent(post) {
         let postContent = "";
         
-        // --- THAY ĐỔI LỚN BẮT ĐẦU TỪ ĐÂY ---
-
- // (Bên trong hàm getPostInfo)
-
-        // 1. TÌM MESSAGE BLOCK
-        // Chúng ta sẽ gộp tất cả các selector có thể có vào một chuỗi
         const contentSelectors = [
-            'div[data-ad-preview="message"]',                 // Selector cũ cho timeline
-            'div[data-testid="post_message"]',                // Selector cũ cho group
-            '[data-testid="story-text-content"]',             // Selector tiềm năng
-            '[data-testid="post_text"]',                      // Selector tiềm năng mới
-            
-            // === THÊM SELECTOR MỚI VÀO ĐÂY ===
+            'div[data-ad-preview="message"]',
+            'div[data-testid="post_message"]',
+            '[data-testid="story-text-content"]',
+            '[data-testid="post_text"]',
             'div[class="html-div xdj266r x14z9mp xat24cr x1lziwak x1l90r2v xv54qhq xf7dkkf x1iorvi4"]'
-            
         ];
         
         let messageBlock = post.querySelector(contentSelectors.join(', '));
         
-// ... (phần còn lại của code giữ nguyên)
-        
-        // 2. XỬ LÝ
         if (messageBlock) {
-            // A. Tìm nút "Xem thêm" BÊN TRONG khối message
             const seeMoreButton = Array.from(messageBlock.querySelectorAll('div[role="button"]'))
                                       .find(btn => btn.innerText.includes("Xem thêm") || btn.innerText.includes("See more"));
 
-            // B. Nếu tìm thấy -> click và chờ
             if (seeMoreButton) {
-                console.log("[Ext] 'Xem thêm' detected. Clicking and waiting 500ms...");
+                console.log("[Ext] 'Xem thêm' detected. Clicking...");
                 seeMoreButton.click();
-                await new Promise(resolve => setTimeout(resolve, 500)); 
-                console.log("[Ext] Waited 500ms. Now scraping expanded content.");
+                // Dùng CONFIG
+                await new Promise(resolve => setTimeout(resolve, CONFIG.SEE_MORE_CLICK_DELAY)); 
             }
 
-            // C. (Sau khi đã click, hoặc nếu không có nút)
             const clone = messageBlock.cloneNode(true);
 
-            // Xóa nút "Xem thêm" (phải làm TRƯỚC khi xử lý emoji)
             clone.querySelectorAll('div[role="button"]').forEach(button => {
                 if (button.innerText.includes("Xem thêm") || button.innerText.includes("See more")) {
                     button.remove();
                 }
             });
 
-            // XỬ LÝ EMOJI
             clone.querySelectorAll('img[alt]').forEach(emoji => {
                 if (emoji.alt) {
                     emoji.replaceWith(document.createTextNode(emoji.alt));
@@ -371,143 +357,161 @@
                 }
             });
             
-            // XỬ LÝ XUỐNG DÒNG
             const paragraphDivs = clone.querySelectorAll('div[dir="auto"]');
             if (paragraphDivs.length > 0) {
                 postContent = Array.from(paragraphDivs)
                     .map(p => p.innerText) 
-                    .join('\n'); 
+                    .join('\n');
             } else {
-                postContent = clone.innerText.trim(); 
+                postContent = clone.innerText.trim();
             }
         } else {
-            // 3. THẤT BẠI (ĐÃ XÓA LOGIC FALLBACK CŨ)
-            console.error("[Ext] ⚠️ THẤT BẠI: Không thể tìm thấy khối nội dung (messageBlock). Cần cập nhật contentSelectors.");
+            // ĐÃ CHUYỂN SANG CONSOLE.LOG
+            console.log("[Ext] ⚠️ THẤT BẠI: Không thể tìm thấy khối nội dung (messageBlock). Cần cập nhật contentSelectors.");
             postContent = "Lỗi: Không tìm thấy khối nội dung. (Cần cập nhật selector cho phiên bản Facebook này)";
         }
         
-        // 4. Trả về đối tượng
-        return {
-            authorName,
-            authorUrl,
-            groupName,
-            groupUrl,
-            timeText,
-            postUrl,
-            postContent: postContent.trim() // Đã có postContent (dữ liệu hoặc thông báo lỗi)
-        };
+        return postContent.trim();
     };
 
+    // === 5. API & UI UTILITIES (Các hàm tiện ích) ===
+    
     /**
-     * Hàm tạo và chèn nút
+     * Gọi Google App Script để tóm tắt nội dung.
      */
-    const injectButton = (targetContainer, beforeElement, index) => {
+    const summarizePostContent = async (content, postUrl) => {
+        if (!PROXY_URL || PROXY_URL === "PROXY_URL_NOT_FOUND_IN_CONFIG") {
+            return "Lỗi cấu hình: Không tìm thấy URL Proxy (biến API trong config.js).";
+        }
         
-        const summarizeBtn = document.createElement("div");
-        summarizeBtn.innerText = "Tóm Tắt";
-        summarizeBtn.title = "Tóm tắt bài viết này (bởi Lập's Ext)";
-        summarizeBtn.className = INJECTED_CLASS; // Thêm class
-
-        Object.assign(summarizeBtn.style, {
-            cursor: "pointer",
-            padding: "8px",
-            borderRadius: "6px",
-            fontWeight: "bold",
-            fontSize: "13px",
-            color: "var(--primary-text-color, #050505)", // <-- THAY ĐỔI MÀU
-            lineHeight: "1",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
+        const pass = await new Promise(resolve => {
+            chrome.storage.local.get(['pass'], (result) => resolve(result.pass || ''));
         });
-        summarizeBtn.onmouseover = () => { summarizeBtn.style.backgroundColor = "var(--hover-overlay, #EBEDF0)"; }; // <-- Dùng màu hover của FB
-        summarizeBtn.onmouseout = () => { summarizeBtn.style.backgroundColor = "transparent"; };
 
-        // Sửa thành ASYNC function để có thể "await"
-        summarizeBtn.onclick = async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log(`[Ext] Nút 'Tóm Tắt' được click!`);
-            
-            // 1. Thay đổi text nút và vô hiệu hóa
-            const originalText = summarizeBtn.innerText;
-            summarizeBtn.innerText = "Đang tóm tắt...";
-            summarizeBtn.style.pointerEvents = 'none'; // Vô hiệu hóa nút
+        const payloadObject = { pass: pass, action: 'tomTatByAI', content: content, code: postUrl };
 
-            // Leo lên tìm `div[aria-labelledby]` gần nhất, vì `div[role="article"]` không đáng tin cậy
-            const post = targetContainer.closest('div[aria-labelledby]');
-            if (!post) {
-                console.error("[Ext] Không thể tìm thấy 'post' gốc (div[aria-labelledby]) khi click!");
-                // Khôi phục nút
-                summarizeBtn.innerText = originalText;
-                summarizeBtn.style.pointerEvents = 'auto';
-                return;
+        try {
+            const response = await fetch(PROXY_URL, {
+                method: 'POST',
+                body: JSON.stringify(payloadObject) 
+            });
+
+            if (!response.ok) {
+                return `Lỗi Proxy: Phản hồi không thành công (${response.status} ${response.statusText})`;
             }
 
-            console.log("[Ext] Đang lấy thông tin bài viết (có thể mất 0.5s)...");
+            const result = await response.json();
             
-            // 2. Lấy thông tin bài viết (bao gồm nội dung)
-            const postInfo = await getPostInfo(post);
-            console.log(`[Ext] Thông tin bài viết thu thập được:`, postInfo);
-
-            // 3. KIỂM TRA ĐỘ DÀI
-            const postContentLength = postInfo.postContent.length;
-            
-            if (postContentLength < MIN_LENGTH) {
-                const shortMessage = `Bài viết này quá ngắn (${postContentLength} ký tự, giới hạn là ${MIN_LENGTH} ký tự). Không cần tóm tắt.`;
-                console.warn(`[Ext] ⚠️ ${shortMessage}`);
-                showSummaryPopup(shortMessage, postInfo, true); // True báo hiệu bài viết ngắn
-                
-                // Khôi phục nút
-                summarizeBtn.innerText = originalText;
-                summarizeBtn.style.pointerEvents = 'auto';
-                return; // Dừng xử lý
+            if (result.code !== 1) {
+                // ĐÃ CHUYỂN SANG CONSOLE.LOG
+                console.log("[Ext] LỖI từ App Script/Gemini:", result.error, result.details);
+                return `Lỗi tóm tắt AI (Code ${result.code}): ${result.error || result.details || 'Lỗi không xác định'}`;
             }
 
-// ... (bên trong summarizeBtn.onclick) ...
-
-            // 4. Gọi AI thông qua Proxy
-            let summaryText = 'Không thể tóm tắt.';
-            
-            if (postInfo.postContent && postContentLength > 50) { // Chỉ tóm tắt nếu nội dung đủ dài (safety check)
-                console.log(`[Ext] Đang gửi ${postContentLength} ký tự nội dung đến Proxy App Script...`);
-                
-                // === SỬA DÒNG NÀY ===
-                summaryText = await summarizePostContent(postInfo.postContent, postInfo.postUrl); // <-- THÊM postInfo.postUrl
-            
+            if (result.data) {
+                return result.data.replace(/\n/g, '<br>');
             } else {
-                 summaryText = 'Nội dung bài viết quá ngắn hoặc không tìm thấy để tóm tắt.';
+                return "AI không thể tóm tắt nội dung này (kết quả thành công nhưng không có trường 'data').";
             }
 
-            // 5. HIỂN THỊ KẾT QUẢ TRONG POPUP
-
-            // 5. HIỂN THỊ KẾT QUẢ TRONG POPUP
-            // Luôn gọi showSummaryPopup, bất kể là kết quả tóm tắt hay lỗi
-            showSummaryPopup(summaryText, postInfo); 
+        } catch (error) {
+            // ĐÃ CHUYỂN SANG CONSOLE.LOG
+            console.log("[Ext] LỖI trong quá trình fetch Proxy:", error);
+            return `Lỗi kết nối đến Google App Script: ${error.message}`;
+        }
+    };
+    
+    /**
+     * Mở cửa sổ pop-up để hiển thị nội dung tóm tắt.
+     */
+    const showSummaryPopup = (summaryContent, postInfo, isShortPost = false) => {
+        try {
+            const isError = summaryContent.includes("Lỗi");
             
-            // 6. Khôi phục nút
-            summarizeBtn.innerText = originalText;
-            summarizeBtn.style.pointerEvents = 'auto';
-        };
+            // Dùng CONFIG
+            const popupWidth = CONFIG.POPUP_WIDTH, popupHeight = CONFIG.POPUP_HEIGHT;
+            const left = (window.screen.width / 2) - (popupWidth / 2);
+            const top = (window.screen.height / 2) - (popupHeight / 2);
+            const popup = window.open("", "summaryPopup", `width=${popupWidth},height=${popupHeight},top=${top},left=${left},scrollbars=yes,resizable=yes`);
+            
+            if (popup) {
+                popup.document.open();
+                
+                const metadata = `
+                    <p style="border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px;">
+                        <strong>Tác giả:</strong> ${postInfo.authorName} (<a href="${postInfo.authorUrl}" target="_blank">Link</a>)<br>
+                        <strong>Nguồn:</strong> ${postInfo.groupName || 'Trang cá nhân/Fanpage'} ${postInfo.groupUrl ? `(<a href="${postInfo.groupUrl}" target="_blank">Link</a>)` : ''}<br>
+                        <strong>Thời gian:</strong> ${postInfo.timeText}
+                    </p>
+                `;
+                
+                let titleText, titleColor, summaryBoxStyle;
 
-        targetContainer.insertBefore(summarizeBtn, beforeElement);
-        // console.log(`[Ext] ✅ Đã chèn nút 'Tóm Tắt' (Anchor #${index}).`); // Tắt bớt log
-    }
+                if (isError) {
+                    titleText = "THÔNG BÁO LỖI";
+                    titleColor = "#f00";
+                    summaryBoxStyle = "background: #ffebeb; color: #cc0000; border: 1px solid #f00;";
+                } else if (isShortPost) {
+                    titleText = "THÔNG BÁO";
+                    titleColor = "#ff9800";
+                    summaryBoxStyle = "background: #fff8e1; color: #ff9800; border: 1px solid #ff9800;";
+                } else {
+                    titleText = "Kết Quả Tóm Tắt (Gemini AI)";
+                    titleColor = "#1877f2";
+                    summaryBoxStyle = "background: #f0f2f5; color: #333;";
+                }
 
+                popup.document.write(`
+                    <html>
+                    <head>
+                        <title>${titleText} - ${postInfo.authorName}</title>
+                        <style>
+                            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; line-height: 1.6; background: #fff; color: #333; }
+                            h2 { color: ${titleColor}; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid ${titleColor}; }
+                            strong { font-weight: 600; }
+                            p { margin: 8px 0; }
+                            .summary-box { padding: 15px; border-radius: 8px; white-space: pre-wrap; word-wrap: break-word; ${summaryBoxStyle} }
+                        </style>
+                    </head>
+                    <body>
+                        <h2>${titleText}</h2>
+                        ${(isError || isShortPost) ? '' : metadata} 
+                        <div class="summary-box">${summaryContent}</div>
+                    </body>
+                    </html>
+                `);
+                popup.document.close();
+                popup.focus();
+            } else {
+                // ĐÃ CHUYỂN SANG CONSOLE.LOG
+                console.log("[Ext] Vui lòng cho phép cửa sổ pop-up để xem tóm tắt.");
+            }
+        } catch (e) { 
+            // ĐÃ CHUYỂN SANG CONSOLE.LOG
+            console.log("[Ext] LỖI khi mở popup:", e); 
+        }
+    };
 
-    // 7. Sử dụng MutationObserver...
-    console.log("[Ext] Đang tạo MutationObserver (v40)...");
+// === 6. INITIALIZATION (KHỞI CHẠY) ===
+    
+    console.log("[Ext] Đang tạo MutationObserver (v42 - Fixed Race Condition)...");
+    
+    // 1. Chạy hàm tải blocklist ngay lập tức
+    loadBlocklist(); 
+    
+    // 2. Chạy quét lần đầu ngay lập tức
+    //    (Vì chúng ta đã đổi sang 'document_end', DOM đã sẵn sàng)
+    scanAndAttachFacebook();
+
+    // 3. Tạo MutationObserver
     let debounceTimer;
     const observer = new MutationObserver((mutationsList) => {
-        // Chỉ cần biết có thay đổi là quét
         clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(scanAndAttachFacebook, 300); // Tăng debounce
+        // Vẫn dùng debounce để tránh quét quá nhiều khi trang thay đổi liên tục
+        debounceTimer = setTimeout(scanAndAttachFacebook, CONFIG.DEBOUNCE_TIME);
     });
 
+    // 4. Bắt đầu quan sát
     observer.observe(document.body, { childList: true, subtree: true });
-
-    // 8. Chạy quét lần đầu sau 1.5 giây (chờ trang tải)
-    console.log("[Ext] Chờ 1.5s để quét lần đầu...");
-    setTimeout(scanAndAttachFacebook, 1500);
-
+    
 })();

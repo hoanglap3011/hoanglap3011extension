@@ -7,12 +7,19 @@
     "activeTab", "storage","tabs"
   ],
   "host_permissions": [
-    "*://script.google.com/*"
+    "*://script.google.com/*",
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
+    {
+      "matches": ["*://*/*"],
+      "js": ["handleBlocking.js"],
+      "run_at": "document_start",
+      "all_frames": false 
+    },    
     {
       "matches": ["*://*.youtube.com/*", "*://youtube.com/*"],
       "js": [
@@ -44,10 +51,16 @@
         "config.js",
         "handleFacebook.js"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_end"
     }
   ],
   "web_accessible_resources": [
+    {
+      "resources": [
+        "website_blocklist.json"
+      ],
+      "matches": ["*://*/*"]
+    },
     {
       "resources": ["football-teams.json","handleFootballMatch.js","image/add.png"],
       "matches": ["*://*.google.com/*","*://google.com/*"]
@@ -55,6 +68,10 @@
     {
       "resources": ["image/add.png"],
       "matches": ["*://*.ticketbox.vn/*", "*://ticketbox.vn/*"]
+    },
+        {
+      "resources": ["facebook_blocklist.json"],
+      "matches": ["*://*.facebook.com/*","*://facebook.com/*"]
     }  
   ],
   "commands": {
@@ -71,6 +88,13 @@
         "mac": "Command+Shift+V"
       },
       "description": "Mở file vietgido.html"
-    }    
+    },
+    "open-extensions-page": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+E",
+        "mac": "Command+Shift+E"
+      },
+      "description": "Open chrome://extensions/"
+    } 
   }  
 }
