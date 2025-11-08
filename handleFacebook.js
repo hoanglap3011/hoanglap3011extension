@@ -102,23 +102,50 @@
         });
     };
 
+
+// Dán đoạn code này vào file handleFacebook.js,
+// thay thế hoàn toàn cho hàm shouldBlockPost CŨ
+
     /**
      * Kiểm tra xem bài đăng có nên bị ẩn không.
+     * PHIÊN BẢN ĐÃ SỬA LỖI:
+     * - Ưu tiên đọc text từ 'aria-labelledby' để lấy chính xác tiêu đề khối.
+     * - Chỉ dùng innerText.substring(200) làm phương án dự phòng.
      */
     function shouldBlockPost(post) {
         if (g_blockList.length === 0) return false; 
 
-        // Dùng CONFIG
-        const headerText = (post.innerText || '').substring(0, CONFIG.HEADER_SCAN_LENGTH);
+        let textToScan = '';
 
-        const isBlocked = g_blockList.some(keyword => headerText.includes(keyword));
+        // --- BẮT ĐẦU LOGIC MỚI (Độ ưu tiên cao) ---
+        // Lấy chính xác phần tử tiêu đề mà khối này tham chiếu tới.
+        // Đây là cách đáng tin cậy nhất, tránh race condition.
+        const labelId = post.getAttribute('aria-labelledby');
+        if (labelId) {
+            const labelEl = document.getElementById(labelId);
+            if (labelEl) {
+                // Lấy text của chính xác tiêu đề đó (VD: "Reels", "Nam Dinh FC")
+                textToScan = labelEl.innerText;
+            }
+        }
+        // --- KẾT THÚC LOGIC MỚI ---
+
+        // Nếu logic mới ở trên không tìm thấy text (dự phòng),
+        // chúng ta mới dùng đến logic cũ (kém tin cậy hơn).
+        if (!textToScan) {
+            // Dùng CONFIG
+            textToScan = (post.innerText || '').substring(0, CONFIG.HEADER_SCAN_LENGTH);
+        }
+
+        // Chạy kiểm tra blocklist trên 'textToScan' đã được tinh chỉnh
+        const isBlocked = g_blockList.some(keyword => textToScan.includes(keyword));
 
         if (isBlocked) {
-            console.log("[Ext] Phát hiện khối cần ẩn. Đang ẩn:", headerText.replace(/\n/g, " "));
+            // Dùng textToScan để log cho chính xác
+            console.log("[Ext] Phát hiện khối cần ẩn. Đang ẩn:", textToScan.replace(/\n/g, " "));
         }
         return isBlocked;
     }
-
     /**
      * Tạo và chèn nút "Tóm Tắt".
      */
