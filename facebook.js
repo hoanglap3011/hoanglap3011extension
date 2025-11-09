@@ -194,7 +194,15 @@ function initializeFacebookHandler(settings) {
         Object.assign(summarizeBtn.style, {
             cursor: "pointer", padding: "8px", borderRadius: "6px",
             fontWeight: "bold", fontSize: "13px",
-            color: "var(--primary-text-color, #050505)",
+            
+            // =======================================================
+            // --- BẮT ĐẦU THAY ĐỔI ---
+            // Đổi từ 'var(--primary-text-color, #050505)' sang 'var(--primary-icon)'
+            // để màu tự động khớp với theme (giống nút ... và các icon khác)
+            color: "var(--primary-icon)",
+            // --- KẾT THÚC THAY ĐỔI ---
+            // =======================================================
+
             lineHeight: "1", display: "flex",
             alignItems: "center", justifyContent: "center"
         });
