@@ -1,5 +1,48 @@
-(function () {
-    console.log("🚀 [Ext] Handle Facebook script loaded (v42 - Centralized Config).");
+// == 2. TRÌNH KHỞI CHẠY (RUNNER) ==
+// Hàm này sẽ lấy cài đặt và chỉ chạy logic chính nếu được phép
+(function() {
+    // Tự định nghĩa lại hàm get storage (giống vietgido.js)
+    const storage = {
+        isExtension: () => typeof chrome !== 'undefined' && chrome.storage?.local,
+        get: (keys, cb) => {
+            if (storage.isExtension()) {
+                chrome.storage.local.get(keys, cb);
+            } else {
+                // Fallback nếu chạy ngoài extension (ví dụ: testing)
+                const result = {};
+                const key = Array.isArray(keys) ? keys[0] : keys;
+                // Giả định giá trị mặc định nếu không có localStorage
+                result[key] = null; 
+                cb(result);
+            }
+        }
+    };
+    
+    // THAY ĐỔI: Lấy cài đặt từ SETTINGS_KEY (config.js)
+    storage.get(SETTINGS_KEY, (data) => {
+        // THAY ĐỔI: Dùng DEFAULT_SETTINGS và data[SETTINGS_KEY] (config.js)
+        const settings = { ...DEFAULT_SETTINGS, ...(data[SETTINGS_KEY] || {}) };
+
+        // QUAN TRỌNG:
+        // THAY ĐỔI: Dùng key mới (fbEnableSummarize, fbEnableBlockByKeyword)
+        if (settings.fbEnableSummarize || settings.fbEnableBlockByKeyword) {
+            // Truyền 'settings' vào hàm logic chính
+            initializeFacebookHandler(settings);
+        } else {
+            console.log("🚀 [Ext] Facebook: Cả hai tính năng 'Tóm Tắt' và 'Ẩn Khối' đều bị tắt. Script sẽ không chạy.");
+        }
+    });
+})();
+
+
+// == 3. LOGIC XỬ LÝ CHÍNH CỦA FACEBOOK ==
+// (Đây chính là toàn bộ file handleFacebook.js cũ của bạn,
+// được bọc trong một hàm tên là initializeFacebookHandler
+// và nhận 'settings' làm tham số)
+
+function initializeFacebookHandler(settings) {
+    // THAY ĐỔI: 'settings' bây giờ là đối tượng cài đặt chung
+    console.log("🚀 [Ext] Handle Facebook script loaded (Configurable v1). Settings:", settings);
 
     // === 1. CONFIG & CONSTANTS ===
     
@@ -7,26 +50,25 @@
     const PROXY_URL = (typeof API !== 'undefined' && API) ? API : "PROXY_URL_NOT_FOUND_IN_CONFIG";
     const MIN_LENGTH = (typeof MIN_SUMMARY_LENGTH !== 'undefined') ? MIN_SUMMARY_LENGTH : 100;
 
-    /**
-     * Đối tượng cấu hình tập trung.
-     * Mọi thay đổi về selector, thời gian, text... đều nên được thực hiện ở đây.
-     */
     const CONFIG = {
         // Selectors
         ANCHOR_SELECTOR: '[aria-label="Hành động với bài viết này"]',
         INJECTED_CLASS: "ext-summarize-btn",
         PROCESSED_MARKER: "data-ext-summarize-processed",
         
+        // (Lưu ý: Chúng ta không cần SPECIFIC_BLOCK_SELECTORS cho Story ở đây nữa
+        // vì nó đã được xử lý bằng CSS trong file handleFacebook_init.js)
+
         // Files
         BLOCKLIST_FILE_NAME: 'facebook_blocklist.json',
         
-        // Timers (tính bằng mili-giây)
-        DEBOUNCE_TIME: 300,        // Thời gian chờ sau khi DOM thay đổi
-        INITIAL_SCAN_DELAY: 1500,  // Thời gian chờ quét lần đầu
-        SEE_MORE_CLICK_DELAY: 500, // Thời gian chờ sau khi click "Xem thêm"
+        // Timers
+        DEBOUNCE_TIME: 300,        
+        INITIAL_SCAN_DELAY: 1500,  
+        SEE_MORE_CLICK_DELAY: 500, 
         
         // Logic
-        HEADER_SCAN_LENGTH: 200,   // Số ký tự quét ở đầu bài viết để block
+        HEADER_SCAN_LENGTH: 200,   
         
         // UI
         POPUP_WIDTH: 600,
@@ -44,6 +86,8 @@
      * Tải danh sách từ khóa đen từ file JSON.
      */
     async function loadBlocklist() {
+        // Hàm này chỉ cần chạy nếu tính năng 'Ẩn theo từ khóa' được bật
+        // (Kiểm tra này đã được thực hiện ở phần khởi chạy)
         try {
             const url = chrome.runtime.getURL(CONFIG.BLOCKLIST_FILE_NAME);
             const response = await fetch(url);
@@ -56,37 +100,55 @@
             console.log("[Ext] Tải blocklist thành công:", g_blockList);
             
         } catch (error) {
-            // ĐÃ CHUYỂN SANG CONSOLE.LOG
             console.log(`[Ext] LỖI: Không thể tải ${CONFIG.BLOCKLIST_FILE_NAME}.`, error);
-            console.log("[Ext] Hãy đảm bảo file này tồn tại ở thư mục gốc của extension.");
         }
     }
 
     /**
-     * Hàm chính, quét tìm bài đăng mới.
+     * Quét và ẩn các module không mong muốn (Reels, Bạn có thể biết...)
+     * Hàm này chỉ chạy nếu settings.fbEnableBlockByKeyword = true
+     */
+    function scanAndBlockModules() {
+        if (g_blockList.length === 0) return;
+
+        // (Lưu ý: Chúng ta đã XÓA logic ẩn Story bằng selector
+        // vì nó đã được xử lý bằng CSS)
+
+        // 1. Ẩn bằng keyword (Logic cũ của bạn)
+        const allModules = document.querySelectorAll('div[aria-labelledby]');
+
+        allModules.forEach(module => {
+            if (module.style.display === 'none') {
+                return;
+            }
+            if (shouldBlockPost(module)) {
+                module.style.display = 'none';
+            }
+        });
+    }    
+
+    /**
+     * Quét tìm bài đăng mới để GẮN NÚT TÓM TẮT.
+     * Hàm này chỉ chạy nếu settings.fbEnableSummarize = true
      */
     let scanCounter = 0;
-    const scanAndAttachFacebook = () => {
+    const scanAndAttachSummarizeButtons = () => {
         scanCounter++;
-        // Dùng CONFIG
         const anchorButtons = document.querySelectorAll(CONFIG.ANCHOR_SELECTOR);
         if (anchorButtons.length === 0) return;
 
         anchorButtons.forEach((anchorButton, index) => {
             const post = anchorButton.closest('div[aria-labelledby]');
             
-            // Dùng CONFIG
             if (!post || post.hasAttribute(CONFIG.PROCESSED_MARKER)) {
                 return;
             }
             
-            // Dùng CONFIG
             post.setAttribute(CONFIG.PROCESSED_MARKER, "1");
 
-            if (shouldBlockPost(post)) {
-                post.style.display = 'none';
-                return;
-            }
+            // LƯU Ý: Logic block bài đăng đã được chuyển
+            // sang scanAndBlockModules() và chạy riêng rẽ.
+            // Chúng ta KHÔNG block ở đây nữa.
             
             let targetContainer = null, beforeElement = null, wrapper = null;
             wrapper = anchorButton.parentElement;
@@ -102,55 +164,27 @@
         });
     };
 
-
-// Dán đoạn code này vào file handleFacebook.js,
-// thay thế hoàn toàn cho hàm shouldBlockPost CŨ
-
     /**
      * Kiểm tra xem bài đăng có nên bị ẩn không.
-     * PHIÊN BẢN ĐÃ SỬA LỖI:
-     * - Ưu tiên đọc text từ 'aria-labelledby' để lấy chính xác tiêu đề khối.
-     * - Chỉ dùng innerText.substring(200) làm phương án dự phòng.
      */
     function shouldBlockPost(post) {
         if (g_blockList.length === 0) return false; 
 
-        let textToScan = '';
-
-        // --- BẮT ĐẦU LOGIC MỚI (Độ ưu tiên cao) ---
-        // Lấy chính xác phần tử tiêu đề mà khối này tham chiếu tới.
-        // Đây là cách đáng tin cậy nhất, tránh race condition.
-        const labelId = post.getAttribute('aria-labelledby');
-        if (labelId) {
-            const labelEl = document.getElementById(labelId);
-            if (labelEl) {
-                // Lấy text của chính xác tiêu đề đó (VD: "Reels", "Nam Dinh FC")
-                textToScan = labelEl.innerText;
-            }
-        }
-        // --- KẾT THÚC LOGIC MỚI ---
-
-        // Nếu logic mới ở trên không tìm thấy text (dự phòng),
-        // chúng ta mới dùng đến logic cũ (kém tin cậy hơn).
-        if (!textToScan) {
-            // Dùng CONFIG
-            textToScan = (post.innerText || '').substring(0, CONFIG.HEADER_SCAN_LENGTH);
-        }
-
-        // Chạy kiểm tra blocklist trên 'textToScan' đã được tinh chỉnh
-        const isBlocked = g_blockList.some(keyword => textToScan.includes(keyword));
+        const headerText = (post.innerText || '').substring(0, CONFIG.HEADER_SCAN_LENGTH);
+        const isBlocked = g_blockList.some(keyword => headerText.includes(keyword));
 
         if (isBlocked) {
-            // Dùng textToScan để log cho chính xác
-            console.log("[Ext] Phát hiện khối cần ẩn. Đang ẩn:", textToScan.replace(/\n/g, " "));
+            console.log("[Ext] Phát hiện khối cần ẩn. Đang ẩn:", headerText.replace(/\n/g, " "));
         }
         return isBlocked;
     }
+
     /**
      * Tạo và chèn nút "Tóm Tắt".
      */
     const injectButton = (targetContainer, beforeElement, post, index) => {
-        
+        // ... (Toàn bộ nội dung hàm injectButton của bạn giữ nguyên) ...
+        // ... (Không cần thay đổi gì ở đây) ...
         const summarizeBtn = document.createElement("div");
         summarizeBtn.innerText = "Tóm Tắt";
         summarizeBtn.title = "Tóm tắt bài viết này (bởi Lập's Ext)";
@@ -183,7 +217,6 @@
             if (postContentLength < MIN_LENGTH) {
                 const shortMessage = `Bài viết này quá ngắn (${postContentLength} ký tự, giới hạn là ${MIN_LENGTH} ký tự). Không cần tóm tắt.`;
                 
-                // ĐÃ CHUYỂN SANG CONSOLE.LOG
                 console.log(`[Ext] ⚠️ ${shortMessage}`);
                 showSummaryPopup(shortMessage, postInfo, true);
                 
@@ -205,10 +238,8 @@
     };
 
     // === 4. DATA SCRAPING (CÀO DỮ LIỆU) ===
-
-    /**
-     * HÀM CHÍNH: Lấy tất cả thông tin bài viết
-     */
+    // ... (Toàn bộ các hàm getPostInfo, _getAuthorAndGroup, _getTimeAndUrl, _getPostContent
+    // ...  giữ nguyên y hệt như file cũ của bạn) ...
     const getPostInfo = async (post) => {
         const authorInfo = _getAuthorAndGroup(post);
         const timeInfo = _getTimeAndUrl(post);
@@ -220,12 +251,7 @@
             postContent
         };
     };
-
-    /**
-     * HÀM CON 1: Lấy thông tin Tác giả và Nhóm
-     */
     function _getAuthorAndGroup(post) {
-        // ... (Logic hàm này không đổi) ...
         let authorName = 'Không tìm thấy tác giả';
         let authorUrl = 'Không tìm thấy URL tác giả';
         let groupName = null;
@@ -280,12 +306,7 @@
         
         return { authorName, authorUrl, groupName, groupUrl };
     }
-
-    /**
-     * HÀM CON 2: Lấy thông tin Thời gian và URL bài viết
-     */
     function _getTimeAndUrl(post) {
-        // ... (Logic hàm này không đổi) ...
         let timeText = 'Không tìm thấy thời gian';
         let postUrl = 'Không tìm thấy URL bài viết';
         let timeEl = null;
@@ -340,10 +361,6 @@
 
         return { timeText, postUrl };
     }
-
-    /**
-     * HÀM CON 3: Lấy nội dung bài viết (với logic click "Xem thêm")
-     */
     async function _getPostContent(post) {
         let postContent = "";
         
@@ -364,7 +381,6 @@
             if (seeMoreButton) {
                 console.log("[Ext] 'Xem thêm' detected. Clicking...");
                 seeMoreButton.click();
-                // Dùng CONFIG
                 await new Promise(resolve => setTimeout(resolve, CONFIG.SEE_MORE_CLICK_DELAY)); 
             }
 
@@ -393,7 +409,6 @@
                 postContent = clone.innerText.trim();
             }
         } else {
-            // ĐÃ CHUYỂN SANG CONSOLE.LOG
             console.log("[Ext] ⚠️ THẤT BẠI: Không thể tìm thấy khối nội dung (messageBlock). Cần cập nhật contentSelectors.");
             postContent = "Lỗi: Không tìm thấy khối nội dung. (Cần cập nhật selector cho phiên bản Facebook này)";
         }
@@ -401,11 +416,10 @@
         return postContent.trim();
     };
 
+
     // === 5. API & UI UTILITIES (Các hàm tiện ích) ===
-    
-    /**
-     * Gọi Google App Script để tóm tắt nội dung.
-     */
+    // ... (Toàn bộ hàm summarizePostContent và showSummaryPopup
+    // ...  giữ nguyên y hệt như file cũ của bạn) ...
     const summarizePostContent = async (content, postUrl) => {
         if (!PROXY_URL || PROXY_URL === "PROXY_URL_NOT_FOUND_IN_CONFIG") {
             return "Lỗi cấu hình: Không tìm thấy URL Proxy (biến API trong config.js).";
@@ -430,7 +444,6 @@
             const result = await response.json();
             
             if (result.code !== 1) {
-                // ĐÃ CHUYỂN SANG CONSOLE.LOG
                 console.log("[Ext] LỖI từ App Script/Gemini:", result.error, result.details);
                 return `Lỗi tóm tắt AI (Code ${result.code}): ${result.error || result.details || 'Lỗi không xác định'}`;
             }
@@ -442,20 +455,14 @@
             }
 
         } catch (error) {
-            // ĐÃ CHUYỂN SANG CONSOLE.LOG
             console.log("[Ext] LỖI trong quá trình fetch Proxy:", error);
             return `Lỗi kết nối đến Google App Script: ${error.message}`;
         }
     };
-    
-    /**
-     * Mở cửa sổ pop-up để hiển thị nội dung tóm tắt.
-     */
     const showSummaryPopup = (summaryContent, postInfo, isShortPost = false) => {
         try {
             const isError = summaryContent.includes("Lỗi");
             
-            // Dùng CONFIG
             const popupWidth = CONFIG.POPUP_WIDTH, popupHeight = CONFIG.POPUP_HEIGHT;
             const left = (window.screen.width / 2) - (popupWidth / 2);
             const top = (window.screen.height / 2) - (popupHeight / 2);
@@ -510,35 +517,54 @@
                 popup.document.close();
                 popup.focus();
             } else {
-                // ĐÃ CHUYỂN SANG CONSOLE.LOG
                 console.log("[Ext] Vui lòng cho phép cửa sổ pop-up để xem tóm tắt.");
             }
         } catch (e) { 
-            // ĐÃ CHUYỂN SANG CONSOLE.LOG
             console.log("[Ext] LỖI khi mở popup:", e); 
         }
     };
 
-// === 6. INITIALIZATION (KHỞI CHẠY) ===
+    // === 6. INITIALIZATION (KHỞI CHẠY) ===
     
-    console.log("[Ext] Đang tạo MutationObserver (v42 - Fixed Race Condition)...");
+    console.log("[Ext] Đang khởi chạy các mô-đun đã được bật...");
     
-    // 1. Chạy hàm tải blocklist ngay lập tức
-    loadBlocklist(); 
+    // 1. Tải blocklist (nếu được bật)
+    // THAY ĐỔI: Dùng key mới (fbEnableBlockByKeyword)
+    if (settings.fbEnableBlockByKeyword) {
+        loadBlocklist(); 
+    }
     
-    // 2. Chạy quét lần đầu ngay lập tức
-    //    (Vì chúng ta đã đổi sang 'document_end', DOM đã sẵn sàng)
-    scanAndAttachFacebook();
+    // 2. Chạy quét lần đầu (vì đã ở document_end)
+    // THAY ĐỔI: Dùng key mới (fbEnableBlockByKeyword)
+    if (settings.fbEnableBlockByKeyword) {
+        scanAndBlockModules();
+    }
+    // THAY ĐỔI: Dùng key mới (fbEnableSummarize)
+    if (settings.fbEnableSummarize) {
+        scanAndAttachSummarizeButtons();
+    }
 
     // 3. Tạo MutationObserver
     let debounceTimer;
     const observer = new MutationObserver((mutationsList) => {
-        clearTimeout(debounceTimer);
-        // Vẫn dùng debounce để tránh quét quá nhiều khi trang thay đổi liên tục
-        debounceTimer = setTimeout(scanAndAttachFacebook, CONFIG.DEBOUNCE_TIME);
+        
+        // 1. CHẠY ẨN BLOCK NGAY LẬP TỨC (nếu được bật)
+        // THAY ĐỔI: Dùng key mới (fbEnableBlockByKeyword)
+        if (settings.fbEnableBlockByKeyword) {
+            scanAndBlockModules(); 
+        }
+
+        // 2. DEBOUNCE VIỆC GẮN NÚT (nếu được bật)
+        // THAY ĐỔI: Dùng key mới (fbEnableSummarize)
+        if (settings.fbEnableSummarize) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                scanAndAttachSummarizeButtons();
+            }, CONFIG.DEBOUNCE_TIME);
+        }
     });
 
     // 4. Bắt đầu quan sát
     observer.observe(document.body, { childList: true, subtree: true });
     
-})();
+} // <-- Dấu ngoặc này đóng hàm initializeFacebookHandler

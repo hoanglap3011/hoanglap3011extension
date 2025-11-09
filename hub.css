@@ -1,0 +1,77 @@
+:root {
+    --color-primary: #3b82f6;
+    --color-primary-light: #eff6ff;
+    --color-text: #222;
+    --color-text-light: #555;
+    --color-border: #ccc;
+    --color-background: #f7f7fa;
+    --color-white: #fff;
+    --border-radius-md: 8px;
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+body {
+    font-family: Arial, sans-serif;
+    background: var(--color-white); /* Nền trắng sạch sẽ */
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Ẩn thanh cuộn của body */
+}
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* Chiếm toàn bộ chiều cao popup */
+}
+
+/* --- Ô tìm kiếm --- */
+.search-wrapper {
+    padding: 12px;
+    border-bottom: 1px solid var(--color-border);
+}
+#searchInput {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 1.2em;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    box-sizing: border-box; /* Quan trọng */
+    outline: none;
+}
+#searchInput:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+/* --- Danh sách lệnh --- */
+.command-list {
+    flex-grow: 1; /* Chiếm phần còn lại */
+    overflow-y: auto; /* Tự động cuộn nếu danh sách quá dài */
+    padding: 8px;
+}
+.command-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.command-list li {
+    padding: 12px 16px;
+    font-size: 1em;
+    color: var(--color-text);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.command-list li small {
+    color: var(--color-text-light);
+    font-size: 0.9em;
+}
+
+/* --- KIỂU CHO MỤC ĐƯỢC CHỌN --- */
+.command-list li.selected {
+    background: var(--color-primary);
+    color: var(--color-white);
+}
+.command-list li.selected small {
+    color: var(--color-primary-light);
+}

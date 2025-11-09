@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cài đặt Lập's Extension</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+    <main class="container">
+        <h1>Cài đặt Extension</h1>
+        
+        <h2>Facebook</h2>
+        <div class="setting-row">
+            <label for="fbEnableSummarize" class="switchLabel">
+                <strong>Bật nút "Tóm Tắt"</strong>
+                <span class="description">Thêm nút "Tóm Tắt" (AI) vào mỗi bài đăng.</span>
+            </label>
+            <label class="switch">
+                <input type="checkbox" id="fbEnableSummarize">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="setting-row">
+            <label for="fbEnableBlockByKeyword" class="switchLabel">
+                <strong>Ẩn khối theo từ khóa</strong>
+                <span class="description">Tự động ẩn Reels, Gợi ý, và các mục trong <code>facebook_blocklist.json</code>.</span>
+            </label>
+            <label class="switch">
+                <input type="checkbox" id="fbEnableBlockByKeyword">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="setting-row">
+            <label for="fbEnableHideStories" class="switchLabel">
+                <strong>Ẩn khối Story (Tin)</strong>
+                <span class="description">Ẩn toàn bộ khu vực "Tin" (Stories) ở đầu trang.</span>
+            </label>
+            <label class="switch">
+                <input type="checkbox" id="fbEnableHideStories">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <h2 style="margin-top: 24px;">YouTube</h2>
+        <div class="setting-row">
+            <label for="ytEnableHomepageHider" class="switchLabel">
+                <strong>Ẩn Video Trang Chủ</strong>
+                <span class="description">Ẩn tất cả video gợi ý ở trang chủ (youtube.com).</span>
+            </label>
+            <label class="switch">
+                <input type="checkbox" id="ytEnableHomepageHider">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="setting-row">
+            <label for="ytEnableSummaryBox" class="switchLabel">
+                <strong>Bật Box Tóm Tắt</strong>
+                <span class="description">Hiển thị Box "Tóm Tắt", "Quotes", "Key" bên cạnh video.</span>
+            </label>
+            <label class="switch">
+                <input type="checkbox" id="ytEnableSummaryBox">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <p id="saveStatus"></p>
+    </main>
+    <script src="config.js"></script> 
+    <script src="options.js"></script>
+</body>
+</html>

@@ -1,4 +1,12 @@
-(async function () {
+/**
+ * ===================================================================
+ * HÀM XỬ LÝ YOUTUBE CHÍNH
+ * (Hầu hết code gốc được đưa vào hàm này)
+ * ===================================================================
+ */
+async function initializeYouTubeHandler(settings) {
+    console.log("🚀 [Ext] Handle YouTube script loaded. Settings:", settings);
+
     // (API constants nạp từ config.js)
 
     // Hàm tiêm CSS (Không thay đổi)
@@ -210,9 +218,7 @@
         } catch (e) { console.error("[Ext] Lỗi khi mở popup:", e); }
     };
 
-
-
-// ... (Ngay sau hàm showSummaryPopup) ...
+    // ... (Ngay sau hàm showSummaryPopup) ...
 
     const HOMEPAGE_MESSAGE_ID = "my-ext-homepage-message-box";
 
@@ -304,6 +310,7 @@
      * HÀM MỚI 5: Hàm kiểm tra (gọi hàm 3 và 4)
      */
     const checkHomepageVisibility = () => {
+        // HÀM NÀY SẼ CHỈ CHẠY NẾU settings.ytEnableHomepageHider = true
         if (window.location.pathname === "/") {
             injectHomepageMessage();
         } else {
@@ -312,73 +319,19 @@
     };
 
 
-/**
-     * HÀM MỚI (ĐÃ NÂNG CẤP VÀ SỬA LỖI): Tiêm CSS VÀ Thêm thông điệp
-     */
-    const injectHomepageHider = () => {
-        const styleId = "my-ext-homepage-hider-style";
-        
-        // --- 1. Tiêm CSS (Như cũ) ---
-        if (!document.getElementById(styleId)) {
-            const css = `
-                /* Ẩn toàn bộ lưới video gợi ý trên trang chủ */
-                ytd-rich-grid-renderer { display: none !important; }
-                /* Ẩn các "kệ" video (như Shorts, Tin tức, v.v.) */
-                ytd-rich-shelf-renderer { display: none !important; }
-                /* (Tùy chọn) Ẩn luôn thanh filter (Tất cả, Âm nhạc, Trò chơi...) */
-                #chips { display: none !important; }
-            `;
-            const style = document.createElement("style");
-            style.id = styleId;
-            style.textContent = css;
-            document.head.appendChild(style);
-        }
-
-        // --- 2. Thêm Thông Điệp (Logic Mới) ---
-        // Nếu thông điệp đã tồn tại, không làm gì cả
-        if (document.getElementById(HOMEPAGE_MESSAGE_ID)) return;
-
-        // --- BẮT ĐẦU SỬA LỖI ---
-        // Cách tiếp cận mới: Tìm chính phần tử lưới video (mà chúng ta đang ẩn).
-        // Thông điệp sẽ được chèn vào TRƯỚC phần tử này.
-        const gridRenderer = document.querySelector('ytd-rich-grid-renderer');
-
-        if (gridRenderer && gridRenderer.parentNode) {
-            // Cách làm tốt nhất: Chèn thông điệp vào cha của gridRenderer
-            const messageBox = createMessageBox();
-            gridRenderer.parentNode.prepend(messageBox);
-
-        } else {
-            // Dự phòng: Nếu không thấy gridRenderer, thử lại selector cũ nhưng bỏ (>)
-            const fallbackContainer = document.querySelector('ytd-browse[page-subtype="home"] #contents');
-            if (fallbackContainer) {
-                const messageBox = createMessageBox();
-                fallbackContainer.prepend(messageBox);
-            } else {
-                console.error("[Ext] Không tìm thấy vị trí (gridRenderer hoặc #contents) để chèn thông điệp.");
-            }
-        }
-        // --- KẾT THÚC SỬA LỖI ---
-    };
-
     /**
-     * HÀM MỚI (ĐÃ NÂNG CẤP): Gỡ bỏ CSS VÀ Thông điệp
-     */
-    const removeHomepageHider = () => {
-        // --- 1. Gỡ bỏ CSS (Như cũ) ---
-        const styleId = "my-ext-homepage-hider-style";
-        const styleElement = document.getElementById(styleId);
-        if (styleElement) {
-            styleElement.remove();
-        }
-
-        // --- 2. Gỡ bỏ Thông Điệp (Logic Mới) ---
-        const messageBox = document.getElementById(HOMEPAGE_MESSAGE_ID);
-        if (messageBox) {
-            messageBox.remove();
-        }
-    };
-
+      * HÀM MỚI (ĐÃ NÂNG CẤP VÀ SỬA LỖI): Tiêm CSS VÀ Thêm thông điệp
+      * (Hàm này có vẻ LẶP LẠI logic với hàm 1, 2, 3. 
+      * Hàm injectPermanentHomepageHider (1) và checkHomepageVisibility (5) có vẻ là
+      * cách tiếp cận đúng. Tôi sẽ bỏ qua hàm injectHomepageHider và removeHomepageHider
+      * bị trùng lặp bên dưới này, vì code ở trên (1-5) có vẻ đã đúng
+      * logic chống flash + chèn message.)
+      */
+    /*
+    const injectHomepageHider = () => { ... };
+    const removeHomepageHider = () => { ... };
+    */
+    // (Đã bỏ qua 2 hàm trùng lặp ở trên)
 
 
     
@@ -621,6 +574,8 @@
 
     // Hàm: scanAndInject (Đã xóa logic nút Tóm Tắt Mới cũ)
     const scanAndInject = () => {
+        // HÀM NÀY SẼ CHỈ CHẠY NẾU settings.ytEnableSummaryBox = true
+        
         const currentUrl = window.location.href;
         const shortUrl = getShortYouTubeUrl(currentUrl); 
         let myBox = document.getElementById(MY_BOX_ID);
@@ -677,20 +632,25 @@
         }
     };
 
-// --- BẮT ĐẦU CẬP NHẬT PHẦN KHỞI CHẠY ---
+    // --- BẮT ĐẦU CẬP NHẬT PHẦN KHỞI CHẠY ---
 
-    // 1. Tiêm CSS chống flash NGAY LẬP TỨC
-    injectPermanentHomepageHider();
+    // 1. Tiêm CSS chống flash (NẾU ĐƯỢC BẬT)
+    if (settings.ytEnableHomepageHider) {
+        injectPermanentHomepageHider();
+    }
 
     // 2. Tạo Observer tổng
     const observer = new MutationObserver((mutations) => {
-        // Logic cho trang xem video (/watch)
-        if (window.location.pathname === "/watch") {
+        
+        // Logic cho trang xem video (/watch) (NẾU ĐƯỢC BẬT)
+        if (settings.ytEnableSummaryBox && window.location.pathname === "/watch") {
             setTimeout(scanAndInject, 300);
         }
         
-        // Logic cho trang chủ (/)
-        checkHomepageVisibility();
+        // Logic cho trang chủ (/) (NẾU ĐƯỢC BẬT)
+        if (settings.ytEnableHomepageHider) {
+            checkHomepageVisibility();
+        }
     });
 
     // 3. Bắt đầu quan sát
@@ -698,10 +658,43 @@
 
     // 4. Chạy lần đầu khi tải trang
     setTimeout(() => {
-         if (window.location.pathname === "/watch") {
+         if (settings.ytEnableSummaryBox && window.location.pathname === "/watch") {
             scanAndInject();
          }
-         checkHomepageVisibility();
+         if (settings.ytEnableHomepageHider) {
+            checkHomepageVisibility();
+         }
     }, 1000);
 
+} // <-- Dấu ngoặc đóng hàm initializeYouTubeHandler
+
+
+/**
+ * ===================================================================
+ * TRÌNH KHỞI CHẠY (RUNNER) MỚI
+ * (Đọc cài đặt và gọi hàm xử lý chính)
+ * ===================================================================
+ */
+(function() {
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+        // Dùng SETTINGS_KEY chung từ config.js
+        chrome.storage.local.get(SETTINGS_KEY, (data) => {
+            // Dùng DEFAULT_SETTINGS chung từ config.js
+            const settings = { ...DEFAULT_SETTINGS, ...(data[SETTINGS_KEY] || {}) };
+
+            // Chỉ khởi chạy nếu MỘT TRONG HAI tính năng được bật
+            if (settings.ytEnableHomepageHider || settings.ytEnableSummaryBox) {
+                // Chạy hàm logic chính và truyền cài đặt vào
+                initializeYouTubeHandler(settings);
+            } else {
+                 console.log("🚀 [Ext] YouTube: Cả hai tính năng 'Ẩn Trang Chủ' và 'Box Tóm Tắt' đều bị tắt. Script sẽ không chạy.");
+            }
+        });
+    } else {
+        // Fallback: Nếu chạy ngoài môi trường extension,
+        // chạy với cài đặt mặc định (để test)
+        console.log("🚀 [Ext] YouTube: Đang chạy ở môi trường không phải extension, dùng cài đặt mặc định.");
+        // (Dùng DEFAULT_SETTINGS từ config.js)
+        initializeYouTubeHandler(DEFAULT_SETTINGS);
+    }
 })();

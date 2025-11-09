@@ -23,6 +23,26 @@ const CACHE_HIDE_UNREQUIRED = 'hideUnrequiredSwitchState';
 // facebook
 const MIN_SUMMARY_LENGTH = 1000; // Giới hạn tóm tắt là 150 ký tự
 
+// =======================================================
+// --- CÀI ĐẶT TOÀN BỘ EXTENSION (ĐÃ CHUẨN HÓA) ---
+// =======================================================
+// Key lưu trữ CHUNG cho tất cả cài đặt
+const SETTINGS_KEY = 'LapsExtensionSettings';
+
+// Cài đặt mặc định CHUNG cho toàn bộ extension
+const DEFAULT_SETTINGS = {
+    // Facebook
+    fbEnableSummarize: true,
+    fbEnableBlockByKeyword: true,
+    fbEnableHideStories: true,
+    
+    // YouTube (MỚI)
+    ytEnableHomepageHider: true,
+    ytEnableSummaryBox: true
+};
+// =======================================================
+
+
 // hoanglap3011
 const API_ACTION_GET_TODOLIST_THISWEEK = "getToDoListWeek";
 
