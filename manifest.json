@@ -37,23 +37,23 @@
     {
       "matches": ["*://*.youtube.com/*", "*://youtube.com/*"],
       "js": [
-        "config.js","handleYouTube.js"
+        "config.js","youtube.js"
       ],
       "run_at": "document_idle"
     },
     {
       "matches": ["*://*.google.com/search*","*://google.com/search*"],
-      "js": ["handleGoogleSearch.js"],
+      "js": ["google_search.js"],
       "run_at": "document_idle"
     },
     {
       "matches": ["*://*.ticketbox.vn/*", "*://ticketbox.vn/*"],
-      "js": ["handleTicketbox.js"],
+      "js": ["ticketbox.js"],
       "run_at": "document_idle"
     },
     {
       "matches": ["*://calendar.google.com/calendar/u/0/r/eventedit?ofe=true*"],
-      "js": ["handleAddGoogleCalendarFromParam.js"],
+      "js": ["google_calendar.js"],
       "run_at": "document_idle"
     },
     {
@@ -61,7 +61,7 @@
         "*://*.facebook.com/*",
         "*://facebook.com/*"
       ],
-      "js": ["config.js","handleFacebook_init.js"],
+      "js": ["config.js","facebook_init.js"],
       "run_at": "document_start" 
     },
     {
@@ -70,7 +70,7 @@
         "*://facebook.com/*"
       ],
       "js": [
-        "handleFacebook.js"
+        "facebook.js"
       ],
       "run_at": "document_end"
     }
