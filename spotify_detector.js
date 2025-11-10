@@ -66,18 +66,35 @@
 
       // Lấy volume
       const volumeButton = document.querySelector('[data-testid="volume-bar-toggle-mute-button"]');
-      const volumeSlider = document.querySelector('[data-testid="volume-bar-slider"]');
       
       const volumeAriaLabel = volumeButton?.getAttribute('aria-label')?.toLowerCase() || '';
-      let isMuted = volumeAriaLabel.includes('unmute') || volumeAriaLabel.includes('bật tiếng');
+      // Khi CHƯA mute: "Tắt tiếng" / "Mute"
+      // Khi ĐÃ mute: "Bật tiếng" / "Unmute"
+      let isMuted = volumeAriaLabel.includes('bật') || volumeAriaLabel.includes('unmute');
       
       let volume = 1;
+      // Thử tìm volume slider với nhiều selector khác nhau
+      const volumeSliderSelectors = [
+        'input[data-testid="volume-bar-slider"]',
+        '[data-testid="volume-bar"] input[type="range"]',
+        'input[aria-label*="olume"]',
+        '.volume-bar__slider'
+      ];
+      
+      let volumeSlider = null;
+      for (const selector of volumeSliderSelectors) {
+        volumeSlider = document.querySelector(selector);
+        if (volumeSlider) break;
+      }
+      
       if (volumeSlider) {
-        const ariaValue = volumeSlider.getAttribute('aria-valuenow');
+        const ariaValue = volumeSlider.getAttribute('aria-valuenow') || volumeSlider.value;
         if (ariaValue) {
           volume = parseInt(ariaValue) / 100;
         }
       }
+      
+      console.log('[Spotify Detector] Volume:', volume, 'Muted:', isMuted, 'Aria label:', volumeAriaLabel);
 
       // Kiểm tra next/previous buttons
       const nextButton = document.querySelector('[data-testid="control-button-skip-forward"]');
