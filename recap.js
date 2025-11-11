@@ -16,6 +16,37 @@ document.addEventListener('DOMContentLoaded', () => {
     let filteredCommands = []; // Lưu trữ data đã lọc
     let selectedIndex = 0;    
 
+    // ==========================================================
+    // --- 3. HÀM TIỆN ÍCH MỚI (GIẢI PHÁP) ---
+    // ==========================================================
+
+    /**
+     * Kiểm tra xem có đang chạy trong môi trường extension hay không.
+     * (Giả định StorageUtil là global và đã được định nghĩa)
+     */
+    function isExtensionEnv() {
+        // Chúng ta có thể dùng trực tiếp StorageUtil.isExtension 
+        // nếu bạn đã định nghĩa nó, hoặc dùng cách kiểm tra chung:
+        return typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id;
+    }
+
+    /**
+     * Hàm mới để mở tab, tự động chọn API phù hợp
+     */
+    function openNewTab(url) {
+        if (isExtensionEnv()) {
+            // 1. Môi trường Extension
+            chrome.tabs.create({ url: url });
+        } else {
+            // 2. Môi trường Web (github.io)
+            window.open(url, '_blank');
+        }
+        // Tự động đóng cửa sổ popup (nếu là web)
+        if (!isExtensionEnv()) {
+             window.close();
+        }
+    }
+
 
     // --- 4. KHỞI TẠO VÀ LẤY DATA ---
 
@@ -27,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchData() {
         LoadingOverlayUtil.show(); // Hiển thị loading
 
+        // Giả định StorageUtil được tải global
         const pass = await new Promise(resolve => {
             StorageUtil.get([CACHE_PASS], (result) => resolve(result[CACHE_PASS] || ''));
         });
@@ -226,11 +258,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (hasNotebook && hasMindomo) {
             showChoicePopup(command.notebooklm, command.mindomo);
         } else if (hasNotebook) {
-            chrome.tabs.create({ url: command.notebooklm });
-            window.close();
+            // <<< THAY ĐỔI: Dùng hàm mới >>>
+            openNewTab(command.notebooklm);
+            if(isExtensionEnv()) window.close(); // Chỉ extension mới tự đóng cửa sổ hub
         } else if (hasMindomo) {
-            chrome.tabs.create({ url: command.mindomo });
-            window.close();
+            // <<< THAY ĐỔI: Dùng hàm mới >>>
+            openNewTab(command.mindomo);
+            if(isExtensionEnv()) window.close(); // Chỉ extension mới tự đóng cửa sổ hub
         } else {
             alert("Mục này không có link để mở.");
         }
@@ -262,9 +296,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * Xử lý khi bấm nút trong popup
      */
     function openChoice(url) {
-        chrome.tabs.create({ url: url });
+        // <<< THAY ĐỔI: Dùng hàm mới >>>
+        openNewTab(url); 
         hideChoicePopup(); 
-        window.close(); 
+        if(isExtensionEnv()) window.close(); // Chỉ extension mới tự đóng cửa sổ hub
     }
 
     // --- 6. CHẠY HÀM KHỞI TẠO ---
