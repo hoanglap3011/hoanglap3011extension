@@ -96,7 +96,6 @@
                     <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
                   `}
                 </button>
-                <div style="font-size: 11px; color: #9aa0a6; margin-left: 8px;">${Math.round(media.volume * 100)}%</div>
               </div>
             ` : `
               <!-- Non-Spotify controls: Previous, Seek Back, Play/Pause, Seek Forward, Next, Mute + Volume Slider -->
@@ -147,6 +146,76 @@
     `;
   }
 
+  // Update existing media item without full re-render
+  function updateMediaItem(element, media) {
+    // Update status text và dot
+    const statusText = element.querySelector('.media-status');
+    if (statusText) {
+      const dot = statusText.querySelector('.status-dot');
+      const text = media.isPlaying ? 'Đang phát' : 'Tạm dừng';
+      statusText.innerHTML = `
+        <span class="status-dot ${media.isPlaying ? 'playing' : ''}"></span>
+        ${text}
+      `;
+    }
+
+    // Update progress bar
+    const progressFill = element.querySelector('.progress-fill');
+    if (progressFill && media.duration > 0) {
+      const progress = (media.currentTime / media.duration) * 100;
+      progressFill.style.width = `${progress}%`;
+    }
+
+    // Update time
+    const progressTime = element.querySelector('.progress-time');
+    if (progressTime) {
+      progressTime.innerHTML = `
+        <span>${formatTime(media.currentTime)}</span>
+        <span>${formatTime(media.duration)}</span>
+      `;
+    }
+
+    // Update play/pause button
+    const playButton = element.querySelector('[data-action="toggle"]');
+    if (playButton) {
+      playButton.title = media.isPlaying ? 'Pause' : 'Play';
+      playButton.innerHTML = media.isPlaying ? `
+        <svg viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
+      ` : `
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      `;
+    }
+
+    // Update mute button icon
+    const muteButton = element.querySelector('[data-action="toggleMute"]');
+    if (muteButton) {
+      muteButton.title = media.muted ? 'Unmute' : 'Mute';
+      if (media.isSpotify) {
+        muteButton.innerHTML = media.muted ? `
+          <svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+        ` : `
+          <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        `;
+      } else {
+        muteButton.innerHTML = media.muted || media.volume === 0 ? `
+          <svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+        ` : media.volume > 0.5 ? `
+          <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        ` : `
+          <svg viewBox="0 0 24 24"><path d="M7 9v6h4l5 5V4l-5 5H7z"/></svg>
+        `;
+      }
+    }
+
+    // Update volume slider (non-Spotify only)
+    if (!media.isSpotify) {
+      const volumeSlider = element.querySelector('.volume-slider');
+      if (volumeSlider) {
+        volumeSlider.value = Math.round(media.volume * 100);
+      }
+    }
+  }
+
   // Render media list
   function renderMediaList() {
     const container = document.getElementById('mediaContainer');
@@ -164,10 +233,24 @@
       return;
     }
 
-    const html = mediaData.map(media => createMediaItem(media)).join('');
-    container.innerHTML = `<div class="media-list">${html}</div>`;
-    
-    attachEventListeners();
+    // Kiểm tra xem có cần render lại toàn bộ không
+    const existingItems = container.querySelectorAll('.media-item');
+    const needsFullRender = existingItems.length !== mediaData.length ||
+                           Array.from(existingItems).some((item, index) => {
+                             return parseInt(item.dataset.tabId) !== mediaData[index].tabId;
+                           });
+
+    if (needsFullRender) {
+      // Render toàn bộ nếu số lượng media thay đổi
+      const html = mediaData.map(media => createMediaItem(media)).join('');
+      container.innerHTML = `<div class="media-list">${html}</div>`;
+      attachEventListeners();
+    } else {
+      // Chỉ update nội dung các item hiện có
+      mediaData.forEach((media, index) => {
+        updateMediaItem(existingItems[index], media);
+      });
+    }
   }
 
   // Attach event listeners to controls
@@ -207,15 +290,40 @@
       command = media.muted ? 'unmute' : 'mute';
     }
 
+    // OPTIMISTIC UPDATE: Cập nhật UI ngay lập tức
+    const mediaIndex = mediaData.findIndex(m => m.tabId === tabId);
+    if (mediaIndex !== -1) {
+      const media = mediaData[mediaIndex];
+      
+      // Dự đoán trạng thái mới
+      if (action === 'toggle') {
+        media.isPlaying = !media.isPlaying;
+        media.isPaused = !media.isPaused;
+      } else if (action === 'toggleMute') {
+        media.muted = !media.muted;
+      } else if (action === 'next' || action === 'previous') {
+        // Reset thời gian về 0 khi chuyển bài
+        media.currentTime = 0;
+      }
+      
+      // Render ngay lập tức
+      const container = document.getElementById('mediaContainer');
+      const items = container.querySelectorAll('.media-item');
+      if (items[mediaIndex]) {
+        updateMediaItem(items[mediaIndex], media);
+      }
+    }
+
+    // Gửi command thật
     chrome.runtime.sendMessage({
       action: 'controlMedia',
       tabId: tabId,
       command: command,
       value: value
     }, () => {
-      // Đợi lâu hơn cho Spotify để UI cập nhật
+      // Refresh sau để đảm bảo sync với trạng thái thật
       const media = mediaData.find(m => m.tabId === tabId);
-      const delay = media && media.isSpotify ? 800 : 500;
+      const delay = media && media.isSpotify ? 400 : 200;
       setTimeout(loadMediaData, delay);
     });
   }
@@ -226,14 +334,27 @@
     const tabId = parseInt(this.dataset.tabId);
     const volume = parseInt(this.value) / 100;
 
+    // OPTIMISTIC UPDATE: Cập nhật UI ngay
+    const mediaIndex = mediaData.findIndex(m => m.tabId === tabId);
+    if (mediaIndex !== -1) {
+      mediaData[mediaIndex].volume = volume;
+      
+      // Update visual ngay lập tức
+      const container = document.getElementById('mediaContainer');
+      const items = container.querySelectorAll('.media-item');
+      if (items[mediaIndex]) {
+        updateMediaItem(items[mediaIndex], mediaData[mediaIndex]);
+      }
+    }
+
     chrome.runtime.sendMessage({
       action: 'controlMedia',
       tabId: tabId,
       command: 'volume',
       value: volume
     }, () => {
-      // Refresh ngay để cập nhật UI
-      setTimeout(loadMediaData, 500);
+      // Refresh sau để sync
+      setTimeout(loadMediaData, 300);
     });
   }
 
@@ -248,13 +369,25 @@
     const percent = (e.clientX - rect.left) / rect.width;
     const seekTime = percent * media.duration;
 
+    // OPTIMISTIC UPDATE: Cập nhật progress bar ngay
+    const mediaIndex = mediaData.findIndex(m => m.tabId === tabId);
+    if (mediaIndex !== -1) {
+      mediaData[mediaIndex].currentTime = seekTime;
+      
+      const container = document.getElementById('mediaContainer');
+      const items = container.querySelectorAll('.media-item');
+      if (items[mediaIndex]) {
+        updateMediaItem(items[mediaIndex], mediaData[mediaIndex]);
+      }
+    }
+
     chrome.runtime.sendMessage({
       action: 'controlMedia',
       tabId: tabId,
       command: 'seek',
       value: seekTime
     }, () => {
-      setTimeout(loadMediaData, 300);
+      setTimeout(loadMediaData, 200);
     });
   }
 
@@ -286,10 +419,10 @@
     });
   }
 
-  // Auto refresh every 1 second (nhanh hơn để cập nhật UI real-time)
+  // Auto refresh every 2 seconds (đủ để cập nhật progress bar)
   function startAutoRefresh() {
     if (updateInterval) clearInterval(updateInterval);
-    updateInterval = setInterval(loadMediaData, 1000);
+    updateInterval = setInterval(loadMediaData, 2000);
   }
 
   function stopAutoRefresh() {

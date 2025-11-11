@@ -69,30 +69,14 @@
       
       const volumeAriaLabel = volumeButton?.getAttribute('aria-label')?.toLowerCase() || '';
       // Khi CHƯA mute: "Tắt tiếng" / "Mute"
-      // Khi ĐÃ mute: "Bật tiếng" / "Unmute"
-      let isMuted = volumeAriaLabel.includes('bật') || volumeAriaLabel.includes('unmute');
+      // Khi ĐÃ mute: "Hủy tắt tiếng" / "Unmute"
+      let isMuted = volumeAriaLabel.includes('hủy') || 
+                    volumeAriaLabel.includes('unmute') ||
+                    volumeAriaLabel.includes('bật');
       
       let volume = 1;
-      // Thử tìm volume slider với nhiều selector khác nhau
-      const volumeSliderSelectors = [
-        'input[data-testid="volume-bar-slider"]',
-        '[data-testid="volume-bar"] input[type="range"]',
-        'input[aria-label*="olume"]',
-        '.volume-bar__slider'
-      ];
-      
-      let volumeSlider = null;
-      for (const selector of volumeSliderSelectors) {
-        volumeSlider = document.querySelector(selector);
-        if (volumeSlider) break;
-      }
-      
-      if (volumeSlider) {
-        const ariaValue = volumeSlider.getAttribute('aria-valuenow') || volumeSlider.value;
-        if (ariaValue) {
-          volume = parseInt(ariaValue) / 100;
-        }
-      }
+      // Spotify không expose volume qua UI một cách đáng tin cậy
+      // Chỉ đọc được trạng thái mute/unmute
       
       console.log('[Spotify Detector] Volume:', volume, 'Muted:', isMuted, 'Aria label:', volumeAriaLabel);
 
