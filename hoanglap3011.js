@@ -9,7 +9,7 @@ let quoteIndex = 0;
 
 document.addEventListener("DOMContentLoaded", function () {
   LoadingOverlayUtil.init({
-      getStorageFunc: getStorage,
+      getStorageFunc: StorageUtil.get,
       cacheQuotesKey: CACHE_QUOTES 
   });
   document.getElementById('versionJS').innerHTML = '10';
@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const clickHandlers = [
     ["btnEnter", togglePasswordInput],
     ["btnVietGiDo", vietGiDo],
+    ["btnRecap", recap],
     ["btnToDoListThisWeek", openToDoListThisWeek],
     ["btnToDoListWeekCustom", openToDoListWeekCustom],
     ["btnParkingLot", () => window.open(PARKING_LOT, '_blank')],
@@ -102,7 +103,7 @@ function openToDoListThisWeek(){
 function openToDoListWeekFromDay(dayStr){  
   const { week, weekYear: year } = getInfoWeek(dayStr);
   const keyToDoList = CACHE_TODOLIST_WEEK_PREFIX + week + "." + year;  
-  getStorage([CACHE_TODOLIST], (obj) => {
+  StorageUtil.get([CACHE_TODOLIST], (obj) => {
     const raw = obj[CACHE_TODOLIST];
     if (raw) {
       try {
@@ -123,7 +124,7 @@ function openToDoListWeekFromDay(dayStr){
     }    
     fetchLinkToDoListWeek(dayStr, (url) => {
       window.open(url, '_blank');
-      getStorage([CACHE_TODOLIST], (obj) => {
+      StorageUtil.get([CACHE_TODOLIST], (obj) => {
         const raw = obj[CACHE_TODOLIST];
         let arr = [];
         if (raw) {
@@ -141,7 +142,7 @@ function openToDoListWeekFromDay(dayStr){
         } else {
           arr.push({ [keyToDoList]: url });
         }
-        setStorage({ [CACHE_TODOLIST]: JSON.stringify(arr) }, () => {
+        StorageUtil.set({ [CACHE_TODOLIST]: arr }, () => {
         });
       });            
     });
@@ -161,7 +162,7 @@ function fetchLinkToDoListWeek(dayStr, callback) {
     method: 'POST',
     body: JSON.stringify({
       pass: pass,
-      action: API_ACTION_GET_TODOLIST_THISWEEK,
+      action: API_ACTION_GET_TODOLIST_WEEK,
       dayStr: dayStr
     })
   })
@@ -248,20 +249,11 @@ function savePass() {
   if (!pass || pass.length === 0) {
     alert("Nhập pass");
   } else {
-    if (isExtensionEnv()) {
-      chrome.storage.local.set({ [CACHE_PASS]: pass });
-    } else {
-      localStorage.setItem(CACHE_PASS, pass);
-    }
-    alert("Saved!");
-    togglePasswordInput();
+    StorageUtil.set({ [CACHE_PASS]: pass }, () => { alert("Saved!"); togglePasswordInput(); });
   }
 }
 
 
-function isExtensionEnv() {
-  return typeof chrome !== "undefined" && chrome.storage && chrome.storage.local;
-}
 
 
 
@@ -280,7 +272,7 @@ function isMobile() {
 }
 
 function showPass() {
-  getStorage([CACHE_PASS], result => {
+  StorageUtil.get([CACHE_PASS], result => {
     document.getElementById("txtPass").value = result[CACHE_PASS] || "";
   });
 }
@@ -376,24 +368,6 @@ function showNextQuote() {
   if (btnNextQuote) btnNextQuote.disabled = quoteIndex === quoteArray.length - 1;
 }
 
-function setStorage(obj, cb) {
-  if (isExtensionEnv()) {
-    chrome.storage.local.set(obj, cb);
-  } else {
-    Object.entries(obj).forEach(([k, v]) => localStorage.setItem(k, v));
-    if (typeof cb === 'function') cb();
-  }
-}
-function getStorage(keys, cb) {
-  if (isExtensionEnv()) {
-    chrome.storage.local.get(keys, cb);
-  } else {
-    const result = {};
-    keys.forEach(k => result[k] = localStorage.getItem(k));
-    cb(result);
-  }
-}
-
 
 
 function getCurrentDateFormatted() {
@@ -415,6 +389,10 @@ function shuffleArray(array) {
 
 function vietGiDo(){
   window.open("vietgido.html", '_blank');
+}
+
+function recap(){
+  window.open("recap.html", '_blank');
 }
 
 function getInfoWeek(dateStr) {

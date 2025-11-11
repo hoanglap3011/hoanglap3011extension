@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tìm kiếm API</title>
+    <link rel="stylesheet" href="hub.css">
+    <link rel="stylesheet" href="loadingOverlay.css">
+    <link rel="stylesheet" href="recap.css">
+</head>
+<body>
+    <div class="container">
+        <div class="search-wrapper">
+            <input type="text" id="searchInput" placeholder="Tìm kiếm ..." autocomplete="off">
+            <button id="btnRefreshApi" title="Tải lại dữ liệu từ API">🔄</button>
+        </div>
+        <div class="command-list">
+            <ul id="commandList">
+                </ul>
+        </div>
+    </div>
+
+    <div id="choiceOverlay">
+        <div id="choicePopup">
+            <p>Bạn muốn mở bằng:</p>
+            <div class="choice-buttons">
+                <button id="btnOpenNotebookLM">NotebookLM</button>
+                <button id="btnOpenMindomo">Mindomo</button>
+            </div>
+            <button id="btnCancelChoice">Hủy</button>
+        </div>
+    </div>
+
+    <script src="config.js"></script> 
+    <script src="loadingOverlay.js"></script>
+    <script src="storageUtil.js" defer></script>
+    <script src="recap.js"></script>
+</body>
+</html>

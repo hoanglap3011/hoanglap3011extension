@@ -32,9 +32,7 @@ const VietGidoApp = {
   init() {
 // --- THÊM MỚI TẠI ĐÂY ---
     // Khởi tạo Loading Overlay Utility
-    // Lưu ý: hàm getStorage của vietgido nằm trong 'this.helpers.storage'
-    // và cần 'bind(this.helpers.storage)' để giữ đúng ngữ cảnh 'this'.
-    const getStorageFunc = this.helpers.storage.get.bind(this.helpers.storage);
+    const getStorageFunc = StorageUtil.get;
     LoadingOverlayUtil.init({
         getStorageFunc: getStorageFunc,
         cacheQuotesKey: this.config.CACHE_QUOTES
@@ -42,7 +40,7 @@ const VietGidoApp = {
     // --- KẾT THÚC THÊM MỚI ---    
     this.cacheDomElements();
     this.setupEventListeners();
-this.state.urlParams = new URLSearchParams(window.location.search);    
+    this.state.urlParams = new URLSearchParams(window.location.search);    
     this.loadInitialState();
     this.initDanhMucSelect();
   },
@@ -68,7 +66,7 @@ this.state.urlParams = new URLSearchParams(window.location.search);
 
     if (this.dom.autoNextTheLoaiBietOnSwtich) {
       this.dom.autoNextTheLoaiBietOnSwtich.addEventListener('change', e => {
-        this.helpers.storage.set({ [this.config.CACHE_AUTO_NEXT]: e.target.checked });
+        StorageUtil.set({ [this.config.CACHE_AUTO_NEXT]: e.target.checked });
       });
     }
 
@@ -82,16 +80,16 @@ this.state.urlParams = new URLSearchParams(window.location.search);
   },
 
   loadInitialState() {
-    this.helpers.storage.get(this.config.CACHE_AUTO_NEXT, data => {
+    StorageUtil.get(this.config.CACHE_AUTO_NEXT, data => {
       if (this.dom.autoNextTheLoaiBietOnSwtich && data[this.config.CACHE_AUTO_NEXT] != null) {
         this.dom.autoNextTheLoaiBietOnSwtich.checked = data[this.config.CACHE_AUTO_NEXT];
       }
     });
-    this.helpers.storage.get(this.config.CACHE_PASS, r => {
+    StorageUtil.get(this.config.CACHE_PASS, r => {
       if (this.dom.txtPass) this.dom.txtPass.value = r[this.config.CACHE_PASS] || '';
     });
 
-    this.helpers.storage.get(this.config.CACHE_SHOW_TOOLBAR, data => {
+    StorageUtil.get(this.config.CACHE_SHOW_TOOLBAR, data => {
       // Mặc định là OFF (ẩn toolbar) để duy trì hành vi cũ
       let show = data[this.config.CACHE_SHOW_TOOLBAR];
       if (show == null) {
@@ -104,7 +102,7 @@ this.state.urlParams = new URLSearchParams(window.location.search);
       this.ui.applyToolbarVisibility.call(this, show);
     });
 
-    this.helpers.storage.get(this.config.CACHE_HIDE_UNREQUIRED, data => {
+    StorageUtil.get(this.config.CACHE_HIDE_UNREQUIRED, data => {
       let hideUnrequired = data[this.config.CACHE_HIDE_UNREQUIRED];
       // Mặc định là 'true' (checked) theo file HTML
       if (hideUnrequired == null) {
@@ -132,7 +130,7 @@ initDanhMucSelect() {
       this.dom.danhMucSelect.addEventListener('search', this.handlers.onCategorySearch.bind(this));
     }
 
-    this.helpers.storage.get('danhMuc', data => {
+    StorageUtil.get('danhMuc', data => {
       const categories = data?.danhMuc || [];
       if (categories.length > 0) {
         this.render.populateCategories.call(this, categories);
@@ -146,7 +144,7 @@ initDanhMucSelect() {
             this.render.buildEntriesForSelected.call(this, targetCategory.table);
             this.ui.applyTheme.call(this, targetCategory);
             // Cập nhật cache thành giá trị mới này luôn
-            this.helpers.storage.set({ [this.config.CACHE_DANH_MUC]: targetCategory.table }); 
+            StorageUtil.set({ [this.config.CACHE_DANH_MUC]: targetCategory.table }); 
             this.ui.setButtonsState.call(this, true);
             return; // Xong việc, không cần chạy logic cache cũ
           }
@@ -154,7 +152,7 @@ initDanhMucSelect() {
         }
 
         // 3. LOGIC CŨ (chạy khi không có paramDanhMuc hoặc paramDanhMuc bị sai)
-        this.helpers.storage.get(this.config.CACHE_DANH_MUC, cache => {
+        StorageUtil.get(this.config.CACHE_DANH_MUC, cache => {
           const saved = cache[this.config.CACHE_DANH_MUC];
           const targetCategory = categories.find(c => c.table === saved) || categories[0];
           if (targetCategory) {
@@ -180,8 +178,8 @@ initDanhMucSelect() {
     onCategoryChange() {
       const value = this.dom.danhMucSelect.value;
       this.render.buildEntriesForSelected.call(this, value);
-      this.helpers.storage.set({ [this.config.CACHE_DANH_MUC]: value });
-      this.helpers.storage.get('danhMuc', data => {
+      StorageUtil.set({ [this.config.CACHE_DANH_MUC]: value });
+      StorageUtil.get('danhMuc', data => {
         const category = (data?.danhMuc || []).find(c => c.table === value);
         this.ui.applyTheme.call(this, category);
       });
@@ -252,7 +250,7 @@ initDanhMucSelect() {
         return;
       }
       const cachePass = this.config.CACHE_PASS;
-      this.helpers.storage.set({ [cachePass]: pass }, this.ui.togglePasswordInput.bind(this));
+      StorageUtil.set({ [cachePass]: pass }, this.ui.togglePasswordInput.bind(this));
     },
 
     // Thay thế toàn bộ hàm này trong VietGidoApp.handlers
@@ -278,7 +276,7 @@ initDanhMucSelect() {
         }
 
         if (success) {
-          this.helpers.storage.get('danhMuc', data => {
+          StorageUtil.get('danhMuc', data => {
             const newCategories = data?.danhMuc || [];
             let targetCategory = newCategories.find(c => c.table === oldSelectedValue) || newCategories[0];
 
@@ -287,10 +285,10 @@ initDanhMucSelect() {
               this.ui.applyTheme.call(this, targetCategory);
               this.render.buildEntriesForSelected.call(this, targetCategory.table);
               if (oldSelectedValue !== targetCategory.table) {
-                this.helpers.storage.set({ [this.config.CACHE_DANH_MUC]: targetCategory.table });
+                StorageUtil.set({ [this.config.CACHE_DANH_MUC]: targetCategory.table });
               }
             } else {
-              this.helpers.storage.set({ [this.config.CACHE_DANH_MUC]: null });
+              StorageUtil.set({ [this.config.CACHE_DANH_MUC]: null });
               this.ui.applyTheme.call(this, null);
               this.render.buildEntriesForSelected.call(this, null);
             }
@@ -309,12 +307,12 @@ initDanhMucSelect() {
     },
     onToggleAllToolbars(e) {
       const isChecked = e.target.checked;
-      this.helpers.storage.set({ [this.config.CACHE_SHOW_TOOLBAR]: isChecked });
+      StorageUtil.set({ [this.config.CACHE_SHOW_TOOLBAR]: isChecked });
       this.ui.applyToolbarVisibility.call(this, isChecked);
     },
     onToggleHideUnrequired(e) {
       const hideUnrequired = e.target.checked; // ON (checked) = true = Ẩn
-      this.helpers.storage.set({ [this.config.CACHE_HIDE_UNREQUIRED]: hideUnrequired });
+      StorageUtil.set({ [this.config.CACHE_HIDE_UNREQUIRED]: hideUnrequired });
       this.ui.applyFieldVisibility.call(this, hideUnrequired);
     }
   },
@@ -342,7 +340,7 @@ initDanhMucSelect() {
         return;
       }
 
-      this.helpers.storage.get('danhMuc', data => {
+      StorageUtil.get('danhMuc', data => {
         const categories = data?.danhMuc || [];
         const category = categories.find(c => c?.table === categoryName);
         this.state.currentCategoryConfig = category ? { ...category, header: category.header || [] } : null;
@@ -653,7 +651,7 @@ initDanhMucSelect() {
   data: {
     async collectData() {
       const selectedCategoryName = this.dom.danhMucSelect?.value;
-      const categories = await new Promise(resolve => this.helpers.storage.get('danhMuc', data => resolve(data.danhMuc || [])));
+      const categories = await new Promise(resolve => StorageUtil.get('danhMuc', data => resolve(data.danhMuc || [])));
       const selectedCategory = categories.find(c => c.table === selectedCategoryName);
 
       const entries = Array.from(this.dom.entriesContainer.querySelectorAll('.vg-entry')).map((entry, idx) => {
@@ -747,7 +745,7 @@ async updateCategoriesFromAPI() {
         }
 
         // Lưu cả hai vào cache
-        await new Promise(resolve => this.helpers.storage.set({ 
+        await new Promise(resolve => StorageUtil.set({ 
           danhMuc: categories,
           [this.config.CACHE_QUOTES]: quotes || [] // Lưu cả quotes
         }, resolve));
@@ -783,7 +781,7 @@ async updateCategoriesFromAPI() {
       this.dom.divPassword.style.display = isHidden ? 'block' : 'none';
       if (isHidden) {
         const cachePass = this.config.CACHE_PASS;
-        this.helpers.storage.get(cachePass, r => {
+        StorageUtil.get(cachePass, r => {
           if (this.dom.txtPass) this.dom.txtPass.value = r[cachePass] || '';
         });
       }
@@ -858,47 +856,6 @@ async updateCategoriesFromAPI() {
   // --- HELPERS (Hàm hỗ trợ) ---
   // =================================================================
   helpers: {
-    storage: {
-      isExtension: () => typeof chrome !== 'undefined' && chrome.storage?.local,
-      get(keys, cb) {
-        if (this.isExtension()) {
-          chrome.storage.local.get(keys, cb);
-        } else {
-          const result = {};
-          (Array.isArray(keys) ? keys : [keys]).forEach(k => {
-            const raw = localStorage.getItem(k);
-            if (raw === null) {
-              result[k] = null;
-            } else {
-              try {
-                // Nếu raw là JSON (object/array/number/boolean/"string"), JSON.parse sẽ trả về giá trị đúng
-                result[k] = JSON.parse(raw);
-              } catch (e) {
-                // Nếu không parse được (ví dụ raw = abc), trả về nguyên chuỗi
-                result[k] = raw;
-              }
-            }
-          });
-          cb(result);
-        }
-      },
-      set(obj, cb) {
-        if (this.isExtension()) {
-          chrome.storage.local.set(obj, cb);
-        } else {
-          Object.entries(obj).forEach(([k, v]) => {
-            // Nếu giá trị là chuỗi nguyên thủy thì lưu thẳng, còn lại stringify để giữ kiểu
-            if (typeof v === 'string') {
-              localStorage.setItem(k, v);
-            } else {
-              localStorage.setItem(k, JSON.stringify(v));
-            }
-          });
-          cb?.();
-        }
-      }
-    },
-
     formatMoney(value) {
       const cleanValue = String(value).replace(/\D/g, '');
       return cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');

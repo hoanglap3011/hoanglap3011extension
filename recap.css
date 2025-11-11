@@ -1,0 +1,93 @@
+/* search_api.css */
+
+/* --- THÊM MỚI: Cập nhật Search Wrapper --- */
+.search-wrapper {
+    position: relative;
+}
+
+/* --- THÊM MỚI: Kiểu cho nút Refresh --- */
+#btnRefreshApi {
+    position: absolute;
+    right: 20px; /* hub.css có padding 12px, 12+8=20 */
+    top: 50%;
+    transform: translateY(-50%);
+    background: #eee;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 1.2em;
+    color: #555;
+    transition: background 0.2s, transform 0.2s;
+}
+#btnRefreshApi:hover {
+    background: #e0e0e0;
+}
+#btnRefreshApi:active {
+    transform: translateY(-50%) scale(0.95);
+}
+/* Ẩn nút refresh khi input đang focus để gõ (trên hub.css) */
+#searchInput:focus + #btnRefreshApi {
+    display: none;
+}
+
+
+/* --- Lớp phủ cho Popup Lựa chọn --- */
+#choiceOverlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 9990; /* Dưới loading overlay nhưng trên nội dung */
+    display: none; /* Bị ẩn mặc định */
+    justify-content: center;
+    align-items: center;
+    font-family: Arial, sans-serif;
+}
+/* ... (Phần còn lại của file CSS giữ nguyên) ... */
+#choiceOverlay.visible {
+    display: flex;
+}
+#choicePopup {
+    background: #fff;
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    width: 300px;
+}
+#choicePopup p {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 1.1em;
+    color: #333;
+}
+.choice-buttons {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+}
+#choicePopup button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.2s;
+}
+.choice-buttons button {
+    background-color: #3b82f6; /* var(--color-primary) từ hub.css */
+    color: white;
+    flex: 1;
+    margin: 0 5px;
+}
+.choice-buttons button:hover {
+    background-color: #2563eb;
+}
+#btnCancelChoice {
+    background-color: #eee;
+    color: #555;
+    width: 100%;
+}
+#btnCancelChoice:hover {
+    background-color: #ddd;
+}

@@ -22,10 +22,10 @@ document.addEventListener('DOMContentLoaded', () => {
             action: () => chrome.tabs.create({ url: chrome.runtime.getURL('media_hub.html') })
         },
         {
-            id: 'open_extensions',
-            name: 'Mở trang Extensions',
-            keywords: 'tiện ích chrome manage',
-            action: () => chrome.tabs.create({ url: 'chrome://extensions/' })
+            id: 'open_recap',
+            name: 'Mở trang recap',
+            keywords: 'recap tóm tắt',
+            action: () => chrome.tabs.create({ url: chrome.runtime.getURL('recap.html') })
         }
         // Thêm bao nhiêu lệnh tuỳ thích vào đây
     ];

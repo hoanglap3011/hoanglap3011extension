@@ -1,16 +1,17 @@
 // api
-const API = "https://script.google.com/macros/s/AKfycbyIhtZWTgA3T87dpJx2eijzfU5lxHWeEXy7aZ7ACi4t6MfGsh3G0xXnryRzwqQCEWXY/exec";
+const API = "https://script.google.com/macros/s/AKfycbzS1sNi3t3E9BJpWI-ftOe3q8t2iC58QIUtxA69s6Sa8Q_RtcgSsswqWJNEJnR2ZZtUbQ/exec";
 const API_ACTION_GET_SUMMARY_BY_CODE = "getSummaryByCode";
+const API_ACTION_GET_SUMMARY_BY_CATEGORY = "getSummariesByCategory";
 const API_ACTION_GET_QUOTES = "getQuotes";
 const API_ACTION_ADD_VIETGIDO = "addVietGiDo";
 const API_ACTION_GET_DANHMUC_QUOTES = "getDanhMucAndQuote";
-
-// youtube
-const YOUTUBE_PANEL_FIXED_HEIGHT = "230px";
+const API_ACTION_GET_TODOLIST_WEEK = "getToDoListWeek";
 
 // CACHE KEYS
 const CACHE_PASS = "pass";
 const CACHE_QUOTES = "quotes";
+
+// hoanglap3011
 const CACHE_TODOLIST = "todolist";
 const CACHE_TODOLIST_WEEK_PREFIX = "toDoListWeek.";
 
@@ -20,8 +21,14 @@ const CACHE_AUTO_NEXT = 'autoNextSwitchState';
 const CACHE_SHOW_TOOLBAR = 'showToolbarSwitchState';
 const CACHE_HIDE_UNREQUIRED = 'hideUnrequiredSwitchState';
 
+// recap
+const CACHE_DATA_RECAP = 'dataRecap';
+
 // facebook
 const MIN_SUMMARY_LENGTH = 1000; // Giới hạn tóm tắt là 150 ký tự
+
+// youtube
+const YOUTUBE_PANEL_FIXED_HEIGHT = "230px";
 
 // =======================================================
 // --- CÀI ĐẶT TOÀN BỘ EXTENSION (ĐÃ CHUẨN HÓA) ---
@@ -43,9 +50,7 @@ const DEFAULT_SETTINGS = {
 // =======================================================
 
 
-// hoanglap3011
-const API_ACTION_GET_TODOLIST_THISWEEK = "getToDoListWeek";
-
+// quick link hoanglap3011
 const TODOLIST_ALL = "https://docs.google.com/spreadsheets/d/1ODqzKCpG_uZ_3YckZMiXNvhE6xGGulUEy7nICsdAQHo/edit";
 const PARKING_LOT = "https://docs.google.com/spreadsheets/d/1wJioap23Z4zkycu-xdbaAyunw8mEvKrVON8isa3KQBs/edit?gid=1922680355#gid=1922680355";
 const CALENDAR = "https://calendar.google.com/";
