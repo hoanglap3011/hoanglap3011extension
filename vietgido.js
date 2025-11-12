@@ -20,7 +20,7 @@ const VietGidoApp = {
     entryCount: 0,
     quillInstances: new Map(),
     currentCategoryConfig: null,
-    confettiAnimationId: null
+    // animationId: null
   },
 
   // --- Cache các DOM element ---
@@ -30,17 +30,17 @@ const VietGidoApp = {
    * Khởi tạo ứng dụng
    */
   init() {
-// --- THÊM MỚI TẠI ĐÂY ---
+    // --- THÊM MỚI TẠI ĐÂY ---
     // Khởi tạo Loading Overlay Utility
     const getStorageFunc = StorageUtil.get;
     LoadingOverlayUtil.init({
-        getStorageFunc: getStorageFunc,
-        cacheQuotesKey: this.config.CACHE_QUOTES
+      getStorageFunc: getStorageFunc,
+      cacheQuotesKey: this.config.CACHE_QUOTES
     });
     // --- KẾT THÚC THÊM MỚI ---    
     this.cacheDomElements();
     this.setupEventListeners();
-    this.state.urlParams = new URLSearchParams(window.location.search);    
+    this.state.urlParams = new URLSearchParams(window.location.search);
     this.loadInitialState();
     this.initDanhMucSelect();
   },
@@ -54,6 +54,7 @@ const VietGidoApp = {
       , 'autoHideUnRequiredFieldSwtich'
     ];
     ids.forEach(id => this.dom[id] = document.getElementById(id));
+    this.dom.lottieMainPlayer = document.getElementById('lottie-main-player');
   },
 
   setupEventListeners() {
@@ -113,7 +114,7 @@ const VietGidoApp = {
     });
   },
 
-initDanhMucSelect() {
+  initDanhMucSelect() {
     if (!this.dom.danhMucSelect) return;
 
     // 1. Đọc tham số 'danhMuc' từ state (đã lưu ở hàm init)
@@ -140,7 +141,7 @@ initDanhMucSelect() {
             this.render.buildEntriesForSelected.call(this, targetCategory.table);
             this.ui.applyTheme.call(this, targetCategory);
             // Cập nhật cache thành giá trị mới này luôn
-            StorageUtil.set({ [this.config.CACHE_DANH_MUC]: targetCategory.table }); 
+            StorageUtil.set({ [this.config.CACHE_DANH_MUC]: targetCategory.table });
             this.ui.setButtonsState.call(this, true);
             return; // Xong việc, không cần chạy logic cache cũ
           }
@@ -217,7 +218,7 @@ initDanhMucSelect() {
 
       LoadingOverlayUtil.show(); // <-- THÊM DÒNG NÀY
       this.ui.setButtonsState.call(this, false);
-      
+
       try {
         const response = await fetch(this.config.API, { method: 'POST', body: JSON.stringify(data) });
         if (!response.ok) throw new Error(`Lỗi mạng: ${response.statusText}`);
@@ -397,7 +398,7 @@ initDanhMucSelect() {
         effectiveHeaderConfig.preset = urlValue;
       }
       // --- KẾT THÚC LOGIC TỰ ĐỘNG ĐIỀN ---
-      
+
       // 5. Sử dụng 'effectiveHeaderConfig' (đã có thể bị ghi đè)
       switch (effectiveHeaderConfig.type) {
         case 'checkbox':
@@ -425,6 +426,9 @@ initDanhMucSelect() {
           break;
         case 'textarea':
           this.render._createTextAreaField.call(this, control, effectiveHeaderConfig);
+          break;
+        case 'stepper': // Đổi từ 'updown'
+          this.render._createStepperField.call(this, field, control, entryId, effectiveHeaderConfig, fieldIndex); // Đổi tên hàm
           break;
         case 'text':
         default:
@@ -493,6 +497,95 @@ initDanhMucSelect() {
         }
       }, 50);
     },
+
+    // --- THAY THẾ TOÀN BỘ HÀM NÀY (ĐỔI TÊN HÀM VÀ ID BÊN TRONG) ---
+    _createStepperField(field, control, entryId, headerConfig, fieldIndex) {
+      // 1. Tạo Label
+      const label = document.createElement('label');
+      label.className = 'vg-field-label';
+      label.textContent = headerConfig.column || '';
+      if (headerConfig.required) {
+        const requiredSpan = document.createElement('span');
+        requiredSpan.className = 'required-indicator';
+        requiredSpan.textContent = '*';
+        label.appendChild(requiredSpan);
+      }
+
+      // 2. Lấy giá trị khởi tạo từ preset, mặc định là 0
+      let initialValue = parseInt(headerConfig.preset, 10);
+      if (isNaN(initialValue)) {
+        initialValue = 0;
+      }
+
+      // 3. Tạo cấu trúc HTML cho stepper
+      const stepper = document.createElement('div');
+      stepper.className = 'stepper';
+
+      // Đổi tên ID
+      const inputId = `stepper-input-${entryId}-${fieldIndex}`;
+      const displayId = `stepper-display-${entryId}-${fieldIndex}`;
+      stepper.dataset.targetInput = inputId;
+      stepper.dataset.targetDisplay = displayId;
+
+      stepper.innerHTML = `
+        <button type="button" class="stepper-btn" data-step="-1">-</button>
+        <span id="${displayId}">${initialValue}</span>
+        <input type="hidden" id="${inputId}" value="${initialValue}">
+        <button type="button" class="stepper-btn" data-step="1">+</button>
+      `;
+
+      // 4. Gắn logic từ habit.js (bao gồm nhấn giữ và rung)
+      let stepperInterval = null;
+      const intervalSpeed = 100;
+      const input = stepper.querySelector(`#${inputId}`);
+      const display = stepper.querySelector(`#${displayId}`);
+
+      const updateStep = (button) => {
+        const stepAmount = parseInt(button.dataset.step);
+        let currentValue = parseInt(input.value);
+        let newValue = currentValue + stepAmount;
+        if (newValue < 0) newValue = 0; // Vẫn cho phép giá trị 0
+
+        input.value = newValue;
+        display.innerText = newValue;
+
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+      }
+
+      const startStepping = (event) => {
+        event.preventDefault();
+        const buttonElement = event.currentTarget;
+        updateStep(buttonElement);
+        stepperInterval = setInterval(() => {
+          updateStep(buttonElement);
+        }, intervalSpeed);
+      }
+
+      const stopStepping = () => {
+        if (stepperInterval) {
+          clearInterval(stepperInterval);
+          stepperInterval = null;
+        }
+      }
+
+      const buttons = stepper.querySelectorAll('.stepper-btn');
+      buttons.forEach(button => {
+        button.addEventListener('mousedown', startStepping);
+        button.addEventListener('touchstart', startStepping, { passive: false });
+        button.addEventListener('mouseup', stopStepping);
+        button.addEventListener('mouseleave', stopStepping);
+        button.addEventListener('touchend', stopStepping);
+        button.addEventListener('touchcancel', stopStepping);
+      });
+
+      // 5. Gắn vào DOM
+      field.insertBefore(label, control);
+      control.appendChild(stepper);
+      field.classList.add('vg-field--stepper');
+    },
+    // --- KẾT THÚC HÀM ĐÃ ĐỔI TÊN ---
 
     // UPDATED: Hàm được viết lại hoàn toàn
     _createDateField(control, headerConfig) {
@@ -700,13 +793,21 @@ initDanhMucSelect() {
             if (field.type === 'selectbox' && !field.value) {
               return `Vui lòng chọn giá trị cho trường "${field.column}" ở vùng ${i + 1}!`;
             }
+
+            if (field.type === 'stepper') {
+              const numericValue = parseInt(field.value, 10);
+              // Kiểm tra nếu không phải là số HOẶC nhỏ hơn hoặc bằng 0
+              if (isNaN(numericValue) || numericValue <= 0) {
+                return `Vui lòng nhập giá trị lớn hơn 0 cho trường "${field.column}" ở vùng ${i + 1}!`;
+              }
+            }
           }
         }
       }
       return null;
     },
 
-async updateCategoriesFromAPI() {
+    async updateCategoriesFromAPI() {
       const passData = await new Promise(resolve => StorageUtil.get(this.config.CACHE_PASS, resolve));
       const pass = (passData[this.config.CACHE_PASS] || '').trim();
 
@@ -723,7 +824,7 @@ async updateCategoriesFromAPI() {
 
         // --- CẬP NHẬT LOGIC TỪ ĐÂY ---
         let payload = (typeof resp.data === 'string') ? JSON.parse(resp.data) : resp.data;
-        
+
         // Payload giờ là 1 object { danhMuc: [], quotes: [] }
         if (typeof payload !== 'object' || payload === null) {
           throw new Error('Dữ liệu trả về không hợp lệ.');
@@ -737,15 +838,15 @@ async updateCategoriesFromAPI() {
         }
 
         // Lưu cả hai vào cache
-        await new Promise(resolve => StorageUtil.set({ 
+        await new Promise(resolve => StorageUtil.set({
           danhMuc: categories,
           [this.config.CACHE_QUOTES]: quotes || [] // Lưu cả quotes
         }, resolve));
-        
+
         this.ui.showNotification.call(this, 'Đã cập nhật danh sách danh mục & quotes!', 'success');
-        
+
         // Chỉ populate categories như cũ
-        this.render.populateCategories.call(this, categories); 
+        this.render.populateCategories.call(this, categories);
         return true;
         // --- KẾT THÚC CẬP NHẬT ---
       } catch (err) {
@@ -759,13 +860,13 @@ async updateCategoriesFromAPI() {
   // --- UI (Hiệu ứng & giao diện) ---
   // =================================================================
   ui: {
-    setButtonsState: function(enabled, keepUpdateBtn = enabled) {
-        if (!this.dom) return; // Add guard clause
-        const app = this.dom.addBtn ? this : VietGidoApp; // Get correct context
-        
-        app.dom.addBtn.disabled = !enabled;
-        app.dom.submitBtn.disabled = !enabled;
-        app.dom.updateDanhMucBtn.disabled = !keepUpdateBtn;
+    setButtonsState: function (enabled, keepUpdateBtn = enabled) {
+      if (!this.dom) return; // Add guard clause
+      const app = this.dom.addBtn ? this : VietGidoApp; // Get correct context
+
+      app.dom.addBtn.disabled = !enabled;
+      app.dom.submitBtn.disabled = !enabled;
+      app.dom.updateDanhMucBtn.disabled = !keepUpdateBtn;
     },
 
 
@@ -790,7 +891,8 @@ async updateCategoriesFromAPI() {
       dynamicThemeStyle.innerHTML = `body { background-image: ${finalBackgroundImage} !important; background-repeat: repeat, repeat !important; background-color: #f5f5f5 !important; }`;
     },
 
-    showNotification(message, type = 'info') {
+// --- THAY THẾ TOÀN BỘ HÀM NÀY ---
+    showNotification(message, type = 'info', duration = 3000) {
       const notification = document.createElement('div');
       notification.className = `notification ${type}`;
       notification.textContent = message;
@@ -799,19 +901,58 @@ async updateCategoriesFromAPI() {
       setTimeout(() => {
         notification.classList.remove('show');
         setTimeout(() => notification.remove(), 300);
-      }, 3000);
+      }, duration); // SỬ DỤNG DURATION MỚI
     },
+    // --- KẾT THÚC THAY THẾ ---
 
 
+
+// --- THAY THẾ TOÀN BỘ HÀM NÀY ---
     showCongrats() {
-      if (!this.dom.congratsOverlay || !this.dom.confettiCanvas) return;
-      this.dom.congratsOverlay.style.display = 'flex';
-      this.helpers.startConfetti.call(this, this.dom.confettiCanvas);
+      const overlay = this.dom.congratsOverlay;
+      const player = this.dom.lottieMainPlayer;
+      const effects = this.helpers.lottieAnimations;
+
+      if (!overlay || !player || effects.length === 0) return;
+
+      // 1. HIỂN THỊ THÔNG BÁO THÀNH CÔNG (3 GIÂY)
+      this.ui.showNotification.call(this, '🎉 Chúc mừng! Đã lưu thành công! 🎉', 'success', 3000);
+      
+      // === THÊM HIỆU ỨNG RUNG TẠI ĐÂY ===
+      if (navigator.vibrate) {
+          navigator.vibrate(200); // Rung 200ms để nhấn mạnh thành công
+      }
+      // ===================================
+
+      // 2. Chọn ngẫu nhiên 1 hiệu ứng và tải
+      const effect = effects[Math.floor(Math.random() * effects.length)];
+      player.load(effect.src); 
+
+      // 3. Hiển thị overlay và chạy (Lottie 5 GIÂY)
+      overlay.style.display = 'flex';
+      
+      player.classList.add('lottie-full-screen');
+      
+      player.style.display = 'block';
+      setTimeout(() => { 
+        player.style.opacity = 1;
+        player.stop(); 
+        player.play(); 
+      }, 50);
+
+      // 4. Đặt hẹn giờ để đóng Lottie (5 GIÂY)
       setTimeout(() => {
-        this.dom.congratsOverlay.style.display = 'none';
-        this.helpers.stopConfetti.call(this);
-      }, 2200);
+        overlay.style.display = 'none';
+        
+        player.stop();
+        player.style.opacity = 0;
+        player.style.display = 'none';
+        player.classList.remove('lottie-full-screen');
+        
+      }, 5000); // Kéo dài hiệu ứng Lottie ra 5 giây
     },
+    // --- KẾT THÚC THAY THẾ ---
+
 
     // THÊM MỚI HÀM NÀY
     applyToolbarVisibility(show) {
@@ -839,6 +980,18 @@ async updateCategoriesFromAPI() {
   // --- HELPERS (Hàm hỗ trợ) ---
   // =================================================================
   helpers: {
+    lottieAnimations: [
+      {
+        src: 'library/lottie/Fireworks.json', // Tên file của bạn
+      },
+      {
+        src: 'library/lottie/Trophy.json',
+      },
+      {
+        src: 'library/lottie/done.json',
+      }
+    ],
+
     formatMoney(value) {
       const cleanValue = String(value).replace(/\D/g, '');
       return cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
@@ -910,47 +1063,12 @@ async updateCategoriesFromAPI() {
       return `url("data:image/svg+xml,${encodeURIComponent(svg).replace(/'/g, '%27').replace(/"/g, '%22')}")`;
     },
 
-    startConfetti(canvas) {
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      const colors = ['#f87171', '#fbbf24', '#34d399', '#60a5fa', '#a78bfa'];
-      const particles = Array.from({ length: 100 }, () => ({
-        x: Math.random() * canvas.width, y: Math.random() * -canvas.height, r: Math.random() * 6 + 4,
-        d: Math.random() * 40 + 10, color: colors[Math.floor(Math.random() * colors.length)],
-        tilt: Math.random() * 10 - 10, tiltAngle: 0, tiltAngleIncremental: Math.random() * 0.07 + 0.05
-      }));
 
-      const draw = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        particles.forEach(p => {
-          ctx.beginPath();
-          ctx.lineWidth = p.r;
-          ctx.strokeStyle = p.color;
-          ctx.moveTo(p.x + p.tilt + p.r / 3, p.y);
-          ctx.lineTo(p.x + p.tilt, p.y + p.d / 3);
-          ctx.stroke();
-          p.y += (Math.cos(p.d) + 3 + p.r / 2) / 2;
-          p.x += Math.sin(0.01 * p.d);
-          p.tiltAngle += p.tiltAngleIncremental;
-          p.tilt = Math.sin(p.tiltAngle) * 15;
-          if (p.y > canvas.height) { p.x = Math.random() * canvas.width; p.y = -10; }
-        });
-        this.state.confettiAnimationId = requestAnimationFrame(draw);
-      };
-      draw();
-    },
 
-    stopConfetti() {
-      if (this.state.confettiAnimationId) {
-        cancelAnimationFrame(this.state.confettiAnimationId);
-      }
-      const canvas = VietGidoApp.dom.confettiCanvas;
-      if (canvas) {
-        canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
-      }
-    }
+
+
+
+
   }
 };
 

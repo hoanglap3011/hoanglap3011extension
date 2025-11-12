@@ -312,22 +312,50 @@ input:checked + .slider:before {
 /* --- GIAO DIỆN PHẢN HỒI (UI FEEDBACK) --- */
 /* =================================== */
 .notification {
-    position: fixed; top: 24px; left: 50%;
-    transform: translateX(-50%);
-    background: var(--color-white);
-    color: var(--color-text);
-    border-radius: 6px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-    padding: 12px 24px;
+    position: fixed; 
+    
+    /* === VỊ TRÍ VÀ CĂN GIỮA MÀN HÌNH (GIỮ NGUYÊN) === */
+    top: 50%; 
+    left: 50%;
+    transform: translate(-50%, -50%); 
+    
+    /* === Z-INDEX & HIỂN THỊ (GIỮ NGUYÊN) === */
+    z-index: 3000; 
     opacity: 0;
     pointer-events: none;
-    z-index: 1000;
     transition: opacity 0.3s;
+    
+    /* === ĐỊNH DẠNG MỚI: TRONG SUỐT HƠN NỮA === */
+    
+    /* Độ trong suốt cực cao (5% mờ) */
+    background: rgba(255, 255, 255, 0.05); 
+    
+    backdrop-filter: blur(4px); 
+    border-radius: 8px; 
+    
+    /* Giảm độ trong suốt của border */
+    border: 1px solid rgba(255, 255, 255, 0.2); 
+    
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25); 
+    
+    /* --- ĐỊNH DẠNG CHỮ (GIỮ NGUYÊN) --- */
+    font-size: 1.4rem; 
+    color: var(--color-white); 
+    text-align: center;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); 
+    padding: 15px 30px; 
 }
-.notification.show { opacity: 1; }
-.notification.success { border-left: 5px solid var(--color-success); }
-.notification.error { border-left: 5px solid var(--color-danger); }
 
+.notification.show { opacity: 1; }
+
+/* Thay đổi màu chữ cho thông báo Lỗi và Thành công */
+.notification.success { color: var(--color-white); border-color: var(--color-success); } 
+.notification.error { 
+    color: var(--color-danger); 
+    border-color: var(--color-danger);
+    background: var(--color-white); 
+    text-shadow: none;
+}
 
 
 #congratsOverlay {
@@ -338,24 +366,63 @@ input:checked + .slider:before {
     align-items: center;
     justify-content: center;
     animation: fadeIn 0.4s;
+    overflow: hidden;
 }
 #confettiCanvas {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
 }
-.congratsContent {
-    position: relative;
-    background: var(--color-white);
-    border-radius: var(--border-radius-lg);
-    padding: 48px 32px;
-    font-size: 2rem;
-    color: var(--color-success);
-    text-align: center;
-    box-shadow: 0 4px 32px rgba(0,0,0,0.2);
-    animation: popIn 0.5s;
+
+
+/* (Bạn không cần sửa keyframes popIn) */
+@keyframes popIn { 
+    0% { transform: scale(0.7); opacity: 0; } 
+    100% { transform: scale(1); opacity: 1; } 
 }
 @keyframes fadeIn { from { opacity: 0; } }
-@keyframes popIn { 0% { transform: scale(0.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+/* =================================== */
+/* --- KIỂU STEPPER (UP/DOWN) MỚI --- */
+/* =================================== */
+
+/* Căn chỉnh stepper co lại, giống như switch */
+.vg-field--stepper .vg-field-control {
+    flex-grow: 0;
+}
+
+/* Các style copy từ habit.css và đã được điều chỉnh */
+.stepper {
+    display: flex;
+    align-items: center;
+}
+
+.stepper button {
+    background-color: #eee;
+    border: none;
+    width: 40px;
+    height: 40px;
+    font-size: 1.5em;
+    font-weight: bold;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--color-primary); /* Dùng biến của vietgido */
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.stepper span {
+    font-size: 1.2em;
+    font-weight: 700;
+    margin: 0 15px;
+    min-width: 30px;
+    text-align: center;
+    color: var(--color-text); /* Dùng biến của vietgido */
+}
+
+/* Hiệu ứng active từ habit.css (ĐÂY LÀ HIỆU ÚNG "NỔI" LÊN) */
+.stepper button:active {
+    transform: scale(1.1);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
 
 /* =================================== */
 /* --- RESPONSIVE DESIGN --- */
@@ -363,11 +430,33 @@ input:checked + .slider:before {
 @media (max-width: 600px) {
     .container { max-width: 100%; padding: 8px 4px; margin: 8px auto; }
     .editor-container { min-height: 120px; }
-    .congratsContent { font-size: 1.2rem; padding: 24px 8px; }
     .vg-field-label { flex-basis: 120px; }
 }
 
 /* Ẩn các trường không bắt buộc khi switch được kích hoạt */
 #entriesContainer.hide-unrequired-fields .vg-field[data-header-required="false"] {
     display: none;
+}
+
+/* =================================== */
+/* --- HIỆU ỨNG LOTTIE MỚI (CHỈ 1 CLASS FULL SCREEN) --- */
+/* =================================== */
+
+/* Player chính, ẩn đi chờ JS gọi */
+#lottie-main-player {
+    position: absolute;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 5; /* Nằm dưới Notification (z-index: 1000) */
+}
+
+/* CLASS CHUNG CHO TẤT CẢ HIỆU ỨNG (FULL SCREEN) */
+.lottie-full-screen {
+    width: 100%;
+    height: 100%;
+    top: 50%;
+    left: 50%;
+    /* Dùng scale(1.5) để đảm bảo các hiệu ứng nhỏ (như Cup) lấp đầy màn hình */
+    transform: translate(-50%, -50%) scale(1.5); 
 }
