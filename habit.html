@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habit Tracker</title>
+    <link rel="stylesheet" href="habit.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Nhật ký Thói quen</h1>
+            <p id="current-date">Đang tải...</p>
+        </header>
+
+        <form id="habit-form">
+
+            <div class="habit-card">
+                <label for="thank-you-count">Nói lời cảm ơn</label>
+                <div class="habit-input">
+                    <div class="stepper" data-target-input="thank-you-count" data-target-display="thank-you-count-display">
+                        <button type="button" class="stepper-btn" data-step="-1">-</button>
+                        <span id="thank-you-count-display">0</span>
+                        <input type="hidden" id="thank-you-count" name="thank_you_count" value="0">
+                        <button type="button" class="stepper-btn" data-step="1">+</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="habit-card">
+                <label for="meditation-minutes">Thiền (phút)</label>
+                <div class="habit-input">
+                    <input type="number" id="meditation-minutes" name="meditation_minutes" class="number-input" placeholder="Nhập số phút...">
+                </div>
+            </div>
+
+            <div class="habit-card">
+                <label for="exercise-minutes">Thể dục (phút)</label>
+                <div class="habit-input">
+                    <input type="number" id="exercise-minutes" name="exercise_minutes" class="number-input" placeholder="Nhập số phút...">
+                </div>
+            </div>
+
+            <div class="habit-card">
+                <label for="read-book">Đọc sách</label>
+                <div class="habit-input checkbox-style">
+                    <input type="checkbox" id="read-book" name="read_book" value="true" class="checkbox-input">
+                    <span>Đã hoàn thành</span>
+                </div>
+            </div>
+
+            <button type="submit" id="save-button" class="save-button">Lưu lại</button>
+        </form>
+    </div>
+
+    <script src="habit.js"></script>
+</body>
+</html>

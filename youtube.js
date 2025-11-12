@@ -98,108 +98,16 @@ async function initializeYouTubeHandler(settings) {
     const MY_BOX_ID = "my-custom-youtube-box";
     const CONTENT_ELEMENT_ID = "my-ext-content-display"; 
     const SUMMARY_BUTTON_ID = "my-ext-summary-button";
-    const QUOTES_BUTTON_ID = "my-ext-quotes-button";
-    const KEY_BUTTON_ID = "my-ext-key-button";
-    const MODAL_ID = "my-ext-key-modal", MODAL_BACKDROP_ID = "my-ext-key-modal-backdrop";
-    const MODAL_INPUT_ID = "my-ext-key-input", MODAL_SAVE_ID = "my-ext-key-save", MODAL_CLOSE_ID = "my-ext-key-close";
 
-    // ... (Các hàm helper setMainButtonsDisabled, setModalControlsDisabled, onSaveKeyClick, onCloseKeyClick, showKeyPopup, showSummaryPopup giữ nguyên) ...
+
     const setMainButtonsDisabled = (disabled) => {
         const summaryButton = document.getElementById(SUMMARY_BUTTON_ID);
-        const quotesButton = document.getElementById(QUOTES_BUTTON_ID);
-        const keyButton = document.getElementById(KEY_BUTTON_ID);
         if (summaryButton) summaryButton.disabled = disabled;
-        if (quotesButton) quotesButton.disabled = disabled;
-        if (keyButton) keyButton.disabled = disabled;
+
     };
-    const setModalControlsDisabled = (disabled) => {
-        const saveButton = document.getElementById(MODAL_SAVE_ID);
-        const closeButton = document.getElementById(MODAL_CLOSE_ID);
-        const backdrop = document.getElementById(MODAL_BACKDROP_ID);
-        const input = document.getElementById(MODAL_INPUT_ID);
-        if (saveButton) saveButton.disabled = disabled;
-        if (closeButton) closeButton.disabled = disabled;
-        if (input) input.disabled = disabled;
-        if (backdrop) backdrop.onclick = disabled ? null : onCloseKeyClick;
-    };
-    const onSaveKeyClick = async () => {
-        const input = document.getElementById(MODAL_INPUT_ID);
-        const saveButton = document.getElementById(MODAL_SAVE_ID);
-        if (!input || !saveButton) return;
-        
-        setModalControlsDisabled(true);
-        saveButton.innerHTML = `<div class="my-ext-button-loader"></div>`;
-        
-        try {
-            // DÙNG CÚ PHÁP [Computed Property Name]
-            await chrome.storage.local.set({ [CACHE_PASS]: input.value });
-            
-            saveButton.textContent = "Đã lưu!";
-            setTimeout(onCloseKeyClick, 1000);
-        } catch (e) {
-            console.error(`[Ext] Lỗi khi lưu '${CACHE_PASS}':`, e);
-            saveButton.textContent = "Lỗi!";
-            setTimeout(() => {
-                setModalControlsDisabled(false); 
-                saveButton.innerHTML = "Lưu";
-            }, 2000);
-        }
-    };
-    const onCloseKeyClick = () => {
-        const modal = document.getElementById(MODAL_ID);
-        const backdrop = document.getElementById(MODAL_BACKDROP_ID);
-        if (modal) modal.style.display = "none";
-        if (backdrop) backdrop.style.display = "none";
-        const saveButton = document.getElementById(MODAL_SAVE_ID);
-        if (saveButton) saveButton.innerHTML = "Lưu"; 
-        setModalControlsDisabled(false); 
-    };
-    const showKeyPopup = async () => {
-        let modal = document.getElementById(MODAL_ID);
-        let backdrop = document.getElementById(MODAL_BACKDROP_ID);
-        if (!modal) {
-            backdrop = document.createElement("div");
-            backdrop.id = MODAL_BACKDROP_ID;
-            Object.assign(backdrop.style, {
-                position: "fixed", top: "0", left: "0", width: "100vw", height: "100vh",
-                background: "rgba(0, 0, 0, 0.5)", zIndex: "9998", display: "none"
-            });
-            backdrop.onclick = onCloseKeyClick;
-            modal = document.createElement("div");
-            modal.id = MODAL_ID;
-            Object.assign(modal.style, {
-                position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
-                background: "var(--yt-spec-background-secondary, #fff)",
-                color: "var(--yt-spec-text-primary, #000)",
-                padding: "20px", borderRadius: "12px", zIndex: "9999",
-                fontFamily: "Roboto, Arial, sans-serif", minWidth: "300px",
-                border: "1px solid var(--yt-spec-divider, #ddd)",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.15)", display: "none"
-            });
-            modal.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h4 style="margin: 0; font-size: 18px; font-weight: bold;">Nhập API Key</h4>
-                    <button id="${MODAL_CLOSE_ID}" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--yt-spec-text-secondary);">&times;</button>
-                </div>
-                <input id="${MODAL_INPUT_ID}" type="password" placeholder="Nhập key của bạn..." style="
-                    width: calc(100% - 20px); padding: 10px; font-size: 14px; margin-bottom: 15px;
-                    border: 1px solid var(--yt-spec-divider); border-radius: 8px;
-                    background: var(--yt-spec-background-primary); color: var(--yt-spec-text-primary);
-                ">
-                <button id="${MODAL_SAVE_ID}" class="my-ext-button">Lưu</button>
-            `;
-            document.body.appendChild(backdrop);
-            document.body.appendChild(modal);
-            modal.querySelector(`#${MODAL_SAVE_ID}`).onclick = onSaveKeyClick;
-            modal.querySelector(`#${MODAL_CLOSE_ID}`).onclick = onCloseKeyClick;
-        }
-        backdrop.style.display = "block";
-        modal.style.display = "block";
-        const input = document.getElementById(MODAL_INPUT_ID);
-        const currentPass = await getApiPass();
-        if (currentPass !== "hihi") { input.value = currentPass; } else { input.value = ""; }
-        input.focus();
-    };
+
+
+
     const showSummaryPopup = (summaryContent) => {
         try {
             const popupWidth = 600, popupHeight = 400;
@@ -218,7 +126,15 @@ async function initializeYouTubeHandler(settings) {
         } catch (e) { console.error("[Ext] Lỗi khi mở popup:", e); }
     };
 
-    // ... (Ngay sau hàm showSummaryPopup) ...
+   const openPasswordPopup = () => {
+       // Lấy URL tuyệt đối của file password.html trong extension
+       const url = chrome.runtime.getURL('password.html');
+       const popupWidth = 400;
+       const popupHeight = 250;
+       const left = (window.screen.width / 2) - (popupWidth / 2);
+       const top = (window.screen.height / 2) - (popupHeight / 2);
+       window.open(url, 'passwordPopup', `width=${popupWidth},height=${popupHeight},top=${top},left=${left},resizable=yes`);
+   };
 
     const HOMEPAGE_MESSAGE_ID = "my-ext-homepage-message-box";
 
@@ -466,60 +382,9 @@ async function initializeYouTubeHandler(settings) {
             if (button) button.innerHTML = "Tóm tắt"; 
         }
     };
-    const fetchQuotes = async (shortUrl, button) => {
-        if (!button) return;
-        
-        const contentBox = document.getElementById(CONTENT_ELEMENT_ID);
-        if (!contentBox) return;
 
-        setMainButtonsDisabled(true);
-        button.innerHTML = `<div class="my-ext-button-loader"></div>`;
-        contentBox.innerHTML = await getRandomQuote();
 
-        const currentPass = await getApiPass();
-        let statusText = "Quotes";
 
-        try {
-            const response = await fetch(API, {
-                method: "POST",
-                body: JSON.stringify({
-                    code: shortUrl, action: API_ACTION_GET_QUOTES, pass: currentPass
-                })
-            });
-            if (!response.ok) throw new Error("Lỗi mạng hoặc API");
-            
-            const data = await response.json();
-            if (data.code == 1) {
-                // DÙNG CÚ PHÁP [Computed Property Name]
-                await chrome.storage.local.set({ [CACHE_QUOTES]: data.data });
-                
-                console.log(`[Ext] Đã lưu '${CACHE_QUOTES}' mới vào storage.`);
-                statusText = "Đã lưu!";
-            } else {
-                console.error("[Ext] API trả lỗi khi lấy quotes:", data.error);
-                statusText = "Lỗi API";
-            }
-        } catch (error) {
-            console.error("[Ext] Lỗi khi fetch quotes:", error);
-            statusText = "Lỗi mạng";
-        } finally {
-            if (button) button.textContent = statusText; 
-            setTimeout(() => {
-                setMainButtonsDisabled(false);
-                if (button) button.innerHTML = "Quotes"; 
-                if (contentBox) {
-                     contentBox.innerHTML = `<i style="color: var(--yt-spec-text-secondary);">Nhấn 'Tóm tắt' để tải.</i>`;
-                }
-            }, 2000);
-        }
-    };
-
-    // =======================================================
-    // --- BẮT ĐẦU CẬP NHẬT ---
-    // =======================================================
-    /**
-     * CẬP NHẬT: createMyNewBox (Đã loại bỏ nút "Tóm Tắt Mới")
-     */
     const createMyNewBox = () => { 
         if (document.getElementById(MY_BOX_ID)) return null;
         
@@ -562,8 +427,6 @@ async function initializeYouTubeHandler(settings) {
                 flex-shrink: 0;
             ">
                 <button id="${SUMMARY_BUTTON_ID}" class="my-ext-button">Tóm tắt</button>
-                <button id="${QUOTES_BUTTON_ID}" class="my-ext-button">Quotes</button>
-                <button id="${KEY_BUTTON_ID}" class="my-ext-button">Key</button>
             </div>
         `;
         return myBox;
@@ -601,8 +464,6 @@ async function initializeYouTubeHandler(settings) {
                 }
                 const summaryButton = myBox.querySelector(`#${SUMMARY_BUTTON_ID}`);
                 if (summaryButton) summaryButton.innerHTML = "Tóm tắt";
-                const quotesButton = myBox.querySelector(`#${QUOTES_BUTTON_ID}`);
-                if (quotesButton) quotesButton.innerHTML = "Quotes";
                 setMainButtonsDisabled(false); 
                 console.log("[Ext] Phát hiện URL mới, đã reset box.");
             }
@@ -614,20 +475,6 @@ async function initializeYouTubeHandler(settings) {
                 console.log("[Ext] Người dùng nhấn 'Tóm tắt'.");
                 // Logic chính nằm trong fetchSummary
                 fetchSummary(shortUrl); 
-            };
-        }
-        const quotesButton = myBox.querySelector(`#${QUOTES_BUTTON_ID}`);
-        if (quotesButton) {
-            quotesButton.onclick = () => {
-                console.log("[Ext] Người dùng nhấn 'Quotes'.");
-                fetchQuotes(shortUrl, quotesButton);
-            };
-        }
-        const keyButton = myBox.querySelector(`#${KEY_BUTTON_ID}`);
-        if (keyButton) {
-            keyButton.onclick = () => {
-                console.log("[Ext] Người dùng nhấn 'Key'.");
-                showKeyPopup();
             };
         }
     };

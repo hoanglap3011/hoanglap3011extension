@@ -1,0 +1,128 @@
+/* Thiết lập CSS cơ bản */
+:root {
+    --bg-color: #f4f7f6;
+    --card-color: #ffffff;
+    --text-color: #333;
+    --primary-color: #007bff;
+    --border-radius: 8px;
+}
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+    width: 320px; /* Kích thước phổ biến cho popup extension */
+    box-sizing: border-box; /* Đảm bảo padding không làm vỡ width */
+}
+/* Cấu trúc chính */
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+header h1 {
+    margin: 0;
+    font-size: 1.5em;
+}
+header p {
+    margin: 0;
+    font-size: 1em;
+    color: #666;
+}
+/* Thẻ thói quen */
+.habit-card {
+    background-color: var(--card-color);
+    border-radius: var(--border-radius);
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.habit-card label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+.habit-input {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Loại 1: Stepper (Đếm số lượng) */
+.stepper {
+    display: flex;
+    align-items: center;
+}
+.stepper button {
+    background-color: #eee;
+    border: none;
+    width: 40px;
+    height: 40px;
+    font-size: 1.5em;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--primary-color);
+    
+    /* THÊM DÒNG NÀY ĐỂ TẠO HIỆU ỨNG MƯỢT */
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.stepper span {
+    font-size: 1.2em;
+    font-weight: 700;
+    margin: 0 15px;
+    min-width: 30px;
+    text-align: center;
+}
+
+/* Loại 2: Number Input (Thời gian) */
+.number-input {
+    width: 100%;
+    padding: 10px;
+    font-size: 1.1em;
+    border: 1px solid #ccc;
+    border-radius: var(--border-radius);
+    box-sizing: border-box; /* Quan trọng để padding không làm vỡ layout */
+}
+
+/* Loại 3: Checkbox (Hoàn thành) */
+.checkbox-input {
+    /* Dùng CSS để làm checkbox to hơn, dễ bấm hơn */
+    transform: scale(1.5);
+    margin-right: 10px;
+}
+.habit-input.checkbox-style {
+    justify-content: flex-start;
+}
+
+/* Nút Lưu */
+.save-button {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.1em;
+    font-weight: 700;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    margin-top: 20px;
+}
+.save-button:hover {
+    background-color: #0056b3;
+}
+.save-button:disabled {
+    background-color: #999;
+}
+
+/* Hiệu ứng khi nút được nhấn và giữ */
+.stepper button:active {
+    /* Phóng to nút lên 10% */
+    transform: scale(1.1); 
+    
+    /* Thêm một chút bóng đổ để tạo cảm giác "nổi" */
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}

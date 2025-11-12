@@ -14,15 +14,14 @@ document.addEventListener("DOMContentLoaded", function () {
   });
   document.getElementById('versionJS').innerHTML = '10';
   hienThiNgayHienTai();
-  showPass();
   const clickHandlers = [
-    ["btnEnter", togglePasswordInput],
+    ["btnHabit", openHabit],
+    ["btnEnter", openPasswordPopup],
     ["btnVietGiDo", vietGiDo],
     ["btnRecap", recap],
     ["btnToDoListThisWeek", openToDoListThisWeek],
     ["btnToDoListWeekCustom", openToDoListWeekCustom],
     ["btnParkingLot", () => window.open(PARKING_LOT, '_blank')],
-    ["btnSavePass", savePass],
     ["btnToDoListTong", () => window.open(TODOLIST_ALL, '_self')],
     ["btnCalendar", () => window.open(CALENDAR, '_self')],
     ["btnProblem", () => window.open(PROBLEM, '_self')],
@@ -150,46 +149,52 @@ function openToDoListWeekFromDay(dayStr){
 }
 
 function fetchLinkToDoListWeek(dayStr, callback) {
-  const pass = document.getElementById("txtPass").value;
-  if (!pass || pass.length === 0) {
-    togglePasswordInput();
-    return;
-  }
 
-  LoadingOverlayUtil.show();
+  // Lấy pass từ storage
+  StorageUtil.get([CACHE_PASS], (result) => {
+    const pass = result[CACHE_PASS] || "";
+    
+    if (!pass || pass.length === 0) {
+      // Nếu không có pass, mở popup
+      openPasswordPopup();
+      return;
+    }
 
-  fetch(API, {
-    method: 'POST',
-    body: JSON.stringify({
-      pass: pass,
-      action: API_ACTION_GET_TODOLIST_WEEK,
-      dayStr: dayStr
+    LoadingOverlayUtil.show();
+
+    fetch(API, {
+      method: 'POST',
+      body: JSON.stringify({
+        pass: pass,
+        action: API_ACTION_GET_TODOLIST_WEEK,
+        dayStr: dayStr
+      })
     })
-  })
-    .then(response => {
-      if (!response.ok) {
-        alert('Lỗi khi gọi API');
-        throw new Error("Lỗi khi gọi API");
-      }
-      return response.json();
-    })
-    .then(result => {
-      const code = result.code;
-      if (code !== 1) {
-        const errMsg = result.error || 'Có lỗi xảy ra';
-        alert('Lỗi: ' + errMsg);
-        return;
-      }
-      const url = result.data;
-      if (typeof callback === 'function') {
-        callback(url);
-      }      
-    })
-    .catch(err => {
-      alert('Lỗi khi gọi API: ' + err);
-    }).finally(() => {  
-      LoadingOverlayUtil.hide(); // <-- SỬA DÒNG NÀY
-    });
+      .then(response => {
+        if (!response.ok) {
+          alert('Lỗi khi gọi API');
+          throw new Error("Lỗi khi gọi API");
+        }
+        return response.json();
+      })
+      .then(result => {
+        const code = result.code;
+        if (code !== 1) {
+          const errMsg = result.error || 'Có lỗi xảy ra';
+          alert('Lỗi: ' + errMsg);
+          return;
+        }
+        const url = result.data;
+        if (typeof callback === 'function') {
+          callback(url);
+        }      
+      })
+      .catch(err => {
+        alert('Lỗi khi gọi API: ' + err);
+      }).finally(() => {  
+        LoadingOverlayUtil.hide();
+      });
+  });
 }
 
 
@@ -238,20 +243,7 @@ function playNhacVui() {
   }
 }
 
-function togglePasswordInput() {
-  const divPassword = document.getElementById('divPassword');
-  divPassword.style.display = (divPassword.style.display === 'none') ? 'block' : 'none';
-  if (divPassword.style.display === 'block') showPass();
-}
 
-function savePass() {
-  const pass = document.getElementById('txtPass').value;
-  if (!pass || pass.length === 0) {
-    alert("Nhập pass");
-  } else {
-    StorageUtil.set({ [CACHE_PASS]: pass }, () => { alert("Saved!"); togglePasswordInput(); });
-  }
-}
 
 
 
@@ -271,11 +263,7 @@ function isMobile() {
   return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-function showPass() {
-  StorageUtil.get([CACHE_PASS], result => {
-    document.getElementById("txtPass").value = result[CACHE_PASS] || "";
-  });
-}
+
 
 
 function updateQuoteDisplay() {
@@ -391,6 +379,10 @@ function vietGiDo(){
   window.open("vietgido.html", '_blank');
 }
 
+function openHabit(){
+  window.open("habit.html", '_blank');
+}
+
 function recap(){
   window.open("recap.html", '_blank');
 }
@@ -458,3 +450,24 @@ function getDDMMYYYYHienTai() {
   return `${day}.${month}.${year}`;
 }
 
+function openPasswordPopup() {
+    const popupWidth = 400;
+    const popupHeight = 250;
+    const left = (window.screen.width / 2) - (popupWidth / 2);
+    const top = (window.screen.height / 2) - (popupHeight / 2);
+    window.open('password.html', 'passwordPopup', `width=${popupWidth},height=${popupHeight},top=${top},left=${left},resizable=yes`);
+}
+
+function openPasswordPopup() {
+    const popupWidth = 400;
+    const popupHeight = 250;
+    // Tính toán vị trí để mở popup ở giữa màn hình
+    const left = (window.screen.width / 2) - (popupWidth / 2);
+    const top = (window.screen.height / 2) - (popupHeight / 2);
+    // Gọi popup (đảm bảo file 'password.html' nằm cùng cấp)
+    window.open(
+        'password.html', 
+        'passwordPopup', 
+        `width=${popupWidth},height=${popupHeight},top=${top},left=${left},resizable=yes`
+    );
+}

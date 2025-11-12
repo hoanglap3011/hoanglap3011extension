@@ -49,7 +49,7 @@ const VietGidoApp = {
   // --- SETUP & KHỞI TẠO ---
   // =================================================================
   cacheDomElements() {
-    const ids = ['danhMucSelect', 'entriesContainer', 'addBtn', 'submitBtn', 'updateDanhMucBtn', 'txtPass', 'divPassword', 'btnSavePass', 'autoNextTheLoaiBietOnSwtich', 'loadingOverlay', 'loadingQuote', 'congratsOverlay', 'confettiCanvas',
+    const ids = ['danhMucSelect', 'entriesContainer', 'addBtn', 'submitBtn', 'updateDanhMucBtn', 'autoNextTheLoaiBietOnSwtich', 'loadingOverlay', 'loadingQuote', 'congratsOverlay', 'confettiCanvas',
       'toggleAllToolbarsSwitch' // <-- THÊM ID MỚI VÀO ĐÂY
       , 'autoHideUnRequiredFieldSwtich'
     ];
@@ -59,7 +59,6 @@ const VietGidoApp = {
   setupEventListeners() {
     this.dom.addBtn?.addEventListener('click', this.handlers.addEntry.bind(this));
     this.dom.submitBtn?.addEventListener('click', this.handlers.submitData.bind(this));
-    this.dom.btnSavePass?.addEventListener('click', this.handlers.savePass.bind(this));
     this.dom.updateDanhMucBtn?.addEventListener('click', this.handlers.updateCategories.bind(this));
     this.dom.danhMucSelect?.addEventListener('change', this.handlers.onCategoryChange.bind(this));
     document.addEventListener('click', this.handlers.onDocumentClick.bind(this));
@@ -84,9 +83,6 @@ const VietGidoApp = {
       if (this.dom.autoNextTheLoaiBietOnSwtich && data[this.config.CACHE_AUTO_NEXT] != null) {
         this.dom.autoNextTheLoaiBietOnSwtich.checked = data[this.config.CACHE_AUTO_NEXT];
       }
-    });
-    StorageUtil.get(this.config.CACHE_PASS, r => {
-      if (this.dom.txtPass) this.dom.txtPass.value = r[this.config.CACHE_PASS] || '';
     });
 
     StorageUtil.get(this.config.CACHE_SHOW_TOOLBAR, data => {
@@ -187,8 +183,7 @@ initDanhMucSelect() {
 
     onCategorySearch(e) {
       if (e.detail.value?.toLowerCase() === 'showpass') {
-        this.ui.togglePasswordInput.call(this);
-        this.dom.txtPass?.focus();
+
         setTimeout(() => this.dom.danhMucSelect.choices.clearInput(), 50);
       }
     },
@@ -243,15 +238,7 @@ initDanhMucSelect() {
       this.render.addEntry.call(this);
     },
 
-    savePass() {
-      const pass = this.dom.txtPass?.value;
-      if (!pass) {
-        alert('Vui lòng nhập pass');
-        return;
-      }
-      const cachePass = this.config.CACHE_PASS;
-      StorageUtil.set({ [cachePass]: pass }, this.ui.togglePasswordInput.bind(this));
-    },
+
 
     // Thay thế toàn bộ hàm này trong VietGidoApp.handlers
     async updateCategories() {
@@ -650,6 +637,9 @@ initDanhMucSelect() {
   // =================================================================
   data: {
     async collectData() {
+      const passData = await new Promise(resolve => StorageUtil.get(this.config.CACHE_PASS, resolve));
+      const pass = passData[this.config.CACHE_PASS] || '';
+
       const selectedCategoryName = this.dom.danhMucSelect?.value;
       const categories = await new Promise(resolve => StorageUtil.get('danhMuc', data => resolve(data.danhMuc || [])));
       const selectedCategory = categories.find(c => c.table === selectedCategoryName);
@@ -689,7 +679,7 @@ initDanhMucSelect() {
       return {
         id: selectedCategory ? selectedCategory.id : null,
         thoiGianTao: new Date().toISOString(),
-        pass: this.dom.txtPass?.value,
+        pass: pass,
         danhMuc: selectedCategoryName,
         duLieu: entries,
         action: this.config.API_ACTION_ADD_VIETGIDO
@@ -717,7 +707,9 @@ initDanhMucSelect() {
     },
 
 async updateCategoriesFromAPI() {
-      const pass = this.dom.txtPass?.value.trim();
+      const passData = await new Promise(resolve => StorageUtil.get(this.config.CACHE_PASS, resolve));
+      const pass = (passData[this.config.CACHE_PASS] || '').trim();
+
       if (!pass) return false;
 
       try {
@@ -776,16 +768,7 @@ async updateCategoriesFromAPI() {
         app.dom.updateDanhMucBtn.disabled = !keepUpdateBtn;
     },
 
-    togglePasswordInput() {
-      const isHidden = this.dom.divPassword.style.display === 'none';
-      this.dom.divPassword.style.display = isHidden ? 'block' : 'none';
-      if (isHidden) {
-        const cachePass = this.config.CACHE_PASS;
-        StorageUtil.get(cachePass, r => {
-          if (this.dom.txtPass) this.dom.txtPass.value = r[cachePass] || '';
-        });
-      }
-    },
+
 
     applyTheme(categoryConfig) {
       let dynamicThemeStyle = document.getElementById('dynamic-theme-style');
