@@ -926,41 +926,49 @@ const VietGidoApp = {
 
       if (!overlay || !player || effects.length === 0) return;
 
-      // 1. HIỂN THỊ THÔNG BÁO THÀNH CÔNG (3 GIÂY)
-      this.ui.showNotification.call(this, '🎉 Chúc mừng! Đã lưu thành công! 🎉', 'success', 3000);
+      // === GIAI ĐOẠN 1: HIỂN THỊ NOTIFICATION (1 GIÂY) ===
       
-      // === THÊM HIỆU ỨNG RUNG TẠI ĐÂY ===
+      // 1. Hiển thị thông báo (trên nền app)
+      // --- THAY ĐỔI THỜI GIAN TẠI ĐÂY ---
+      const notificationDuration = 1000; // Đổi thành 1 giây (trước đây là 3000)
+      this.ui.showNotification.call(this, '🎉 Chúc mừng! Đã lưu thành công! 🎉', 'success', notificationDuration);
+
+      // 2. Rung (giữ nguyên)
       if (navigator.vibrate) {
-          navigator.vibrate(200); // Rung 200ms để nhấn mạnh thành công
+          navigator.vibrate(200);
       }
-      // ===================================
 
-      // 2. Chọn ngẫu nhiên 1 hiệu ứng và tải
-      const effect = effects[Math.floor(Math.random() * effects.length)];
-      player.load(effect.src); 
-
-      // 3. Hiển thị overlay và chạy (Lottie 5 GIÂY)
-      overlay.style.display = 'flex';
+      // === GIAI ĐOẠN 2: HIỂN THỊ LOTTIE (BẮT ĐẦU SAU 1 GIÂY) ===
       
-      player.classList.add('lottie-full-screen');
-      
-      player.style.display = 'block';
-      setTimeout(() => { 
-        player.style.opacity = 1;
-        player.stop(); 
-        player.play(); 
-      }, 50);
+      const lottieDuration = 5000; // Lottie vẫn chạy trong 5 giây
 
-      // 4. Đặt hẹn giờ để đóng Lottie (5 GIÂY)
+      // 3. Đặt hẹn giờ để chạy Lottie SAU KHI notification biến mất
       setTimeout(() => {
-        overlay.style.display = 'none';
+        // 4. Chọn ngẫu nhiên 1 hiệu ứng và tải
+        const effect = effects[Math.floor(Math.random() * effects.length)];
+        player.load(effect.src); 
+
+        // 5. Hiển thị Lottie Overlay (nền đen)
+        overlay.style.display = 'flex';
+        player.classList.add('lottie-full-screen');
+        player.style.display = 'block';
         
-        player.stop();
-        player.style.opacity = 0;
-        player.style.display = 'none';
-        player.classList.remove('lottie-full-screen');
-        
-      }, 5000); // Kéo dài hiệu ứng Lottie ra 5 giây
+        setTimeout(() => { 
+          player.style.opacity = 1;
+          player.stop(); 
+          player.play(); 
+        }, 50); // Delay nhỏ để play
+
+        // 6. Đặt hẹn giờ để đóng Lottie (sau 5 giây)
+        setTimeout(() => {
+          overlay.style.display = 'none';
+          player.stop();
+          player.style.opacity = 0;
+          player.style.display = 'none';
+          player.classList.remove('lottie-full-screen');
+        }, lottieDuration); 
+
+      }, notificationDuration); // <-- Trì hoãn việc chạy Lottie đúng 1 GIÂY
     },
     // --- KẾT THÚC THAY THẾ ---
 

@@ -312,61 +312,41 @@ input:checked + .slider:before {
 /* --- GIAO DIỆN PHẢN HỒI (UI FEEDBACK) --- */
 /* =================================== */
 .notification {
-    position: fixed; 
-    
-    /* === VỊ TRÍ VÀ CĂN GIỮA MÀN HÌNH (GIỮ NGUYÊN) === */
-    top: 50%; 
-    left: 50%;
-    transform: translate(-50%, -50%); 
-    
-    /* === Z-INDEX & HIỂN THỊ (GIỮ NGUYÊN) === */
-    z-index: 3000; 
+    position: fixed; top: 24px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-white);
+    color: var(--color-text);
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    padding: 12px 24px;
     opacity: 0;
     pointer-events: none;
+    z-index: 1000;
     transition: opacity 0.3s;
-    
-    /* === ĐỊNH DẠNG MỚI: TRONG SUỐT HƠN NỮA === */
-    
-    /* Độ trong suốt cực cao (5% mờ) */
-    background: rgba(255, 255, 255, 0.05); 
-    
-    backdrop-filter: blur(4px); 
-    border-radius: 8px; 
-    
-    /* Giảm độ trong suốt của border */
-    border: 1px solid rgba(255, 255, 255, 0.2); 
-    
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25); 
-    
-    /* --- ĐỊNH DẠNG CHỮ (GIỮ NGUYÊN) --- */
-    font-size: 1.4rem; 
-    color: var(--color-white); 
-    text-align: center;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); 
-    padding: 15px 30px; 
 }
-
 .notification.show { opacity: 1; }
-
-/* Thay đổi màu chữ cho thông báo Lỗi và Thành công */
-.notification.success { color: var(--color-white); border-color: var(--color-success); } 
-.notification.error { 
-    color: var(--color-danger); 
-    border-color: var(--color-danger);
-    background: var(--color-white); 
-    text-shadow: none;
-}
+.notification.success { border-left: 5px solid var(--color-success); }
+.notification.error { border-left: 5px solid var(--color-danger); }
 
 
 #congratsOverlay {
     position: fixed; inset: 0;
-    background: var(--color-overlay);
+    
+    /* === THAY ĐỔI: NỀN TRẮNG HOÀN TOÀN === */
+    
+    /* Xóa bỏ nền đen cũ */
+    /* background: #000; */
+
+    /* Thêm nền trắng (opaque) */
+    background: var(--color-white); /* Sử dụng biến CSS màu trắng của bạn */
+
+    /* === KẾT THÚC THAY ĐỔI === */
+
     z-index: 2000;
     display: none;
     align-items: center;
     justify-content: center;
     animation: fadeIn 0.4s;
-    overflow: hidden;
 }
 #confettiCanvas {
     position: absolute; inset: 0;
