@@ -139,6 +139,32 @@ async function initializeYouTubeHandler(settings) {
     const HOMEPAGE_MESSAGE_ID = "my-ext-homepage-message-box";
 
     /**
+     * HÀM MỚI: Ẩn video gợi ý ở Sidebar (Trang Watch)
+     * Lưu ý: Ta không ẩn toàn bộ #related vì Box của Extension nằm trong đó.
+     * Ta chỉ ẩn các component con của YouTube.
+     */
+    const injectRelatedHider = () => {
+        const styleId = "my-ext-related-hider";
+        if (document.getElementById(styleId)) return;
+
+        const css = `
+            /* Ẩn danh sách video tiếp theo */
+            #related ytd-watch-next-secondary-results-renderer {
+                display: none !important;
+            }
+            /* Ẩn danh sách video gợi ý dạng item section (đề phòng youtube đổi cấu trúc) */
+            #related ytd-item-section-renderer {
+                display: none !important;
+            }
+        `;
+        const style = document.createElement("style");
+        style.id = styleId;
+        style.textContent = css;
+        document.head.appendChild(style);
+        console.log("[Ext] Đã ẩn sidebar video gợi ý.");
+    };
+
+    /**
      * HÀM MỚI 1: Tiêm CSS vĩnh viễn, chỉ
      * ảnh hưởng đến trang chủ.
      */
@@ -481,10 +507,16 @@ async function initializeYouTubeHandler(settings) {
 
     // --- BẮT ĐẦU CẬP NHẬT PHẦN KHỞI CHẠY ---
 
-    // 1. Tiêm CSS chống flash (NẾU ĐƯỢC BẬT)
+    // 1. Tiêm CSS chống flash Trang chủ (NẾU ĐƯỢC BẬT)
     if (settings.ytEnableHomepageHider) {
         injectPermanentHomepageHider();
     }
+
+    // [MỚI] 2. Tiêm CSS ẩn Sidebar Video (NẾU ĐƯỢC BẬT)
+    if (settings.ytEnableHideRelated) {
+        injectRelatedHider();
+    }
+
 
     // 2. Tạo Observer tổng
     const observer = new MutationObserver((mutations) => {
@@ -529,12 +561,11 @@ async function initializeYouTubeHandler(settings) {
             // Dùng DEFAULT_SETTINGS chung từ config.js
             const settings = { ...DEFAULT_SETTINGS, ...(data[SETTINGS_KEY] || {}) };
 
-            // Chỉ khởi chạy nếu MỘT TRONG HAI tính năng được bật
-            if (settings.ytEnableHomepageHider || settings.ytEnableSummaryBox) {
-                // Chạy hàm logic chính và truyền cài đặt vào
+            // CẬP NHẬT ĐIỀU KIỆN IF: Chạy nếu bất kỳ tính năng nào được bật
+            if (settings.ytEnableHomepageHider || settings.ytEnableSummaryBox || settings.ytEnableHideRelated) {
                 initializeYouTubeHandler(settings);
             } else {
-                 console.log("🚀 [Ext] YouTube: Cả hai tính năng 'Ẩn Trang Chủ' và 'Box Tóm Tắt' đều bị tắt. Script sẽ không chạy.");
+                 console.log("🚀 [Ext] YouTube: Tất cả tính năng đều tắt.");
             }
         });
     } else {

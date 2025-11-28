@@ -43,9 +43,10 @@ const DEFAULT_SETTINGS = {
     fbEnableBlockByKeyword: true,
     fbEnableHideStories: true,
     
-    // YouTube (MỚI)
+    // YouTube
     ytEnableHomepageHider: true,
-    ytEnableSummaryBox: true
+    ytEnableSummaryBox: true,
+    ytEnableHideRelated: true
 };
 // =======================================================
 

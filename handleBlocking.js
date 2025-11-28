@@ -5,22 +5,21 @@
     
     let g_blockRules = [];
     let g_checkInterval = null;
+    let g_currentDomainKey = null;
+    let g_maxSeconds = 0;
 
     // --- CÁC HÀM TIỆN ÍCH ---
 
-    // Đổi "HH:MM" -> Tổng số giây
     function parseDurationToSeconds(timeStr) {
         if (!timeStr) return 0;
         const [hours, minutes] = timeStr.split(':').map(Number);
         return (hours * 3600) + (minutes * 60);
     }
 
-    // Lấy ngày hiện tại (YYYY-MM-DD) để check reset
     function getTodayString() {
-        return new Date().toLocaleDateString('en-CA'); // Định dạng YYYY-MM-DD
+        return new Date().toLocaleDateString('en-CA'); 
     }
 
-    // Tải file cấu hình json
     async function loadBlocklist() {
         try {
             const url = chrome.runtime.getURL(BLOCKLIST_FILE);
@@ -31,15 +30,15 @@
         }
     }
 
-    // Hàm chặn trang (giữ nguyên UI cũ của bạn)
     function triggerBlock(messageCustom) {
-        // Ngắt Interval đếm giờ để không chạy ngầm nữa
         if (g_checkInterval) clearInterval(g_checkInterval);
-
-        // Dừng tải trang
         window.stop();
 
-        const message = messageCustom || "Đã hết thời gian cho phép trong ngày. Hãy quay lại làm việc.";
+        const message = messageCustom || "Đã hết thời gian cho phép. Quay lại làm việc đi!";
+        
+        // Kiểm tra xem đã chặn chưa để tránh render lại nhiều lần gây nháy
+        if (document.getElementById(BLOCKER_CONTAINER_ID)) return;
+
         const html = `
         <html lang="vi">
         <head>
@@ -73,7 +72,7 @@
 
         document.documentElement.innerHTML = html;
 
-        // Observer chống ghi đè (Anti-bypass)
+        // Anti-bypass observer
         const observer = new MutationObserver(() => {
             if (!document.getElementById(BLOCKER_CONTAINER_ID)) {
                 window.stop();
@@ -83,92 +82,122 @@
         observer.observe(document.documentElement, { childList: true, subtree: true });
     }
 
-    // --- LOGIC CHÍNH ---
-
-    await loadBlocklist();
-    if (!g_blockRules || g_blockRules.length === 0) return;
-
-    const currentHostname = window.location.hostname;
-
-    // Tìm rule phù hợp với domain hiện tại
-    // (So khớp: currentHostname có chứa hoặc bằng url trong config)
-    const matchedRule = g_blockRules.find(rule => 
-        currentHostname === rule.url || currentHostname.endsWith('.' + rule.url)
-    );
-
-    // Nếu trang này không nằm trong danh sách thì bỏ qua
-    if (!matchedRule) return;
-
-    const maxSeconds = parseDurationToSeconds(matchedRule.duration);
-    const domainKey = matchedRule.url; // Dùng cái này làm key lưu trong storage
-
-    console.log(`[Ext Blocker] Giám sát: ${domainKey}, Giới hạn: ${maxSeconds}s`);
-
-    // Nếu giới hạn là 0 giây -> Chặn luôn (giống code cũ)
-    if (maxSeconds <= 0) {
-        triggerBlock("Trang web này nằm trong danh sách chặn.");
-        return;
-    }
-
-    // -- XỬ LÝ ĐẾM GIỜ --
-
-    // Lấy dữ liệu từ storage
-    chrome.storage.local.get([STORAGE_KEY], (result) => {
-        let data = result[STORAGE_KEY] || { date: getTodayString(), usage: {} };
-        const today = getTodayString();
-
-        // 1. Kiểm tra Reset ngày mới
-        if (data.date !== today) {
-            console.log("[Ext Blocker] Ngày mới! Reset bộ đếm.");
-            data = { date: today, usage: {} };
-            chrome.storage.local.set({ [STORAGE_KEY]: data });
-        }
-
-        // Lấy thời gian đã dùng (nếu chưa có thì bằng 0)
-        let currentUsage = data.usage[domainKey] || 0;
-
-        // 2. Kiểm tra ngay lúc vừa vào trang
-        if (currentUsage >= maxSeconds) {
-            triggerBlock(`Bạn đã dùng hết ${matchedRule.duration} cho trang này hôm nay.`);
-            return;
-        }
-
-        // 3. Bắt đầu đếm (Interval 1 giây)
-        g_checkInterval = setInterval(() => {
-            // Logic "Cách B": Chỉ đếm khi Tab Visible và Window Focus
-            if (document.visibilityState === 'visible' && document.hasFocus()) {
-                currentUsage++;
-                
-                // Cập nhật vào biến cục bộ để hiển thị log (nếu cần)
-                // console.log(`[Ext Blocker] ${domainKey}: ${currentUsage}/${maxSeconds}s`);
-
-                // Kiểm tra vượt quá giới hạn
-                if (currentUsage >= maxSeconds) {
-                    // Lưu lần cuối trước khi chặn
-                    saveUsage(domainKey, currentUsage, today);
-                    triggerBlock(`Bạn đã dùng hết ${matchedRule.duration}. Mai quay lại nhé!`);
-                } else {
-                    // Lưu định kỳ (để tránh mất dữ liệu nếu tắt trình duyệt đột ngột)
-                    // Lưu mỗi giây là an toàn nhất cho local storage
-                    saveUsage(domainKey, currentUsage, today);
-                }
-            }
-        }, 1000);
-    });
-
-    // Hàm lưu xuống Storage
-    function saveUsage(domain, seconds, dateStr) {
+    // --- LOGIC LƯU TRỮ AN TOÀN (FIX BUG TỤT GIỜ) ---
+    
+    function saveUsageSafe(domain, secondsToAdd, dateStr) {
         chrome.storage.local.get([STORAGE_KEY], (result) => {
             let data = result[STORAGE_KEY] || { date: dateStr, usage: {} };
             
-            // Đảm bảo vẫn đúng ngày (phòng trường hợp treo máy qua đêm)
             if (data.date !== dateStr) {
                 data = { date: dateStr, usage: {} };
             }
 
-            data.usage[domain] = seconds;
+            // Lấy giá trị hiện tại trong DB
+            const currentDbValue = data.usage[domain] || 0;
+            
+            // Logic mới: Chỉ cộng dồn hoặc lấy max, không ghi đè mù quáng
+            // Ở đây ta tính toán: Giá trị mới = Max(Giá trị DB, Giá trị Local muốn lưu)
+            // Tuy nhiên, vì biến secondsToAdd ở dưới đang là biến đếm tổng (currentUsage),
+            // nên ta dùng Math.max để đảm bảo không bao giờ giảm đi.
+            
+            const newValue = Math.max(currentDbValue, secondsToAdd);
+
+            data.usage[domain] = newValue;
             chrome.storage.local.set({ [STORAGE_KEY]: data });
         });
     }
+
+    // --- LOGIC KHỞI TẠO VÀ ĐẾM ---
+
+    async function initCheck() {
+        await loadBlocklist();
+        if (!g_blockRules || g_blockRules.length === 0) return;
+
+        const currentHostname = window.location.hostname;
+        const matchedRule = g_blockRules.find(rule => 
+            currentHostname === rule.url || currentHostname.endsWith('.' + rule.url)
+        );
+
+        if (!matchedRule) return;
+
+        g_currentDomainKey = matchedRule.url;
+        g_maxSeconds = parseDurationToSeconds(matchedRule.duration);
+
+        if (g_maxSeconds <= 0) {
+            triggerBlock("Trang web này nằm trong danh sách chặn.");
+            return;
+        }
+
+        startCounting();
+    }
+
+    function startCounting() {
+        // Clear interval cũ nếu có để tránh chạy chồng chéo
+        if (g_checkInterval) clearInterval(g_checkInterval);
+
+        const domainKey = g_currentDomainKey;
+        const maxSeconds = g_maxSeconds;
+        const today = getTodayString();
+
+        // Lấy dữ liệu mới nhất từ storage để đồng bộ biến đếm cục bộ
+        chrome.storage.local.get([STORAGE_KEY], (result) => {
+            let data = result[STORAGE_KEY] || { date: today, usage: {} };
+            
+            if (data.date !== today) {
+                data = { date: today, usage: {} }; // Reset nếu sang ngày mới
+                chrome.storage.local.set({ [STORAGE_KEY]: data });
+            }
+
+            // Đồng bộ biến đếm cục bộ với DB
+            let localCounter = data.usage[domainKey] || 0;
+
+            // Kiểm tra ngay lập tức
+            if (localCounter >= maxSeconds) {
+                triggerBlock("Đã hết giờ ngay khi tải trang.");
+                return;
+            }
+
+            // Bắt đầu interval đếm
+            g_checkInterval = setInterval(() => {
+                // Chỉ đếm khi tab active
+                if (document.visibilityState === 'visible' && document.hasFocus()) {
+                    localCounter++;
+                    
+                    if (localCounter >= maxSeconds) {
+                        saveUsageSafe(domainKey, localCounter, today);
+                        triggerBlock("Hết giờ rồi!");
+                    } else {
+                        // Lưu định kỳ mỗi giây, dùng hàm Safe để không bị ghi đè lùi
+                        saveUsageSafe(domainKey, localCounter, today);
+                    }
+                }
+            }, 1000);
+        });
+    }
+
+    // --- XỬ LÝ SỰ KIỆN (FIX BUG BACK BUTTON) ---
+
+    // Chạy lần đầu
+    initCheck();
+
+    // Lắng nghe sự kiện pageshow: Được kích hoạt ngay cả khi load từ BF Cache (Back/Forward)
+    window.addEventListener('pageshow', (event) => {
+        // Nếu trang được load từ cache (event.persisted = true)
+        // Hoặc đơn giản là chạy lại logic check để đảm bảo an toàn
+        if (event.persisted) {
+            console.log("[Ext Blocker] Phát hiện Back/Forward navigation. Checking lại...");
+            // Load lại config và check lại từ đầu
+            initCheck();
+        }
+    });
+
+    // Lắng nghe sự kiện focus lại cửa sổ để đồng bộ dữ liệu (phòng trường hợp mở 2 tab cùng lúc)
+    window.addEventListener('focus', () => {
+        if (g_currentDomainKey) {
+             // Khi focus lại, nên lấy dữ liệu mới nhất từ storage
+             // để tránh việc Tab A dùng hết giờ, quay lại Tab B vẫn còn giờ cũ
+             startCounting(); 
+        }
+    });
 
 })();
