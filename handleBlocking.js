@@ -1,35 +1,49 @@
 (async function() {
     const BLOCKLIST_FILE = 'website_blocklist.json';
-    let g_siteBlocklist = [];
+    const BLOCKER_CONTAINER_ID = 'my-ext-blocker-container';
+    const STORAGE_KEY = 'daily_usage_data';
     
-    // Thêm ID cho container để kiểm tra
-    const BLOCKER_CONTAINER_ID = 'my-ext-blocker-container'; 
+    let g_blockRules = [];
+    let g_checkInterval = null;
 
-    /**
-     * Tải danh sách chặn (không đổi)
-     */
+    // --- CÁC HÀM TIỆN ÍCH ---
+
+    // Đổi "HH:MM" -> Tổng số giây
+    function parseDurationToSeconds(timeStr) {
+        if (!timeStr) return 0;
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        return (hours * 3600) + (minutes * 60);
+    }
+
+    // Lấy ngày hiện tại (YYYY-MM-DD) để check reset
+    function getTodayString() {
+        return new Date().toLocaleDateString('en-CA'); // Định dạng YYYY-MM-DD
+    }
+
+    // Tải file cấu hình json
     async function loadBlocklist() {
         try {
             const url = chrome.runtime.getURL(BLOCKLIST_FILE);
             const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error("Không tìm thấy file blocklist");
-            }
-            g_siteBlocklist = await response.json();
+            g_blockRules = await response.json();
         } catch (e) {
             console.log("[Ext Blocker] Lỗi tải blocklist:", e);
         }
     }
 
-    /**
-     * Tiêm HTML đè lên trang (đã thêm ID vào container)
-     */
-    function injectBlocker() {
-        const message = "Chặn là có lý do. Hãy tập trung vào công việc của bạn.";
+    // Hàm chặn trang (giữ nguyên UI cũ của bạn)
+    function triggerBlock(messageCustom) {
+        // Ngắt Interval đếm giờ để không chạy ngầm nữa
+        if (g_checkInterval) clearInterval(g_checkInterval);
+
+        // Dừng tải trang
+        window.stop();
+
+        const message = messageCustom || "Đã hết thời gian cho phép trong ngày. Hãy quay lại làm việc.";
         const html = `
         <html lang="vi">
         <head>
-            <title>Trang đã bị chặn</title>
+            <title>Hết giờ!</title>
             <meta charset="UTF-8">
             <style>
                 html, body {
@@ -50,59 +64,111 @@
         </head>
         <body>
             <div class="container" id="${BLOCKER_CONTAINER_ID}">
-                <h1>Trang này đã bị chặn</h1>
+                <h1>Giới hạn thời gian</h1>
                 <p>${message}</p>
             </div>
         </body>
         </html>
         `;
-        
+
         document.documentElement.innerHTML = html;
-    }
 
-    // --- Logic chính ---
-
-    await loadBlocklist();
-    if (g_siteBlocklist.length === 0) return; 
-
-    const currentHostname = window.location.hostname;
-    
-    const isBlocked = g_siteBlocklist.some(domain => 
-        currentHostname === domain || 
-        currentHostname.endsWith('.' + domain)
-    );
-
-    if (isBlocked) {
-        console.log(`[Ext Blocker] Đang chặn ${currentHostname}`);
-
-        // === BẮT ĐẦU SỬA LỖI RACE CONDITION ===
-
-        // 1. Dừng tải tất cả tài nguyên (scripts, images) của trang ngay lập tức
-        // Đây là chìa khóa để chặn logo Instagram
-        window.stop();
-
-        // 2. Tiêm HTML chặn (lần đầu tiên)
-        injectBlocker();
-
-        // 3. Tạo một MutationObserver để "canh gác" trang
-        //    Phòng trường hợp script của trang (như Instagram) cố gắng
-        //    vẽ lại UI đè lên màn hình chặn của chúng ta.
-        const observer = new MutationObserver((mutations) => {
-            // Kiểm tra xem trang có còn là của chúng ta không
+        // Observer chống ghi đè (Anti-bypass)
+        const observer = new MutationObserver(() => {
             if (!document.getElementById(BLOCKER_CONTAINER_ID)) {
-                console.log("[Ext Blocker] Trang web cố gắng ghi đè. Đang chặn lại...");
-                // Nếu không, chặn lại một lần nữa
                 window.stop();
-                injectBlocker();
+                document.documentElement.innerHTML = html;
             }
         });
-
-        // Bắt đầu quan sát toàn bộ tài liệu
-        observer.observe(document.documentElement, {
-            childList: true, // Theo dõi việc thêm/bớt con
-            subtree: true    // Theo dõi toàn bộ cây DOM
-        });
-        
-        // === KẾT THÚC SỬA LỖI ===
+        observer.observe(document.documentElement, { childList: true, subtree: true });
     }
+
+    // --- LOGIC CHÍNH ---
+
+    await loadBlocklist();
+    if (!g_blockRules || g_blockRules.length === 0) return;
+
+    const currentHostname = window.location.hostname;
+
+    // Tìm rule phù hợp với domain hiện tại
+    // (So khớp: currentHostname có chứa hoặc bằng url trong config)
+    const matchedRule = g_blockRules.find(rule => 
+        currentHostname === rule.url || currentHostname.endsWith('.' + rule.url)
+    );
+
+    // Nếu trang này không nằm trong danh sách thì bỏ qua
+    if (!matchedRule) return;
+
+    const maxSeconds = parseDurationToSeconds(matchedRule.duration);
+    const domainKey = matchedRule.url; // Dùng cái này làm key lưu trong storage
+
+    console.log(`[Ext Blocker] Giám sát: ${domainKey}, Giới hạn: ${maxSeconds}s`);
+
+    // Nếu giới hạn là 0 giây -> Chặn luôn (giống code cũ)
+    if (maxSeconds <= 0) {
+        triggerBlock("Trang web này nằm trong danh sách chặn.");
+        return;
+    }
+
+    // -- XỬ LÝ ĐẾM GIỜ --
+
+    // Lấy dữ liệu từ storage
+    chrome.storage.local.get([STORAGE_KEY], (result) => {
+        let data = result[STORAGE_KEY] || { date: getTodayString(), usage: {} };
+        const today = getTodayString();
+
+        // 1. Kiểm tra Reset ngày mới
+        if (data.date !== today) {
+            console.log("[Ext Blocker] Ngày mới! Reset bộ đếm.");
+            data = { date: today, usage: {} };
+            chrome.storage.local.set({ [STORAGE_KEY]: data });
+        }
+
+        // Lấy thời gian đã dùng (nếu chưa có thì bằng 0)
+        let currentUsage = data.usage[domainKey] || 0;
+
+        // 2. Kiểm tra ngay lúc vừa vào trang
+        if (currentUsage >= maxSeconds) {
+            triggerBlock(`Bạn đã dùng hết ${matchedRule.duration} cho trang này hôm nay.`);
+            return;
+        }
+
+        // 3. Bắt đầu đếm (Interval 1 giây)
+        g_checkInterval = setInterval(() => {
+            // Logic "Cách B": Chỉ đếm khi Tab Visible và Window Focus
+            if (document.visibilityState === 'visible' && document.hasFocus()) {
+                currentUsage++;
+                
+                // Cập nhật vào biến cục bộ để hiển thị log (nếu cần)
+                // console.log(`[Ext Blocker] ${domainKey}: ${currentUsage}/${maxSeconds}s`);
+
+                // Kiểm tra vượt quá giới hạn
+                if (currentUsage >= maxSeconds) {
+                    // Lưu lần cuối trước khi chặn
+                    saveUsage(domainKey, currentUsage, today);
+                    triggerBlock(`Bạn đã dùng hết ${matchedRule.duration}. Mai quay lại nhé!`);
+                } else {
+                    // Lưu định kỳ (để tránh mất dữ liệu nếu tắt trình duyệt đột ngột)
+                    // Lưu mỗi giây là an toàn nhất cho local storage
+                    saveUsage(domainKey, currentUsage, today);
+                }
+            }
+        }, 1000);
+    });
+
+    // Hàm lưu xuống Storage
+    function saveUsage(domain, seconds, dateStr) {
+        chrome.storage.local.get([STORAGE_KEY], (result) => {
+            let data = result[STORAGE_KEY] || { date: dateStr, usage: {} };
+            
+            // Đảm bảo vẫn đúng ngày (phòng trường hợp treo máy qua đêm)
+            if (data.date !== dateStr) {
+                data = { date: dateStr, usage: {} };
+            }
+
+            data.usage[domain] = seconds;
+            chrome.storage.local.set({ [STORAGE_KEY]: data });
+        });
+    }
+
 })();

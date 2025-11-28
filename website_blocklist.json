@@ -1,6 +1,18 @@
 [
-  "twitter.com",
-  "instagram.com",
-  "tiktok.com",
-  "voz.vn"
+  {
+    "url": "facebook.com",
+    "duration": "00:10"
+  },
+  {
+    "url": "instagram.com",
+    "duration": "00:00"
+  },
+  {
+    "url": "tiktok.com",
+    "duration": "00:00"
+  },
+  {
+    "url": "voz.vn",
+    "duration": "00:10"
+  }
 ]
