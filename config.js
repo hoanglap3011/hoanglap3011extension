@@ -1,5 +1,5 @@
 // api
-const API = "https://script.google.com/macros/s/AKfycbyb9988bDda7ZLG0lXMmSgzSXjr1KGe0bcFVGSnmjDnhyVqZeuf76N7YKpEEdWVFPmSeQ/exec";
+const API = "https://script.google.com/macros/s/AKfycbxzTZWhAvxqAURxjwB4kBvRT3VJHCqqtfWIW_PIcEAR24U6P14_uXjhFCpuqGLZh8lH9w/exec";
 const API_ACTION_GET_SUMMARY_BY_CODE = "getSummaryByCode";
 const API_ACTION_GET_SUMMARY_BY_CATEGORY = "getSummariesByCategory";
 const API_ACTION_GET_QUOTES = "getQuotes";

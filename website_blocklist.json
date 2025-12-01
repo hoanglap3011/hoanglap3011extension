@@ -1,18 +1,19 @@
 [
   {
     "url": "facebook.com",
-    "duration": "00:10"
+    "duration": "00:15",
+    "allowed_frames": ["12:00-14:00", "18:00-21:00"]
   },
   {
-    "url": "instagram.com",
-    "duration": "00:00"
-  },
-  {
-    "url": "tiktok.com",
-    "duration": "00:00"
+    "url": "vnexpress.net",
+    "duration": "00:10",
+    "allowed_frames": ["12:00-14:00"]
   },
   {
     "url": "voz.vn",
-    "duration": "00:01"
+    "duration": "00:10"
+  },
+  {
+    "url": "tiktok.com"
   }
 ]

@@ -1,15 +1,34 @@
 (async function() {
     const BLOCKLIST_FILE = 'website_blocklist.json';
     const BLOCKER_CONTAINER_ID = 'my-ext-blocker-container';
+    const NOTI_ID = 'my-ext-timer-notification'; // ID cho popup thông báo
     const STORAGE_KEY = 'daily_usage_data';
     
     let g_blockRules = [];
     let g_checkInterval = null;
     let g_currentDomainKey = null;
     let g_maxSeconds = 0;
+    let g_allowedFrames = null;
 
-    // --- CÁC HÀM TIỆN ÍCH ---
+    // --- 1. MODULE UI & TIỆN ÍCH ---
 
+    // Chuyển đổi giây sang định dạng MM:SS hoặc HH:MM:SS
+    function formatTime(totalSeconds) {
+        if (totalSeconds >= Number.MAX_SAFE_INTEGER) return "∞";
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        
+        const mStr = minutes.toString().padStart(2, '0');
+        const sStr = seconds.toString().padStart(2, '0');
+        
+        if (hours > 0) {
+            return `${hours}:${mStr}:${sStr}`;
+        }
+        return `${mStr}:${sStr}`;
+    }
+
+    // Parse "HH:MM" thành giây
     function parseDurationToSeconds(timeStr) {
         if (!timeStr) return 0;
         const [hours, minutes] = timeStr.split(':').map(Number);
@@ -19,6 +38,99 @@
     function getTodayString() {
         return new Date().toLocaleDateString('en-CA'); 
     }
+
+    function isCurrentTimeAllowed(frames) {
+        if (!frames || frames.length === 0) return true;
+        const now = new Date();
+        const currentMins = now.getHours() * 60 + now.getMinutes();
+
+        return frames.some(frame => {
+            const [start, end] = frame.split('-');
+            const [startH, startM] = start.split(':').map(Number);
+            const [endH, endM] = end.split(':').map(Number);
+            const startTotalMins = startH * 60 + startM;
+            const endTotalMins = endH * 60 + endM;
+            return currentMins >= startTotalMins && currentMins < endTotalMins;
+        });
+    }
+
+    // --- 2. MODULE HIỂN THỊ THÔNG BÁO (TOAST) ---
+
+    function showUsageNotification(currentUsage, maxSeconds) {
+        // Xóa thông báo cũ nếu có
+        const oldNoti = document.getElementById(NOTI_ID);
+        if (oldNoti) oldNoti.remove();
+
+        const remaining = maxSeconds - currentUsage;
+        let messageHTML = '';
+
+        // Xử lý nội dung hiển thị tùy theo chế độ
+        if (maxSeconds >= Number.MAX_SAFE_INTEGER) {
+            // Trường hợp chỉ dùng Time Frame (Không giới hạn duration)
+            messageHTML = `
+                <div style="font-weight: bold; color: #4CAF50;">Được phép truy cập</div>
+                <div style="font-size: 12px; margin-top: 4px;">Trong khung giờ quy định</div>
+            `;
+        } else {
+            // Trường hợp có giới hạn thời gian
+            const percent = Math.min(100, (currentUsage / maxSeconds) * 100);
+            let color = '#4CAF50'; // Xanh (An toàn)
+            if (percent > 50) color = '#FFC107'; // Vàng (Cảnh báo)
+            if (percent > 85) color = '#FF5252'; // Đỏ (Nguy hiểm)
+
+            messageHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <span style="font-size: 12px; color: #aaa;">Thời gian còn lại</span>
+                    <span style="font-weight: bold; color: ${color}; font-size: 14px;">${formatTime(remaining)}</span>
+                </div>
+                <div style="width: 100%; background: #444; height: 4px; border-radius: 2px;">
+                    <div style="width: ${percent}%; background: ${color}; height: 100%; border-radius: 2px; transition: width 0.5s;"></div>
+                </div>
+                <div style="font-size: 10px; color: #888; margin-top: 4px; text-align: right;">
+                    Tổng giới hạn: ${formatTime(maxSeconds)}
+                </div>
+            `;
+        }
+
+        const html = `
+            <div id="${NOTI_ID}" style="
+                position: fixed; bottom: 20px; right: 20px; z-index: 2147483647;
+                background: #1E1E1E; color: #E0E0E0;
+                padding: 15px; width: 220px;
+                border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+                font-family: -apple-system, sans-serif; border: 1px solid #333;
+                animation: slideInKeyframe 0.5s ease-out;
+                pointer-events: none; /* Để bấm xuyên qua được */
+            ">
+                <style>
+                    @keyframes slideInKeyframe {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes fadeOutKeyframe {
+                        to { opacity: 0; visibility: hidden; }
+                    }
+                </style>
+                ${messageHTML}
+            </div>
+        `;
+
+        // Chèn vào DOM
+        const div = document.createElement('div');
+        div.innerHTML = html;
+        document.body.appendChild(div.firstElementChild);
+
+        // Tự động ẩn sau 5 giây
+        setTimeout(() => {
+            const el = document.getElementById(NOTI_ID);
+            if (el) {
+                el.style.animation = "fadeOutKeyframe 1s forwards";
+                setTimeout(() => el.remove(), 1000); // Xóa hẳn khỏi DOM sau khi fade
+            }
+        }, 5000);
+    }
+
+    // --- 3. LOGIC CHẶN & ĐẾM ---
 
     async function loadBlocklist() {
         try {
@@ -32,38 +144,37 @@
 
     function triggerBlock(messageCustom) {
         if (g_checkInterval) clearInterval(g_checkInterval);
-        window.stop();
-
-        const message = messageCustom || "Đã hết thời gian cho phép. Quay lại làm việc đi!";
         
-        // Kiểm tra xem đã chặn chưa để tránh render lại nhiều lần gây nháy
+        // Xóa notification nếu đang hiện
+        const noti = document.getElementById(NOTI_ID);
+        if (noti) noti.remove();
+
+        window.stop();
         if (document.getElementById(BLOCKER_CONTAINER_ID)) return;
 
+        const message = messageCustom || "Đã hết thời gian cho phép.";
         const html = `
         <html lang="vi">
         <head>
-            <title>Hết giờ!</title>
+            <title>Truy cập bị chặn</title>
             <meta charset="UTF-8">
             <style>
                 html, body {
                     background: #121212; color: #E0E0E0;
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                    font-family: -apple-system, sans-serif;
                     display: flex; justify-content: center; align-items: center;
-                    height: 100vh; margin: 0; padding: 0;
-                    text-align: center; overflow: hidden;
+                    height: 100vh; margin: 0;
                 }
                 .container {
-                    border: 1px dashed #FF5555; padding: 40px 60px;
-                    border-radius: 12px; background: #1E1E1E;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+                    border: 1px dashed #FF5555; padding: 40px;
+                    border-radius: 12px; background: #1E1E1E; text-align: center;
                 }
-                h1 { font-size: 24px; color: #FF8A80; margin-top: 0; }
-                p { font-size: 16px; }
+                h1 { color: #FF8A80; margin-top: 0; }
             </style>
         </head>
         <body>
             <div class="container" id="${BLOCKER_CONTAINER_ID}">
-                <h1>Giới hạn thời gian</h1>
+                <h1>Truy cập bị chặn</h1>
                 <p>${message}</p>
             </div>
         </body>
@@ -71,8 +182,6 @@
         `;
 
         document.documentElement.innerHTML = html;
-
-        // Anti-bypass observer
         const observer = new MutationObserver(() => {
             if (!document.getElementById(BLOCKER_CONTAINER_ID)) {
                 window.stop();
@@ -82,32 +191,16 @@
         observer.observe(document.documentElement, { childList: true, subtree: true });
     }
 
-    // --- LOGIC LƯU TRỮ AN TOÀN (FIX BUG TỤT GIỜ) ---
-    
     function saveUsageSafe(domain, secondsToAdd, dateStr) {
         chrome.storage.local.get([STORAGE_KEY], (result) => {
             let data = result[STORAGE_KEY] || { date: dateStr, usage: {} };
+            if (data.date !== dateStr) data = { date: dateStr, usage: {} };
             
-            if (data.date !== dateStr) {
-                data = { date: dateStr, usage: {} };
-            }
-
-            // Lấy giá trị hiện tại trong DB
             const currentDbValue = data.usage[domain] || 0;
-            
-            // Logic mới: Chỉ cộng dồn hoặc lấy max, không ghi đè mù quáng
-            // Ở đây ta tính toán: Giá trị mới = Max(Giá trị DB, Giá trị Local muốn lưu)
-            // Tuy nhiên, vì biến secondsToAdd ở dưới đang là biến đếm tổng (currentUsage),
-            // nên ta dùng Math.max để đảm bảo không bao giờ giảm đi.
-            
-            const newValue = Math.max(currentDbValue, secondsToAdd);
-
-            data.usage[domain] = newValue;
+            data.usage[domain] = Math.max(currentDbValue, secondsToAdd);
             chrome.storage.local.set({ [STORAGE_KEY]: data });
         });
     }
-
-    // --- LOGIC KHỞI TẠO VÀ ĐẾM ---
 
     async function initCheck() {
         await loadBlocklist();
@@ -121,10 +214,26 @@
         if (!matchedRule) return;
 
         g_currentDomainKey = matchedRule.url;
-        g_maxSeconds = parseDurationToSeconds(matchedRule.duration);
+        g_allowedFrames = matchedRule.allowed_frames; 
 
+        // Xử lý Logic Duration
+        if (matchedRule.duration) {
+            g_maxSeconds = parseDurationToSeconds(matchedRule.duration);
+        } else {
+            if (g_allowedFrames && g_allowedFrames.length > 0) {
+                g_maxSeconds = Number.MAX_SAFE_INTEGER; 
+            } else {
+                g_maxSeconds = 0;
+            }
+        }
+        
         if (g_maxSeconds <= 0) {
-            triggerBlock("Trang web này nằm trong danh sách chặn.");
+            triggerBlock("Trang web này nằm trong danh sách chặn vĩnh viễn.");
+            return;
+        }
+
+        if (g_allowedFrames && !isCurrentTimeAllowed(g_allowedFrames)) {
+            triggerBlock(`Chỉ được phép truy cập trong khung giờ: ${g_allowedFrames.join(', ')}`);
             return;
         }
 
@@ -132,42 +241,46 @@
     }
 
     function startCounting() {
-        // Clear interval cũ nếu có để tránh chạy chồng chéo
         if (g_checkInterval) clearInterval(g_checkInterval);
 
         const domainKey = g_currentDomainKey;
         const maxSeconds = g_maxSeconds;
         const today = getTodayString();
 
-        // Lấy dữ liệu mới nhất từ storage để đồng bộ biến đếm cục bộ
         chrome.storage.local.get([STORAGE_KEY], (result) => {
             let data = result[STORAGE_KEY] || { date: today, usage: {} };
-            
             if (data.date !== today) {
-                data = { date: today, usage: {} }; // Reset nếu sang ngày mới
+                data = { date: today, usage: {} }; 
                 chrome.storage.local.set({ [STORAGE_KEY]: data });
             }
 
-            // Đồng bộ biến đếm cục bộ với DB
             let localCounter = data.usage[domainKey] || 0;
 
-            // Kiểm tra ngay lập tức
             if (localCounter >= maxSeconds) {
-                triggerBlock("Đã hết giờ ngay khi tải trang.");
+                triggerBlock("Đã hết thời lượng sử dụng trong ngày.");
                 return;
             }
 
-            // Bắt đầu interval đếm
+            // --- HIỂN THỊ THÔNG BÁO KHI VỪA VÀO ---
+            // Chỉ hiện nếu trang chưa bị chặn
+            showUsageNotification(localCounter, maxSeconds);
+            // ---------------------------------------
+
             g_checkInterval = setInterval(() => {
-                // Chỉ đếm khi tab active
                 if (document.visibilityState === 'visible' && document.hasFocus()) {
+                    
+                    if (g_allowedFrames && !isCurrentTimeAllowed(g_allowedFrames)) {
+                        saveUsageSafe(domainKey, localCounter, today);
+                        triggerBlock("Đã hết khung giờ cho phép truy cập.");
+                        return;
+                    }
+
                     localCounter++;
                     
                     if (localCounter >= maxSeconds) {
                         saveUsageSafe(domainKey, localCounter, today);
-                        triggerBlock("Hết giờ rồi!");
+                        triggerBlock("Hết thời lượng sử dụng trong ngày!");
                     } else {
-                        // Lưu định kỳ mỗi giây, dùng hàm Safe để không bị ghi đè lùi
                         saveUsageSafe(domainKey, localCounter, today);
                     }
                 }
@@ -175,29 +288,14 @@
         });
     }
 
-    // --- XỬ LÝ SỰ KIỆN (FIX BUG BACK BUTTON) ---
-
-    // Chạy lần đầu
     initCheck();
 
-    // Lắng nghe sự kiện pageshow: Được kích hoạt ngay cả khi load từ BF Cache (Back/Forward)
     window.addEventListener('pageshow', (event) => {
-        // Nếu trang được load từ cache (event.persisted = true)
-        // Hoặc đơn giản là chạy lại logic check để đảm bảo an toàn
-        if (event.persisted) {
-            console.log("[Ext Blocker] Phát hiện Back/Forward navigation. Checking lại...");
-            // Load lại config và check lại từ đầu
-            initCheck();
-        }
+        if (event.persisted) initCheck();
     });
 
-    // Lắng nghe sự kiện focus lại cửa sổ để đồng bộ dữ liệu (phòng trường hợp mở 2 tab cùng lúc)
     window.addEventListener('focus', () => {
-        if (g_currentDomainKey) {
-             // Khi focus lại, nên lấy dữ liệu mới nhất từ storage
-             // để tránh việc Tab A dùng hết giờ, quay lại Tab B vẫn còn giờ cũ
-             startCounting(); 
-        }
+        if (g_currentDomainKey && g_maxSeconds > 0) initCheck(); 
     });
 
 })();
