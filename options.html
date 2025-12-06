@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cài đặt Lập's Extension</title>
     <link rel="stylesheet" href="options.css">
 </head>
+
 <body>
     <main class="container">
         <h1>Cài đặt Extension</h1>
-        
+
         <h2>Facebook</h2>
         <div class="setting-row">
             <label for="fbEnableSummarize" class="switchLabel">
@@ -25,7 +27,8 @@
         <div class="setting-row">
             <label for="fbEnableBlockByKeyword" class="switchLabel">
                 <strong>Ẩn khối theo từ khóa</strong>
-                <span class="description">Tự động ẩn Reels, Gợi ý, và các mục trong <code>facebook_blocklist.json</code>.</span>
+                <span class="description">Tự động ẩn Reels, Gợi ý, và các mục trong
+                    <code>facebook_blocklist.json</code>.</span>
             </label>
             <label class="switch">
                 <input type="checkbox" id="fbEnableBlockByKeyword">
@@ -68,6 +71,28 @@
         </div>
 
         <div class="setting-row">
+            <label for="ytEnableAutoSummarize" class="switchLabel">
+                <strong>Tự động Tóm Tắt</strong>
+                <span class="description">Tự động chạy tóm tắt khi vào video mà không cần bấm nút.</span>
+            </label>
+            <label class="switch">
+                <input type="checkbox" id="ytEnableAutoSummarize">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="setting-row">
+            <label for="ytEnableAutoCloseNotebook" class="switchLabel">
+                <strong>Tự động đóng Tab NotebookLM</strong>
+                <span class="description">Sau khi tạo xong "Tài liệu tóm tắt", tự động đóng tab đó lại.</span>
+            </label>
+            <label class="switch">
+                <input type="checkbox" id="ytEnableAutoCloseNotebook">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="setting-row">
             <label for="ytEnableHideRelated" class="switchLabel">
                 <strong>Ẩn Video Gợi Ý (Sidebar)</strong>
                 <span class="description">Ẩn danh sách video tiếp theo bên cạnh video đang xem.</span>
@@ -79,7 +104,8 @@
         </div>
         <p id="saveStatus"></p>
     </main>
-    <script src="config.js"></script> 
+    <script src="config.js"></script>
     <script src="options.js"></script>
 </body>
+
 </html>

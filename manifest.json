@@ -73,6 +73,11 @@
         "facebook.js"
       ],
       "run_at": "document_end"
+    },
+    {
+      "matches": ["*://notebooklm.google.com/*"],
+      "js": ["notebooklm.js"],
+      "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [

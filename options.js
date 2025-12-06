@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // DEFAULT_SETTINGS = { fbEnableSummarize: true, ..., ytEnableHomepageHider: true, ... }
 
     // DOM Elements
-const switches = {
+    const switches = {
         // Facebook
         fbEnableSummarize: document.getElementById('fbEnableSummarize'),
         fbEnableBlockByKeyword: document.getElementById('fbEnableBlockByKeyword'),
@@ -13,6 +13,10 @@ const switches = {
         // YouTube
         ytEnableHomepageHider: document.getElementById('ytEnableHomepageHider'),
         ytEnableSummaryBox: document.getElementById('ytEnableSummaryBox'),
+        
+        ytEnableAutoSummarize: document.getElementById('ytEnableAutoSummarize'),
+        ytEnableAutoCloseNotebook: document.getElementById('ytEnableAutoCloseNotebook'),
+        
         ytEnableHideRelated: document.getElementById('ytEnableHideRelated')
     };
     const saveStatus = document.getElementById('saveStatus');

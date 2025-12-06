@@ -1,4 +1,5 @@
-// Trong file background.js
+let vietgidoTabId = null;
+let shouldAutoRunAll = false; 
 
 chrome.commands.onCommand.addListener((command) => {
   if (command === "open_command_hub") {
@@ -38,7 +39,7 @@ chrome.commands.onCommand.addListener((command) => {
 
   if (command === "open_media_hub") {
     const fileUrl = chrome.runtime.getURL("media_hub.html");
-    chrome.windows.create({ 
+    chrome.windows.create({
       url: fileUrl,
       type: 'popup',
       width: 630,
@@ -48,35 +49,46 @@ chrome.commands.onCommand.addListener((command) => {
   }
 });
 
-
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
-  // 1. Kiểm tra hành động và dữ liệu
-  if (request.action === "openVietGidoTab" && request.data) {
+  // 1. Nhận tín hiệu từ YouTube: "Chuẩn bị chạy auto nha!"
+  if (request.action === "expectAutoFeatures") {
+    shouldAutoRunAll = true;
+    console.log("🚩 [Background] Đã bật chế độ: Chạy tất cả tính năng (Mindmap + Briefing).");
 
-    // 2. TẠO URL VÀ PARAMETERS TẠI BACKGROUND SCRIPT
-    const params = new URLSearchParams();
+    // Tự động tắt sau 60s phòng hờ
+    setTimeout(() => { shouldAutoRunAll = false; }, 60000);
 
-    // Lặp qua object data được gửi từ content script
-    for (const [key, value] of Object.entries(request.data)) {
-      params.append(key, value);
-    }
-
-    // Tạo URL đầy đủ. API này phải được gọi từ Service Worker.
-    const url = chrome.runtime.getURL(`vietgido.html?${params.toString()}`);
-
-    console.log("[Ext Background] Đang mở tab với URL:", url);
-
-    // 3. Mở tab
-    chrome.tabs.create({ url: url });
-
-    // 4. Phản hồi
-    sendResponse({ status: "success", openedUrl: url });
-
+    sendResponse({ received: true });
     return true;
   }
 
-  // Handle media control commands from media_hub.html
+  if (request.action === "closeThisTab") {
+    // Kiểm tra xem tin nhắn có đến từ một tab hợp lệ không
+    if (sender.tab && sender.tab.id) {
+      console.log(`🗑 [Background] Đã xong nhiệm vụ. Đang đóng tab ID: ${sender.tab.id}`);
+      chrome.tabs.remove(sender.tab.id);
+    }
+    return true;
+  }
+
+  if (request.action === "openVietGidoTab" && request.data) {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(request.data)) {
+      params.append(key, value);
+    }
+    const url = chrome.runtime.getURL(`vietgido.html?${params.toString()}`);
+
+    // Cập nhật: Lưu lại tabId khi tạo
+    chrome.tabs.create({ url: url }, (tab) => {
+      vietgidoTabId = tab.id; // <--- QUAN TRỌNG: Lưu ID lại để lát gửi tin nhắn
+      console.log("[Background] Đã mở Vietgido tại Tab ID:", vietgidoTabId);
+    });
+
+    sendResponse({ status: "success", openedUrl: url });
+    return true;
+  }
+
   if (request.action === "getMediaInfo") {
     // Query all tabs to get media information
     chrome.tabs.query({}, async (tabs) => {
@@ -130,4 +142,33 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   return false;
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url && tab.url.includes("notebooklm.google.com/notebook/")) {
+    console.log("🎯 [Background] Bắt được link NotebookLM:", tab.url);
+
+    // Logic gửi link sang Vietgido (giữ nguyên)
+    if (vietgidoTabId) {
+      chrome.tabs.sendMessage(vietgidoTabId, {
+        action: "autofillNotebookLink",
+        notebookUrl: tab.url
+      }).catch(() => { vietgidoTabId = null; });
+    }
+
+    // 2. Kiểm tra cờ và Gửi lệnh tổng lực "activateAll"
+    if (shouldAutoRunAll) {
+      console.log("🚀 [Background] Tab đã load. Gửi lệnh kích hoạt TOÀN BỘ.");
+
+      chrome.tabs.sendMessage(tabId, { action: "activateAll" }, (response) => {
+        if (chrome.runtime.lastError) {
+          // Retry nếu script chưa load
+          setTimeout(() => chrome.tabs.sendMessage(tabId, { action: "activateAll" }), 1000);
+        }
+      });
+
+      shouldAutoRunAll = false; // Tắt cờ ngay
+    }
+  }
+
 });

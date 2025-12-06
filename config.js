@@ -46,7 +46,9 @@ const DEFAULT_SETTINGS = {
     // YouTube
     ytEnableHomepageHider: true,
     ytEnableSummaryBox: true,
-    ytEnableHideRelated: true
+    ytEnableHideRelated: true,
+    ytEnableAutoSummarize: false,
+    ytEnableAutoCloseNotebook: false
 };
 // =======================================================
 

@@ -286,30 +286,92 @@ async function initializeYouTubeHandler(settings) {
         return titleElement ? titleElement.textContent.trim() : 'Không tìm thấy tiêu đề video';
     };
 
-    /**
-     * HÀM MỚI: Tích hợp logic mở tab từ Content Script (Gửi message)
-     */
-    const openVietGidoFlow = (shortUrl, videoTitle) => {
-        // Gửi các tham số thô tới Background Script
-        chrome.runtime.sendMessage(
-            { 
-                action: "openVietGidoTab", 
-                data: { 
-                    danhMuc: 'Tóm Tắt',
-                    category: 'youtube',
-                    title: videoTitle, 
-                    code: shortUrl
-                }
-            },
-            (response) => {
-                if (chrome.runtime.lastError) {
-                    console.error("[Ext] Lỗi khi gửi tin nhắn:", chrome.runtime.lastError.message);
+
+// ... (Giữ nguyên các phần code khác của file youtube.js) ...
+
+/**
+ * HÀM MỚI: Tự động click vào Extension NotebookLM
+ * Logic: Click nút chính -> Nghỉ 100ms -> Click nút "Create New Notebook"
+ */
+const triggerNotebookExtension = async () => {
+    try {
+        // 1. Tìm nút chính (.ytlm-add-button)
+        const container = document.querySelector('.ytlm-add-button');
+        
+        if (container) {
+            // Click vào button con bên trong (nếu có) hoặc click chính container
+            const mainButton = container.querySelector('button, div[role="button"]') || container;
+            mainButton.click();
+            console.log("👉 [Ext] Đã click nút chính (.ytlm-add-button)");
+
+            // 2. Chờ 100ms để menu con kịp "sẵn sàng" (dù là render mới hay chỉ hiện lên)
+            await new Promise(r => setTimeout(r, 100));
+
+            // 3. Tìm nút "Create New Notebook" dựa trên data-type bạn cung cấp
+            // Selector này tìm trong toàn bộ trang (document) vì menu con thường được gắn vào cuối body
+            const createBtn = document.querySelector('[data-type="create-notebook"]');
+
+            if (createBtn) {
+                createBtn.click();
+                console.log("✅ [Ext] Đã click vào 'Create New Notebook'!");
+                return true;
+            } else {
+                // FALLBACK: Nếu sau 100ms chưa thấy, thử chờ thêm 1 giây (phòng trường hợp máy lag render chậm)
+                console.log("⏳ [Ext] Chưa thấy menu, đang chờ thêm...");
+                await new Promise(r => setTimeout(r, 1000));
+                
+                const createBtnRetry = document.querySelector('[data-type="create-notebook"]');
+                if (createBtnRetry) {
+                    createBtnRetry.click();
+                    console.log("✅ [Ext] Đã click (sau khi chờ thêm)!");
+                    return true;
                 } else {
-                    console.log("[Ext] Background đã nhận yêu cầu:", response?.status);
+                    console.warn("⚠️ [Ext] Không tìm thấy menu 'Create New Notebook'.");
+                    return false;
                 }
             }
-        );
-    };
+        } else {
+            console.warn("⚠️ [Ext] Không tìm thấy nút gốc Extension NotebookLM.");
+            return false;
+        }
+    } catch (e) {
+        console.error("❌ [Ext] Lỗi thao tác NotebookLM:", e);
+        return false;
+    }
+};
+
+/**
+ * CẬP NHẬT: openVietGidoFlow
+ */
+const openVietGidoFlow = async (shortUrl, videoTitle) => {
+// 1. Gửi tín hiệu kích hoạt tính năng tự động
+    chrome.runtime.sendMessage({ action: "expectAutoFeatures" }, () => {
+        console.log("🚩 [Ext] Đã gửi yêu cầu chạy cả Mindmap & Tóm tắt.");
+    });
+    
+    // 2. Tự động thao tác Extension NotebookLM (Click tạo mới)
+    await triggerNotebookExtension();
+
+    // 3. Mở tab Vietgido
+    chrome.runtime.sendMessage(
+        { 
+            action: "openVietGidoTab", 
+            data: { 
+                danhMuc: 'Tóm Tắt - Recap',
+                category: 'youtube',
+                title: videoTitle, 
+                code: shortUrl
+            }
+        },
+        (response) => {
+            if (chrome.runtime.lastError) {
+                console.error("[Ext] Lỗi khi gửi tin nhắn:", chrome.runtime.lastError.message);
+            } else {
+                console.log("[Ext] Background đã nhận yêu cầu mở tab:", response?.status);
+            }
+        }
+    );
+};
 
     /**
      * CẬP NHẬT: fetchSummary
@@ -461,7 +523,7 @@ async function initializeYouTubeHandler(settings) {
     // --- KẾT THÚC CẬP NHẬT ---
     // =======================================================
 
-    // Hàm: scanAndInject (Đã xóa logic nút Tóm Tắt Mới cũ)
+    // Hàm: scanAndInject
     const scanAndInject = () => {
         // HÀM NÀY SẼ CHỈ CHẠY NẾU settings.ytEnableSummaryBox = true
         
@@ -474,12 +536,16 @@ async function initializeYouTubeHandler(settings) {
         parentContainer.style.setProperty("display", "flex", "important");
         parentContainer.style.setProperty("flex-direction", "column", "important");
 
+        // Biến cờ để xác định xem có cần chạy auto-summary không
+        let shouldAutoRun = false; 
+
         if (!myBox) {
             myBox = createMyNewBox(); 
             if (!myBox) return;
             parentContainer.prepend(myBox);
             myBox.dataset.currentUrl = shortUrl; 
             console.log("[Ext] Đã chèn box MỚI.");
+            shouldAutoRun = true; // Box mới -> Cần chạy nếu auto bật
         } else {
             const storedUrl = myBox.dataset.currentUrl || "";
             if (storedUrl !== shortUrl) {
@@ -492,6 +558,7 @@ async function initializeYouTubeHandler(settings) {
                 if (summaryButton) summaryButton.innerHTML = "Tóm tắt";
                 setMainButtonsDisabled(false); 
                 console.log("[Ext] Phát hiện URL mới, đã reset box.");
+                shouldAutoRun = true; // URL mới -> Cần chạy nếu auto bật
             }
         }
         
@@ -499,9 +566,15 @@ async function initializeYouTubeHandler(settings) {
         if (summaryButton) {
              summaryButton.onclick = () => {
                 console.log("[Ext] Người dùng nhấn 'Tóm tắt'.");
-                // Logic chính nằm trong fetchSummary
                 fetchSummary(shortUrl); 
             };
+
+            // --- LOGIC TỰ ĐỘNG TÓM TẮT ---
+            if (shouldAutoRun && settings.ytEnableAutoSummarize) {
+                console.log("[Ext] Chế độ Tự động tóm tắt kích hoạt -> Đang chạy...");
+                // Gọi hàm tóm tắt ngay lập tức
+                fetchSummary(shortUrl);
+            }
         }
     };
 
