@@ -1,19 +1,37 @@
 // File: notebooklm.js
 
-console.log("[Ext] NotebookLM Script: Chế độ 'Combo All-in-One'.");
+console.log("[Ext] NotebookLM Script: Chế độ 'Combo All-in-One' (Safe Wait).");
 
 // --- CÁC HÀM HỖ TRỢ (HELPER) ---
 
 const simulateRealClick = (element) => {
     if (!element) return;
-    if (element.focus) element.focus(); // Focus để đánh thức UI
+    if (element.focus) element.focus(); 
     const options = { bubbles: true, cancelable: true, view: window };
     element.dispatchEvent(new MouseEvent('mousedown', options));
     element.dispatchEvent(new MouseEvent('mouseup', options));
     element.dispatchEvent(new MouseEvent('click', options));
 };
 
-const clickDeepestTextElement = (wrapper, text) => {
+const isElementReady = (element) => {
+    if (!element) return false;
+    if (element.disabled) return false;
+    if (element.getAttribute('aria-disabled') === 'true') return false;
+    if (element.classList.contains('disabled')) return false;
+
+    const internalBtn = element.querySelector('button');
+    if (internalBtn) {
+        if (internalBtn.disabled) return false;
+        if (internalBtn.getAttribute('aria-disabled') === 'true') return false;
+    }
+
+    const style = window.getComputedStyle(element);
+    if (style.pointerEvents === 'none') return false;
+    
+    return true;
+};
+
+const clickDeepestTextElementIfReady = (wrapper, text) => {
     const allChildren = wrapper.querySelectorAll('*');
     let target = null;
     for (const child of allChildren) {
@@ -21,33 +39,12 @@ const clickDeepestTextElement = (wrapper, text) => {
             target = child;
         }
     }
-    if (target) {
-        simulateRealClick(target);
+    const elementToClick = target || wrapper;
+    if (isElementReady(wrapper) && isElementReady(elementToClick)) {
+        simulateRealClick(elementToClick);
         return true;
     }
-    simulateRealClick(wrapper);
     return false;
-};
-
-const waitForCondition = (checkFn, timeout = 10000) => {
-    return new Promise((resolve) => {
-        const res = checkFn();
-        if (res) return resolve(res);
-
-        const observer = new MutationObserver(() => {
-            const result = checkFn();
-            if (result) {
-                resolve(result);
-                observer.disconnect();
-            }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
-
-        setTimeout(() => {
-            observer.disconnect();
-            resolve(null);
-        }, timeout);
-    });
 };
 
 const findArtifactButtonWrapper = (text) => {
@@ -60,108 +57,158 @@ const findArtifactButtonWrapper = (text) => {
     return null;
 };
 
-// --- LOGIC TỪNG TÍNH NĂNG ---
+const waitForCondition = (checkFn, timeout = 60000) => {
+    return new Promise((resolve) => {
+        const res = checkFn();
+        if (res) return resolve(res);
 
-// 1. Logic Bản đồ tư duy
-const runMindMapLogic = async () => {
-    console.log("🔹 [Task 1] Bắt đầu: Bản đồ tư duy...");
-    const wrapper = await waitForCondition(() => findArtifactButtonWrapper("Bản đồ tư duy"), 5000);
+        const observer = new MutationObserver(() => {
+            const result = checkFn();
+            if (result) {
+                observer.disconnect();
+                resolve(result);
+            }
+        });
 
-    if (wrapper) {
-        clickDeepestTextElement(wrapper, "Bản đồ tư duy");
-        console.log("✅ [Task 1] Đã click Bản đồ tư duy.");
-        return true;
-    } else {
-        console.warn("⚠️ [Task 1] Không tìm thấy nút.");
-        return false;
+        observer.observe(document.body, { 
+            childList: true, subtree: true, attributes: true, 
+            attributeFilter: ['disabled', 'aria-disabled', 'class'] 
+        });
+
+        setTimeout(() => {
+            observer.disconnect();
+            resolve(null);
+        }, timeout);
+    });
+};
+
+// --- LOGIC NGHIỆP VỤ MỚI: THEO DÕI TIẾN TRÌNH VÀ ĐÓNG TAB ---
+
+const waitForGenerationToFinishAndClose = async () => {
+    console.log("🕵️ [AutoClose] Bắt đầu giám sát tiến trình...");
+    
+    // Timeout an toàn: 10 phút
+    const MAX_WAIT_TIME = 600000; 
+    const START_TIME = Date.now();
+
+    while (true) {
+        // 1. Kiểm tra timeout an toàn
+        if (Date.now() - START_TIME > MAX_WAIT_TIME) {
+            console.warn("⚠️ [AutoClose] Hết thời gian chờ (10p). Buộc đóng tab.");
+            chrome.runtime.sendMessage({ action: "closeThisTab" });
+            break;
+        }
+
+        // 2. Tìm container
+        const container = document.querySelector('.artifact-library-container');
+        
+        if (container) {
+            const fullText = container.innerText || "";
+            
+            // Regex tìm: "Đang tạo" ... "..." (có thể xuống dòng)
+            const isGenerating = /Đang tạo.*?\.\.\./si.test(fullText);
+
+            if (isGenerating) {
+                console.log(`⏳ [AutoClose] Đang tạo báo cáo/mindmap... (${Math.floor((Date.now() - START_TIME)/1000)}s)`);
+            } else {
+                // QUAN TRỌNG: Chỉ đóng khi KHÔNG còn text "Đang tạo"
+                console.log("✅ [AutoClose] Đã hoàn tất (Text 'Đang tạo...' đã biến mất).");
+                
+                // Nghỉ thêm 2 giây để chắc chắn
+                await new Promise(r => setTimeout(r, 2000));
+                
+                console.log("👋 Gửi lệnh đóng tab.");
+                chrome.runtime.sendMessage({ action: "closeThisTab" });
+                break;
+            }
+        } else {
+            console.log("⏳ [AutoClose] Đang chờ khung danh sách hiển thị...");
+        }
+
+        // Kiểm tra mỗi 2 giây
+        await new Promise(r => setTimeout(r, 2000));
     }
 };
 
-// 2. Logic Tài liệu tóm tắt (Đa bước)
-const runBriefingDocLogic = async () => {
-    console.log("🔹 [Task 2] Bắt đầu: Tài liệu tóm tắt...");
-    const STEP_1_TEXT = "Báo cáo";
+// --- LOGIC CLICK TÍNH NĂNG ---
 
-    // Bước 2.1: Click "Báo cáo"
-    const wrapper = await waitForCondition(() => findArtifactButtonWrapper(STEP_1_TEXT), 5000);
-
-    if (!wrapper) {
-        console.warn("⚠️ [Task 2] Không tìm thấy nút 'Báo cáo'.");
-        return false;
+const runMindMapLogic = async () => {
+    console.log("🔹 [Task 1] Chờ nút 'Bản đồ tư duy'...");
+    const checkReady = () => {
+        const wrapper = findArtifactButtonWrapper("Bản đồ tư duy");
+        if (wrapper && isElementReady(wrapper)) return wrapper;
+        return null;
+    };
+    const wrapper = await waitForCondition(checkReady, 60000);
+    if (wrapper) {
+        clickDeepestTextElementIfReady(wrapper, "Bản đồ tư duy");
+        console.log("✅ [Task 1] Đã click.");
     }
+};
 
-    console.log("👉 [Task 2] Click nút Báo cáo.");
-    clickDeepestTextElement(wrapper, STEP_1_TEXT);
+const runBriefingDocLogic = async () => {
+    console.log("🔹 [Task 2] Chờ nút 'Báo cáo'...");
+    const checkStep1Ready = () => {
+        const wrapper = findArtifactButtonWrapper("Báo cáo");
+        if (wrapper && isElementReady(wrapper)) return wrapper;
+        return null;
+    };
+    const wrapper = await waitForCondition(checkStep1Ready, 60000);
+    if (!wrapper) return;
 
-    // Bước 2.2: Chờ Popup (2 giây để chắc chắn MindMap không gây xung đột)
-    console.log("⏳ [Task 2] Đợi Popup (2s)...");
-    await new Promise(r => setTimeout(r, 2000));
+    clickDeepestTextElementIfReady(wrapper, "Báo cáo");
 
-    // Bước 2.3: Tìm Tile và Button trong Popup
     const findTileAndBtn = () => {
         const tiles = document.querySelectorAll('report-customization-tile');
         for (const tile of tiles) {
             const btn = tile.querySelector('button[aria-label="Tài liệu tóm tắt"]');
-            if (btn) return { tile, btn };
+            if (btn && isElementReady(btn)) return { tile, btn };
         }
         return null;
     };
-
-    const result = await waitForCondition(findTileAndBtn, 5000);
-
+    const result = await waitForCondition(findTileAndBtn, 10000);
     if (result) {
-        console.log("✅ [Task 2] Tìm thấy Tile. Đang click...");
-        simulateRealClick(result.btn); // Click button
-        setTimeout(() => simulateRealClick(result.tile), 100); // Click bồi tile
-        return true;
-    } else {
-        console.warn("⚠️ [Task 2] Không tìm thấy 'Tài liệu tóm tắt' trong popup.");
-        return false;
+        console.log("✅ [Task 2] Đã click Tài liệu tóm tắt.");
+        simulateRealClick(result.btn);
+        // Click bồi tile
+        setTimeout(() => { if (document.body.contains(result.tile)) simulateRealClick(result.tile); }, 100);
     }
 };
 
-
-
-// --- TRÌNH ĐIỀU PHỐI (ORCHESTRATOR) ---
+// --- TRÌNH ĐIỀU PHỐI (QUAN TRỌNG: ĐÃ SỬA LOGIC CHỜ) ---
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "activateAll") {
-        console.log("🚀 [Orchestrator] Nhận lệnh chạy Combo.");
+        console.log("🚀 [Orchestrator] Bắt đầu quy trình.");
 
         (async () => {
-            // 1. Chạy MindMap trước
+            // 1. Chạy các task click
             await runMindMapLogic();
-
-            // 2. Nghỉ 2 giây để UI ổn định
+            
             console.log("☕ Nghỉ 2 giây...");
             await new Promise(r => setTimeout(r, 2000));
 
-            // 3. Chạy Briefing Doc sau
-            // Lưu kết quả trả về để biết có thành công không
-            const briefingSuccess = await runBriefingDocLogic();
+            await runBriefingDocLogic();
 
-            // 4. [LOGIC MỚI] Kiểm tra Setting trước khi đóng tab
-            if (briefingSuccess) {
-                console.log("✅ [Done] Đã xong việc. Đang kiểm tra cài đặt đóng tab...");
+            console.log("🏁 [Done] Đã gửi lệnh click.");
 
-                // Lấy cài đặt từ Storage (Key: 'LapsExtensionSettings' giống trong options.js của bạn)
-                chrome.storage.local.get('LapsExtensionSettings', async (data) => {
-                    const settings = data['LapsExtensionSettings'] || {};
+            // 2. LOGIC ĐÓNG TAB AN TOÀN
+            chrome.storage.local.get('LapsExtensionSettings', async (data) => {
+                const settings = data['LapsExtensionSettings'] || {};
 
-                    // Kiểm tra xem switch có bật không (ytEnableAutoCloseNotebook)
-                    if (settings.ytEnableAutoCloseNotebook) {
-                        console.log("SETTINGS: Tự động đóng tab = ON. Đợi 1 giây rồi đóng...");
-                        await new Promise(r => setTimeout(r, 1000));
-
-                        console.log("👋 Gửi lệnh đóng tab về Background...");
-                        chrome.runtime.sendMessage({ action: "closeThisTab" });
-                    } else {
-                        console.log("SETTINGS: Tự động đóng tab = OFF. Giữ nguyên tab.");
-                    }
-                });
-            } else {
-                console.warn("⚠️ Có lỗi ở bước Tóm tắt, không đóng tab.");
-            }
+                if (settings.ytEnableAutoCloseNotebook) {
+                    
+                    // --- ĐIỂM SỬA QUAN TRỌNG NHẤT ---
+                    console.log("🛡️ [Safety] Đợi 5 giây để NotebookLM hiện chữ 'Đang tạo'...");
+                    await new Promise(r => setTimeout(r, 5000)); 
+                    // --------------------------------
+                    
+                    console.log("⚙️ [Auto Close] Bắt đầu theo dõi để đóng tab.");
+                    await waitForGenerationToFinishAndClose();
+                } else {
+                    console.log("⚙️ [Auto Close] OFF. Giữ tab.");
+                }
+            });
 
         })();
 
