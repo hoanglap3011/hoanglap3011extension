@@ -54,27 +54,27 @@ async function initializeYouTubeHandler(settings) {
             const urlObj = new URL(longUrl);
             const videoId = urlObj.searchParams.get("v");
             if (videoId) { return `https://youtu.be/${videoId}`; }
-        } catch (e) {}
-        return longUrl; 
+        } catch (e) { }
+        return longUrl;
     };
     const getRandomQuote = async () => {
         const defaultQuote = `<i style="color: var(--yt-spec-text-secondary);">Đang xử lý yêu cầu...</i>`;
         try {
             // DÙNG HẰNG SỐ
             const result = await chrome.storage.local.get(CACHE_QUOTES);
-            
+
             // DÙNG HẰNG SỐ
             if (!result[CACHE_QUOTES]) return defaultQuote;
-            
+
             // DÙNG HẰNG SỐ
             const quotesArray = result[CACHE_QUOTES];
-            
+
             if (Array.isArray(quotesArray) && quotesArray.length > 0) {
                 const randomIndex = Math.floor(Math.random() * quotesArray.length);
                 return `<i style="color: var(--yt-spec-text-secondary); text-align: center; display: block;">${quotesArray[randomIndex]}</i>`;
             }
-        } catch (e) { 
-            console.error(`[Ext] Lỗi khi đọc '${CACHE_QUOTES}' từ chrome.storage:`, e); 
+        } catch (e) {
+            console.error(`[Ext] Lỗi khi đọc '${CACHE_QUOTES}' từ chrome.storage:`, e);
         }
         return defaultQuote;
     };
@@ -82,21 +82,21 @@ async function initializeYouTubeHandler(settings) {
         try {
             // DÙNG HẰNG SỐ
             const result = await chrome.storage.local.get(CACHE_PASS);
-            
+
             // DÙNG HẰNG SỐ
-            if (result[CACHE_PASS] !== undefined) { 
-                return result[CACHE_PASS]; 
+            if (result[CACHE_PASS] !== undefined) {
+                return result[CACHE_PASS];
             }
-        } catch (e) { 
-            console.error(`[Ext] Lỗi khi đọc '${CACHE_PASS}' từ storage:`, e); 
+        } catch (e) {
+            console.error(`[Ext] Lỗi khi đọc '${CACHE_PASS}' từ storage:`, e);
         }
-        return "hihi"; 
+        return "hihi";
     };
 
     // Định nghĩa ID (Đã loại bỏ NEW_SUMMARY_BUTTON_ID)
     const PARENT_CONTAINER_SELECTOR = "div#related";
     const MY_BOX_ID = "my-custom-youtube-box";
-    const CONTENT_ELEMENT_ID = "my-ext-content-display"; 
+    const CONTENT_ELEMENT_ID = "my-ext-content-display";
     const SUMMARY_BUTTON_ID = "my-ext-summary-button";
 
 
@@ -126,15 +126,15 @@ async function initializeYouTubeHandler(settings) {
         } catch (e) { console.error("[Ext] Lỗi khi mở popup:", e); }
     };
 
-   const openPasswordPopup = () => {
-       // Lấy URL tuyệt đối của file password.html trong extension
-       const url = chrome.runtime.getURL('password.html');
-       const popupWidth = 400;
-       const popupHeight = 250;
-       const left = (window.screen.width / 2) - (popupWidth / 2);
-       const top = (window.screen.height / 2) - (popupHeight / 2);
-       window.open(url, 'passwordPopup', `width=${popupWidth},height=${popupHeight},top=${top},left=${left},resizable=yes`);
-   };
+    const openPasswordPopup = () => {
+        // Lấy URL tuyệt đối của file password.html trong extension
+        const url = chrome.runtime.getURL('password.html');
+        const popupWidth = 400;
+        const popupHeight = 250;
+        const left = (window.screen.width / 2) - (popupWidth / 2);
+        const top = (window.screen.height / 2) - (popupHeight / 2);
+        window.open(url, 'passwordPopup', `width=${popupWidth},height=${popupHeight},top=${top},left=${left},resizable=yes`);
+    };
 
     const HOMEPAGE_MESSAGE_ID = "my-ext-homepage-message-box";
 
@@ -202,7 +202,7 @@ async function initializeYouTubeHandler(settings) {
     const createMessageBox = () => {
         const messageBox = document.createElement("div");
         messageBox.id = HOMEPAGE_MESSAGE_ID;
-        
+
         Object.assign(messageBox.style, {
             color: 'var(--yt-spec-text-primary, #030303)',
             padding: '40px 20px', margin: '16px 0', textAlign: 'center',
@@ -276,7 +276,7 @@ async function initializeYouTubeHandler(settings) {
     // (Đã bỏ qua 2 hàm trùng lặp ở trên)
 
 
-    
+
     /**
      * HÀM MỚI: Lấy tiêu đề video từ DOM
      */
@@ -287,208 +287,324 @@ async function initializeYouTubeHandler(settings) {
     };
 
 
-// ... (Giữ nguyên các phần code khác của file youtube.js) ...
-
-/**
- * HÀM MỚI: Tự động click vào Extension NotebookLM
- * Logic: Click nút chính -> Nghỉ 100ms -> Click nút "Create New Notebook"
- */
-const triggerNotebookExtension = async () => {
-    try {
-        // 1. Tìm nút chính (.ytlm-add-button)
-        const container = document.querySelector('.ytlm-add-button');
-        
-        if (container) {
-            // Click vào button con bên trong (nếu có) hoặc click chính container
-            const mainButton = container.querySelector('button, div[role="button"]') || container;
-            mainButton.click();
-            console.log("👉 [Ext] Đã click nút chính (.ytlm-add-button)");
-
-            // 2. Chờ 100ms để menu con kịp "sẵn sàng" (dù là render mới hay chỉ hiện lên)
-            await new Promise(r => setTimeout(r, 100));
-
-            // 3. Tìm nút "Create New Notebook" dựa trên data-type bạn cung cấp
-            // Selector này tìm trong toàn bộ trang (document) vì menu con thường được gắn vào cuối body
-            const createBtn = document.querySelector('[data-type="create-notebook"]');
-
-            if (createBtn) {
-                createBtn.click();
-                console.log("✅ [Ext] Đã click vào 'Create New Notebook'!");
-                return true;
-            } else {
-                // FALLBACK: Nếu sau 100ms chưa thấy, thử chờ thêm 1 giây (phòng trường hợp máy lag render chậm)
-                console.log("⏳ [Ext] Chưa thấy menu, đang chờ thêm...");
-                await new Promise(r => setTimeout(r, 1000));
-                
-                const createBtnRetry = document.querySelector('[data-type="create-notebook"]');
-                if (createBtnRetry) {
-                    createBtnRetry.click();
-                    console.log("✅ [Ext] Đã click (sau khi chờ thêm)!");
-                    return true;
-                } else {
-                    console.warn("⚠️ [Ext] Không tìm thấy menu 'Create New Notebook'.");
-                    return false;
-                }
-            }
-        } else {
-            console.warn("⚠️ [Ext] Không tìm thấy nút gốc Extension NotebookLM.");
-            return false;
-        }
-    } catch (e) {
-        console.error("❌ [Ext] Lỗi thao tác NotebookLM:", e);
-        return false;
-    }
-};
-
-/**
- * CẬP NHẬT: openVietGidoFlow
- */
-const openVietGidoFlow = async (shortUrl, videoTitle) => {
-// 1. Gửi tín hiệu kích hoạt tính năng tự động
-    chrome.runtime.sendMessage({ action: "expectAutoFeatures" }, () => {
-        console.log("🚩 [Ext] Đã gửi yêu cầu chạy cả Mindmap & Tóm tắt.");
-    });
-    
-    // 2. Tự động thao tác Extension NotebookLM (Click tạo mới)
-    await triggerNotebookExtension();
-
-    // 3. Mở tab Vietgido
-    chrome.runtime.sendMessage(
-        { 
-            action: "openVietGidoTab", 
-            data: { 
-                danhMuc: 'Tóm Tắt - Recap',
-                category: 'youtube',
-                title: videoTitle, 
-                code: shortUrl
-            }
-        },
-        (response) => {
-            if (chrome.runtime.lastError) {
-                console.error("[Ext] Lỗi khi gửi tin nhắn:", chrome.runtime.lastError.message);
-            } else {
-                console.log("[Ext] Background đã nhận yêu cầu mở tab:", response?.status);
-            }
-        }
-    );
-};
+    // ... (Giữ nguyên các phần code khác của file youtube.js) ...
 
     /**
-     * CẬP NHẬT: fetchSummary
-     * - Thêm logic kiểm tra lỗi và chuyển sang openVietGidoFlow.
-     * - Sử dụng tiêu đề video thay vì shortUrl.
+     * HÀM MỚI: Tự động click vào Extension NotebookLM
+     * Logic: Click nút chính -> Nghỉ 100ms -> Click nút "Create New Notebook"
      */
+    const triggerNotebookExtension = async () => {
+        try {
+            // 1. Tìm nút chính (.ytlm-add-button)
+            const container = document.querySelector('.ytlm-add-button');
+
+            if (container) {
+                // Click vào button con bên trong (nếu có) hoặc click chính container
+                const mainButton = container.querySelector('button, div[role="button"]') || container;
+                mainButton.click();
+                console.log("👉 [Ext] Đã click nút chính (.ytlm-add-button)");
+
+                // 2. Chờ 100ms để menu con kịp "sẵn sàng" (dù là render mới hay chỉ hiện lên)
+                await new Promise(r => setTimeout(r, 100));
+
+                // 3. Tìm nút "Create New Notebook" dựa trên data-type bạn cung cấp
+                // Selector này tìm trong toàn bộ trang (document) vì menu con thường được gắn vào cuối body
+                const createBtn = document.querySelector('[data-type="create-notebook"]');
+
+                if (createBtn) {
+                    createBtn.click();
+                    console.log("✅ [Ext] Đã click vào 'Create New Notebook'!");
+                    return true;
+                } else {
+                    // FALLBACK: Nếu sau 100ms chưa thấy, thử chờ thêm 1 giây (phòng trường hợp máy lag render chậm)
+                    console.log("⏳ [Ext] Chưa thấy menu, đang chờ thêm...");
+                    await new Promise(r => setTimeout(r, 1000));
+
+                    const createBtnRetry = document.querySelector('[data-type="create-notebook"]');
+                    if (createBtnRetry) {
+                        createBtnRetry.click();
+                        console.log("✅ [Ext] Đã click (sau khi chờ thêm)!");
+                        return true;
+                    } else {
+                        console.warn("⚠️ [Ext] Không tìm thấy menu 'Create New Notebook'.");
+                        return false;
+                    }
+                }
+            } else {
+                console.warn("⚠️ [Ext] Không tìm thấy nút gốc Extension NotebookLM.");
+                return false;
+            }
+        } catch (e) {
+            console.error("❌ [Ext] Lỗi thao tác NotebookLM:", e);
+            return false;
+        }
+    };
+
+    /**
+     * CẬP NHẬT: openVietGidoFlow
+     */
+    const openVietGidoFlow = async (shortUrl, videoTitle) => {
+        // 1. Gửi tín hiệu kích hoạt tính năng tự động
+        chrome.runtime.sendMessage({ action: "expectAutoFeatures" }, () => {
+            console.log("🚩 [Ext] Đã gửi yêu cầu chạy cả Mindmap & Tóm tắt.");
+        });
+
+        // 2. Tự động thao tác Extension NotebookLM (Click tạo mới)
+        await triggerNotebookExtension();
+
+        // 3. Mở tab Vietgido
+        chrome.runtime.sendMessage(
+            {
+                action: "openVietGidoTab",
+                data: {
+                    danhMuc: 'Tóm Tắt - Recap',
+                    category: 'youtube',
+                    title: videoTitle,
+                    code: shortUrl
+                }
+            },
+            (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error("[Ext] Lỗi khi gửi tin nhắn:", chrome.runtime.lastError.message);
+                } else {
+                    console.log("[Ext] Background đã nhận yêu cầu mở tab:", response?.status);
+                }
+            }
+        );
+    };
+
+    /**
+     * ===================================================================
+     * HÀM MỚI 1: LƯU DỮ LIỆU VÀO CSDL (Bước Save)
+     * ===================================================================
+     */
+    async function saveDataToSystem(notebookId, youtubeUrl, videoTitle) {
+        const contentBox = document.getElementById(CONTENT_ELEMENT_ID);
+        console.log("💾 [Ext] Đang lưu dữ liệu vào CSDL...");
+
+        const currentPass = await getApiPass(); // Lấy pass từ storage
+        const notebookLink = `https://notebooklm.google.com/notebook/${notebookId}`;
+
+        const payload = {
+            "id": "12oOAZsOip5qUhAp5qg6_ObEA7EKWqEyYPqsMvdl4UPA",
+            "thoiGianTao": new Date().toISOString(),
+            "pass": currentPass,
+            "danhMuc": "Tóm Tắt - Recap",
+            "duLieu": [
+                {
+                    "soThuTu": 1,
+                    "fields": [
+                        {
+                            "column": "category",
+                            "value": "youtube",
+                        },
+                        {
+                            "column": "title",
+                            "value": videoTitle,
+                        },
+                        {
+                            "column": "code",
+                            "value": youtubeUrl,
+                        },
+                        {
+                            "column": "notebooklm",
+                            "value": notebookLink,
+                        }
+                    ]
+                }
+            ],
+            "action": "addVietGiDo"
+        }
+
+        try {
+            const response = await fetch(API, { method: 'POST', body: JSON.stringify(payload) });
+            if (!response.ok) {
+                contentBox.innerHTML = `<span style="color: var(--yt-spec-text-secondary);">Lỗi mạng: ${response.statusText}</span>`;
+                return false;
+            }
+            const result = await response.json();
+            if (result?.code !== 1) {
+                contentBox.innerHTML = `<span style="color: var(--yt-spec-text-secondary);">${result?.error} || 'Lỗi không xác định từ server'</span>`;
+                return false;
+            }
+            console.log("✅ [Ext] Lưu CSDL thành công!");
+            return true;
+        } catch (err) {
+            contentBox.innerHTML = `<span style="color: var(--yt-spec-text-secondary);">❌ Lỗi: ${err.message}</span>`;
+            return false;
+        } 
+    }
+
+    /**
+     * ===================================================================
+     * HÀM MỚI 2: VẼ GIAO DIỆN LINK (Dùng chung)
+     * ===================================================================
+     */
+    function renderNotebookUi(container, dataLinks) {
+        container.innerHTML = ""; // Xóa nội dung cũ (ví dụ: "Đang tạo...")
+
+        const linkStyle = `color: #065fd4; text-decoration: none; font-weight: 500; cursor: pointer; display: block; margin-bottom: 8px; padding: 5px 0; border-bottom: 1px dashed #eee;`;
+
+        // 1. Link NotebookLM
+        if (dataLinks.notebooklm) {
+            const notebookLink = document.createElement("a");
+            notebookLink.textContent = "📂 Mở NotebookLM";
+            notebookLink.href = dataLinks.notebooklm;
+            notebookLink.target = "_blank";
+            notebookLink.style.cssText = linkStyle;
+            container.appendChild(notebookLink);
+        }
+
+        // 2. Link Summary (Nếu có)
+        if (dataLinks.summary) {
+            const summaryLink = document.createElement("a");
+            summaryLink.textContent = "📝 Xem Tóm tắt";
+            summaryLink.href = "#";
+            summaryLink.style.cssText = linkStyle;
+            summaryLink.onclick = (e) => { e.preventDefault(); showSummaryPopup(dataLinks.summary); };
+            container.appendChild(summaryLink);
+        }
+
+        // 3. Link Mindomo (Nếu có)
+        if (dataLinks.mindomo) {
+            const mindomoLink = document.createElement("a");
+            mindomoLink.textContent = "🧠 Mở Mindmap";
+            mindomoLink.href = dataLinks.mindomo;
+            mindomoLink.target = "_blank";
+            mindomoLink.style.cssText = linkStyle;
+            container.appendChild(mindomoLink);
+        }
+
+        // Thêm một dòng nhỏ báo trạng thái
+        const note = document.createElement("div");
+        note.style.fontSize = "11px";
+        note.style.color = "green";
+        note.textContent = "✓ Dữ liệu đã sẵn sàng";
+        container.appendChild(note);
+    }
+
     const fetchSummary = async (shortUrl) => {
         const contentBox = document.getElementById(CONTENT_ELEMENT_ID);
-        const button = document.getElementById(SUMMARY_BUTTON_ID); 
-        const videoTitle = getVideoTitle(); // Lấy tiêu đề video
-        
+        const button = document.getElementById(SUMMARY_BUTTON_ID);
+        const videoTitle = getVideoTitle(); // Lấy tiêu đề video để lưu DB
+
         if (!contentBox) return;
 
-        setMainButtonsDisabled(true); 
-        if (button) button.innerHTML = `<div class="my-ext-button-loader"></div>`; 
-        contentBox.innerHTML = await getRandomQuote(); 
-        const currentPass = await getApiPass();
-        
-        let apiError = false; // Biến cờ để theo dõi lỗi API
-        let hasContent = false; // Biến cờ để theo dõi nội dung
-        
+        // 1. UI Loading
+        setMainButtonsDisabled(true);
+        if (button) button.innerHTML = `<div class="my-ext-button-loader"></div>`;
+        contentBox.innerHTML = await getRandomQuote();
+
+        let foundOldData = false;
+
         try {
+            // --- BƯỚC 1: GỌI API ĐỂ CHECK DỮ LIỆU CŨ ---
+            const currentPass = await getApiPass();
+            console.log("📡 [Ext] Check dữ liệu cũ...");
+
             const response = await fetch(API, {
                 method: "POST",
                 body: JSON.stringify({
-                    code: shortUrl, action: API_ACTION_GET_SUMMARY_BY_CODE, pass: currentPass
+                    code: shortUrl,
+                    action: API_ACTION_GET_SUMMARY_BY_CODE,
+                    pass: currentPass
                 })
             });
 
-            if (!response.ok) {
-                throw new Error("Lỗi mạng hoặc API");
-            }
-            
-            const data = await response.json();
-            contentBox.innerHTML = ""; 
-            
-            if (data.code == 1) {
-                const linksData = data.data; 
-                const linkStyle = `color: #065fd4; text-decoration: none; font-weight: 500; cursor: pointer;`;
-                
-                // Kiểm tra nội dung tóm tắt
-                if (linksData.summary || linksData.notebooklm || linksData.mindomo) {
-                    hasContent = true;
-                    
-                    if (linksData.summary) {
-                        const summaryLink = document.createElement("a");
-                        summaryLink.textContent = "Summary";
-                        summaryLink.href = "#"; 
-                        summaryLink.style.cssText = linkStyle;
-                        summaryLink.onclick = (e) => { e.preventDefault(); showSummaryPopup(linksData.summary); };
-                        contentBox.appendChild(summaryLink);
-                    }
-                    if (linksData.notebooklm) {
-                        const notebookLink = document.createElement("a");
-                        notebookLink.textContent = "NotebookLM";
-                        notebookLink.href = linksData.notebooklm;
-                        notebookLink.target = "_blank";
-                        notebookLink.style.cssText = linkStyle;
-                        contentBox.appendChild(notebookLink);
-                    }
-                    if (linksData.mindomo) {
-                        const mindomoLink = document.createElement("a");
-                        mindomoLink.textContent = "Mindomo";
-                        mindomoLink.href = linksData.mindomo;
-                        mindomoLink.target = "_blank";
-                        mindomoLink.style.cssText = linkStyle;
-                        contentBox.appendChild(mindomoLink);
-                    }
-                }
+            if (response.ok) {
+                const data = await response.json();
 
-                if (!hasContent) {
-                    // Nếu API trả về thành công (code=1) nhưng data rỗng
-                    contentBox.innerHTML = `<span style="color: var(--yt-spec-text-secondary);">Không có dữ liệu.</span>`; 
-                }
+                // Nếu có dữ liệu cũ -> Hiển thị ngay
+                if (data.code == 1 && data.data && (data.data.summary || data.data.notebooklm)) {
+                    console.log("✅ [Ext] Tìm thấy dữ liệu cũ.");
+                    foundOldData = true;
 
-            } else {
-                // API trả về lỗi (code != 1)
-                apiError = true;
-                contentBox.innerHTML = `<span style="color: #f00;">${data.error || 'Lỗi không xác định'}</span>`;
+                    // Gọi hàm vẽ giao diện chung
+                    renderNotebookUi(contentBox, data.data);
+
+                    setMainButtonsDisabled(false);
+                    if (button) button.innerHTML = "Tóm tắt";
+                    return; // Xong việc
+                }
             }
-        
         } catch (error) {
-            console.error("[Ext] Lỗi khi fetch summary:", error);
-            apiError = true;
-            contentBox.innerHTML = `<span style="color: #f00;">Đã xảy ra lỗi</span>`;
-        } finally {
-            // --- LOGIC MỚI: TỰ ĐỘNG CHUYỂN NGHIỆP VỤ ---
-            // Nếu có lỗi API hoặc không có nội dung, tự động chuyển sang tạo mới
-            if (apiError || !hasContent) {
-                console.log("[Ext] Không có dữ liệu hoặc lỗi API. Tự động chuyển sang tạo mới.");
-                openVietGidoFlow(shortUrl, videoTitle);
-            }
-            // ------------------------------------------
+            console.warn("⚠️ [Ext] Lỗi check API cũ:", error);
+        }
 
-            setMainButtonsDisabled(false); 
-            if (button) button.innerHTML = "Tóm tắt"; 
+        // --- BƯỚC 2: NẾU KHÔNG CÓ DỮ LIỆU -> TẠO MỚI ---
+        if (!foundOldData) {
+            console.log("🚀 [Ext] Tạo Notebook mới...");
+            contentBox.innerHTML = `<span style="color: var(--yt-spec-text-secondary);">Đang khởi tạo NotebookLM...</span>`;
+
+            try {
+                // Gọi Background tạo Notebook
+                chrome.runtime.sendMessage(
+                    { action: "create_notebook_from_youtube", url: shortUrl },
+                    async (response) => {
+
+                        // --- XỬ LÝ KẾT QUẢ TRẢ VỀ ---
+
+                        if (chrome.runtime.lastError) {
+                            contentBox.innerHTML = `<span style="color: red;">Lỗi kết nối Extension!</span>`;
+                        }
+                        else if (response && response.success) {
+                            const newNotebookId = response.notebookId;
+                            const newNotebookLink = `https://notebooklm.google.com/notebook/${newNotebookId}`;
+
+                            console.log("✅ [Ext] Tạo xong ID:", newNotebookId);
+
+                            // --- BƯỚC 3: LƯU VÀO CSDL ---
+                            contentBox.innerHTML = `<span style="color: var(--yt-spec-text-secondary);">Đang lưu vào hệ thống...</span>`;
+
+                            // Gọi hàm lưu dữ liệu (chạy ngầm, không cần await nếu muốn nhanh, 
+                            // nhưng await để chắc chắn lưu xong mới hiện link thì tốt hơn)
+                            await saveDataToSystem(newNotebookId, shortUrl, videoTitle);
+
+                            // --- BƯỚC 4: HIỂN THỊ LINK (Thay vì thông báo text) ---
+                            // Giả lập object data giống API trả về để tái sử dụng hàm render
+                            const newDataObject = {
+                                notebooklm: newNotebookLink,
+                                // summary: "Đang chờ xử lý...", // Có thể thêm placeholder nếu muốn
+                                // mindomo: ...
+                            };
+
+                            // Vẽ lại giao diện y hệt như lúc có dữ liệu cũ
+                            renderNotebookUi(contentBox, newDataObject);
+
+                        } else {
+                            contentBox.innerHTML = `<span style="color: red;">Lỗi: ${response?.error}</span>`;
+                        }
+
+                        setMainButtonsDisabled(false);
+                        if (button) button.innerHTML = "Tóm tắt";
+                    }
+                );
+            } catch (e) {
+                console.error(e);
+                contentBox.innerHTML = `<span style="color: red;">Lỗi Script</span>`;
+                setMainButtonsDisabled(false);
+                if (button) button.innerHTML = "Tóm tắt";
+            }
         }
     };
 
 
-
-    const createMyNewBox = () => { 
+    const createMyNewBox = () => {
         if (document.getElementById(MY_BOX_ID)) return null;
-        
+
         const myBox = document.createElement("div");
         myBox.id = MY_BOX_ID;
-        
+
         Object.assign(myBox.style, {
             border: "2px solid #065fd4", borderRadius: "12px", padding: "16px",
-            margin: "0 0 16px 0", background: "var(--yt-spec-background-secondary)", 
+            margin: "0 0 16px 0", background: "var(--yt-spec-background-secondary)",
             color: "var(--yt-spec-text-primary)", fontFamily: "Roboto, Arial, sans-serif",
             fontSize: "14px", zIndex: "10",
             display: 'flex', flexDirection: 'column',
-            height: YOUTUBE_PANEL_FIXED_HEIGHT, 
+            height: YOUTUBE_PANEL_FIXED_HEIGHT,
             maxHeight: "40vh"
         });
-        
+
         myBox.style.setProperty("order", "-999", "important");
 
         myBox.innerHTML = `
@@ -526,24 +642,24 @@ const openVietGidoFlow = async (shortUrl, videoTitle) => {
     // Hàm: scanAndInject
     const scanAndInject = () => {
         // HÀM NÀY SẼ CHỈ CHẠY NẾU settings.ytEnableSummaryBox = true
-        
+
         const currentUrl = window.location.href;
-        const shortUrl = getShortYouTubeUrl(currentUrl); 
+        const shortUrl = getShortYouTubeUrl(currentUrl);
         let myBox = document.getElementById(MY_BOX_ID);
         const parentContainer = document.querySelector(PARENT_CONTAINER_SELECTOR);
-        if (!parentContainer) return; 
+        if (!parentContainer) return;
 
         parentContainer.style.setProperty("display", "flex", "important");
         parentContainer.style.setProperty("flex-direction", "column", "important");
 
         // Biến cờ để xác định xem có cần chạy auto-summary không
-        let shouldAutoRun = false; 
+        let shouldAutoRun = false;
 
         if (!myBox) {
-            myBox = createMyNewBox(); 
+            myBox = createMyNewBox();
             if (!myBox) return;
             parentContainer.prepend(myBox);
-            myBox.dataset.currentUrl = shortUrl; 
+            myBox.dataset.currentUrl = shortUrl;
             console.log("[Ext] Đã chèn box MỚI.");
             shouldAutoRun = true; // Box mới -> Cần chạy nếu auto bật
         } else {
@@ -556,17 +672,17 @@ const openVietGidoFlow = async (shortUrl, videoTitle) => {
                 }
                 const summaryButton = myBox.querySelector(`#${SUMMARY_BUTTON_ID}`);
                 if (summaryButton) summaryButton.innerHTML = "Tóm tắt";
-                setMainButtonsDisabled(false); 
+                setMainButtonsDisabled(false);
                 console.log("[Ext] Phát hiện URL mới, đã reset box.");
                 shouldAutoRun = true; // URL mới -> Cần chạy nếu auto bật
             }
         }
-        
+
         const summaryButton = myBox.querySelector(`#${SUMMARY_BUTTON_ID}`);
         if (summaryButton) {
-             summaryButton.onclick = () => {
+            summaryButton.onclick = () => {
                 console.log("[Ext] Người dùng nhấn 'Tóm tắt'.");
-                fetchSummary(shortUrl); 
+                fetchSummary(shortUrl);
             };
 
             // --- LOGIC TỰ ĐỘNG TÓM TẮT ---
@@ -593,12 +709,12 @@ const openVietGidoFlow = async (shortUrl, videoTitle) => {
 
     // 2. Tạo Observer tổng
     const observer = new MutationObserver((mutations) => {
-        
+
         // Logic cho trang xem video (/watch) (NẾU ĐƯỢC BẬT)
         if (settings.ytEnableSummaryBox && window.location.pathname === "/watch") {
             setTimeout(scanAndInject, 300);
         }
-        
+
         // Logic cho trang chủ (/) (NẾU ĐƯỢC BẬT)
         if (settings.ytEnableHomepageHider) {
             checkHomepageVisibility();
@@ -610,12 +726,12 @@ const openVietGidoFlow = async (shortUrl, videoTitle) => {
 
     // 4. Chạy lần đầu khi tải trang
     setTimeout(() => {
-         if (settings.ytEnableSummaryBox && window.location.pathname === "/watch") {
+        if (settings.ytEnableSummaryBox && window.location.pathname === "/watch") {
             scanAndInject();
-         }
-         if (settings.ytEnableHomepageHider) {
+        }
+        if (settings.ytEnableHomepageHider) {
             checkHomepageVisibility();
-         }
+        }
     }, 1000);
 
 } // <-- Dấu ngoặc đóng hàm initializeYouTubeHandler
@@ -627,7 +743,7 @@ const openVietGidoFlow = async (shortUrl, videoTitle) => {
  * (Đọc cài đặt và gọi hàm xử lý chính)
  * ===================================================================
  */
-(function() {
+(function () {
     if (typeof chrome !== 'undefined' && chrome.storage?.local) {
         // Dùng SETTINGS_KEY chung từ config.js
         chrome.storage.local.get(SETTINGS_KEY, (data) => {
@@ -638,7 +754,7 @@ const openVietGidoFlow = async (shortUrl, videoTitle) => {
             if (settings.ytEnableHomepageHider || settings.ytEnableSummaryBox || settings.ytEnableHideRelated) {
                 initializeYouTubeHandler(settings);
             } else {
-                 console.log("🚀 [Ext] YouTube: Tất cả tính năng đều tắt.");
+                console.log("🚀 [Ext] YouTube: Tất cả tính năng đều tắt.");
             }
         });
     } else {
