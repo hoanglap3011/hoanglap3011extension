@@ -1,6 +1,6 @@
 // api
 const API = 
-"https://script.google.com/macros/s/AKfycbw9TWKEYf2E0__wlSDy5aYh7mD_hOEOx3NEo3F_pTYQkqwOOgofcdTSRjIqrgH4BkF5GA/exec"
+"https://script.google.com/macros/s/AKfycbxO4yeOkR1Y48SnaKZoEv_jOBP7dgwdlLy6wi0Ob6530PAcLUAF8vGiMmi0nd3OYTHQwQ/exec"
 ;
 
 const API_ACTION_GET_SUMMARY_BY_CODE = "getSummaryByCode";
@@ -9,6 +9,9 @@ const API_ACTION_GET_QUOTES = "getQuotes";
 const API_ACTION_ADD_VIETGIDO = "addVietGiDo";
 const API_ACTION_GET_DANHMUC_QUOTES = "getDanhMucAndQuote";
 const API_ACTION_GET_TODOLIST_WEEK = "getToDoListWeek";
+const API_ACTION_GET_METADATA_INTENT_TIME = "getMetaDataIntentTime";
+const API_ACTION_ADD_INTENT_TIME_DATA = "addIntentTimeData";
+
 
 // CACHE KEYS
 const CACHE_PASS = "pass";
@@ -24,6 +27,9 @@ const CACHE_AUTO_NEXT = 'autoNextSwitchState';
 const CACHE_SHOW_TOOLBAR = 'showToolbarSwitchState';
 const CACHE_HIDE_UNREQUIRED = 'hideUnrequiredSwitchState';
 const CACHE_SHOW_CONGRATS = 'showCongratSwitchState';
+
+// intent-time
+const CACHE_HABIT_LIST = 'habitList';
 
 // recap
 const CACHE_DATA_RECAP = 'dataRecap';

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intent Time Tracker</title>
+    <link rel="stylesheet" href="loadingOverlay.css">    
+    <link rel="stylesheet" href="notificationUtil.css"> 
+    <link rel="stylesheet" href="intent-time.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header-center">
+            <div class="search-wrapper">
+                <input type="text" id="search-input" placeholder="Tìm thói quen..." autofocus>
+                <button id="btn-refresh" title="Cập nhật Cache">🔄</button>
+            </div>
+        </header>
+
+        <div id="habit-list" class="habit-grid"></div>
+    </div>
+
+    <div id="input-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3 id="modal-title">Tên thói quen</h3>
+            <div class="input-group">
+                <input type="number" id="habit-value" placeholder="0" inputmode="numeric">
+                <span id="modal-unit-label">Đơn vị</span>
+            </div>
+            <textarea id="habit-note" placeholder="Ghi chú"></textarea>
+            <div class="btn-group">
+                <button class="btn btn-cancel" id="btn-close">Hủy</button>
+                <button class="btn btn-ok" id="btn-submit">LƯU DỮ LIỆU</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script> 
+    <script src="notificationUtil.js"></script>
+    <script src="loadingOverlay.js" defer></script>
+    <script src="storageUtil.js" defer></script>    
+    <script src="intent-time.js"></script>
+</body>
+</html>
