@@ -13,6 +13,7 @@ const VietGidoApp = {
     CACHE_HIDE_UNREQUIRED: CACHE_HIDE_UNREQUIRED,
     CACHE_QUOTES: CACHE_QUOTES,
     CACHE_PASS: CACHE_PASS,
+    CACHE_SHOW_CONGRATS: CACHE_SHOW_CONGRATS,
   },
 
   // --- Trạng thái của ứng dụng ---
@@ -94,7 +95,8 @@ const VietGidoApp = {
   // =================================================================
   cacheDomElements() {
     const ids = ['danhMucSelect', 'entriesContainer', 'addBtn', 'submitBtn', 'updateDanhMucBtn', 'autoNextTheLoaiBietOnSwtich', 'loadingOverlay', 'loadingQuote', 'congratsOverlay', 'confettiCanvas',
-      'toggleAllToolbarsSwitch' // <-- THÊM ID MỚI VÀO ĐÂY
+      'toggleAllToolbarsSwitch',
+      'toggleCongratsOverlaySwitch',
       , 'autoHideUnRequiredFieldSwtich'
     ];
     ids.forEach(id => this.dom[id] = document.getElementById(id));
@@ -121,6 +123,12 @@ const VietGidoApp = {
     if (this.dom.autoHideUnRequiredFieldSwtich) {
       this.dom.autoHideUnRequiredFieldSwtich.addEventListener('change', this.handlers.onToggleHideUnrequired.bind(this));
     }
+
+    if (this.dom.toggleCongratsOverlaySwitch) {
+        this.dom.toggleCongratsOverlaySwitch.addEventListener('change', e => {
+            StorageUtil.set({ [this.config.CACHE_SHOW_CONGRATS]: e.target.checked });
+        });
+    }    
   },
 
   loadInitialState() {
@@ -156,6 +164,14 @@ const VietGidoApp = {
       // Áp dụng trạng thái lên UI
       this.ui.applyFieldVisibility.call(this, hideUnrequired);
     });
+
+    StorageUtil.get(this.config.CACHE_SHOW_CONGRATS, data => {
+        let show = data[this.config.CACHE_SHOW_CONGRATS];
+        if (show == null) show = true; // Mặc định là bật
+        if (this.dom.toggleCongratsOverlaySwitch) {
+            this.dom.toggleCongratsOverlaySwitch.checked = show;
+        }
+    });    
   },
 
   initDanhMucSelect() {
@@ -281,7 +297,13 @@ const VietGidoApp = {
         if (result?.code !== 1) throw new Error(result?.error || 'Lỗi không xác định từ server');
 
         this.render.buildEntriesForSelected.call(this, this.dom.danhMucSelect?.value);
-        this.ui.showCongrats.call(this);
+
+        const showCongrats = this.dom.toggleCongratsOverlaySwitch ? this.dom.toggleCongratsOverlaySwitch.checked : true;
+        if (showCongrats) {
+            this.ui.showCongrats.call(this);
+        } else {
+            this.ui.showNotification.call(this, '💾 Đã lưu dữ liệu thành công!', 'success');
+        }
       } catch (err) {
         this.ui.showNotification.call(this, `❌ Lỗi: ${err.message}`, 'error');
       } finally {

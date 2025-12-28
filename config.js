@@ -1,7 +1,8 @@
 // api
 const API = 
-"https://script.google.com/macros/s/AKfycbwJdYaBuxkH4Sloo4pzU0R7KE4VcHl2tdMGXtyw6XWFvHCBntUZYcAtRJq1XUaay746CQ/exec"
+"https://script.google.com/macros/s/AKfycbw9TWKEYf2E0__wlSDy5aYh7mD_hOEOx3NEo3F_pTYQkqwOOgofcdTSRjIqrgH4BkF5GA/exec"
 ;
+
 const API_ACTION_GET_SUMMARY_BY_CODE = "getSummaryByCode";
 const API_ACTION_GET_SUMMARY_BY_CATEGORY = "getSummariesByCategory";
 const API_ACTION_GET_QUOTES = "getQuotes";
@@ -22,6 +23,7 @@ const CACHE_DANH_MUC = 'selectedDanhMuc';
 const CACHE_AUTO_NEXT = 'autoNextSwitchState';
 const CACHE_SHOW_TOOLBAR = 'showToolbarSwitchState';
 const CACHE_HIDE_UNREQUIRED = 'hideUnrequiredSwitchState';
+const CACHE_SHOW_CONGRATS = 'showCongratSwitchState';
 
 // recap
 const CACHE_DATA_RECAP = 'dataRecap';
