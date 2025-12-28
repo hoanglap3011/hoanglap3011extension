@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", function () {
     ["btnHabit", openHabit],
     ["btnEnter", openPasswordPopup],
     ["btnVietGiDo", vietGiDo],
+    ["btnIntentTime", openIntentTime],
     ["btnRecap", recap],
     ["btnToDoListThisWeek", openToDoListThisWeek],
     ["btnToDoListWeekCustom", openToDoListWeekCustom],
@@ -377,6 +378,10 @@ function shuffleArray(array) {
 
 function vietGiDo(){
   window.open("vietgido.html", '_blank');
+}
+
+function openIntentTime(){
+  window.open("intent-time.html", '_blank');
 }
 
 function openHabit(){
