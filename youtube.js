@@ -203,18 +203,19 @@ async function initializeYouTubeHandler(settings) {
         const messageBox = document.createElement("div");
         messageBox.id = HOMEPAGE_MESSAGE_ID;
 
-        Object.assign(messageBox.style, {
-            color: 'var(--yt-spec-text-primary, #030303)',
-            padding: '40px 20px', margin: '16px 0', textAlign: 'center',
-            fontSize: '18px', fontWeight: '500', lineHeight: '1.6',
-            background: 'var(--yt-spec-background-secondary, #f9f9f9)',
-            borderRadius: '12px', border: '1px dashed var(--yt-spec-divider, #ddd)',
-        });
+    Object.assign(messageBox.style, {
+        color: 'var(--yt-spec-text-primary)',        // ✅ bỏ fallback hardcode
+        padding: '40px 20px', margin: '16px 0', textAlign: 'center',
+        fontSize: '18px', fontWeight: '500', lineHeight: '1.6',
+        background: 'var(--yt-spec-base-background)',  // ✅ dùng base background (theo theme)
+        borderRadius: '12px', border: '1px dashed var(--yt-spec-10-minute-badging-background)',
+    });
 
         messageBox.innerHTML = `
             Thời gian, năng lượng và cuộc sống là hữu hạn.<br>
             Mỗi lựa chọn hôm nay đều ảnh hưởng đến ngày mai.<br><br>
-            <strong style="font-size: 20px; color: var(--yt-spec-call-to-action, #065fd4);">Hãy làm chủ YouTube.</strong><br>
+            <strong style="font-size: 20px; color: var(--yt-spec-call-to-action);">
+            Hãy làm chủ YouTube. Đừng để nó làm chủ mình</strong><br><br>
             Sử dụng nó một cách thông minh để phục vụ cho mục tiêu của bạn.
         `;
         return messageBox;
@@ -479,7 +480,7 @@ async function initializeYouTubeHandler(settings) {
         const note = document.createElement("div");
         note.style.fontSize = "11px";
         note.style.color = "green";
-        note.textContent = "✓ Dữ liệu đã sẵn sàng";
+        // note.textContent = "✓ Dữ liệu đã sẵn sàng";
         container.appendChild(note);
     }
 
