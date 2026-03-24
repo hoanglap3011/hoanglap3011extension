@@ -6,6 +6,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cài đặt Lập's Extension</title>
     <link rel="stylesheet" href="options.css">
+    <style>
+        .setting-sub-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 0 12px 14px 16px;
+            margin-top: -8px;
+        }
+        .setting-sub-row textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+            line-height: 1.5;
+            color: #333;
+        }
+        .setting-sub-row textarea:focus {
+            outline: none;
+            border-color: #1877f2;
+        }
+        .setting-sub-row.hidden {
+            display: none;
+        }
+    </style>
 </head>
 
 <body>
@@ -27,13 +55,19 @@
         <div class="setting-row">
             <label for="fbEnableBlockByKeyword" class="switchLabel">
                 <strong>Ẩn khối theo từ khóa</strong>
-                <span class="description">Tự động ẩn Reels, Gợi ý, và các mục trong
-                    <code>facebook_blocklist.json</code>.</span>
+                <span class="description">Tự động ẩn các khối chứa từ khóa trong danh sách bên dưới.</span>
             </label>
             <label class="switch">
                 <input type="checkbox" id="fbEnableBlockByKeyword">
                 <span class="slider"></span>
             </label>
+        </div>
+        <div class="setting-sub-row" id="blockKeywordSection">
+            <label for="fbBlockKeywords" class="switchLabel">
+                <strong>Danh sách từ khóa</strong>
+                <span class="description">Mỗi dòng một từ khóa. Khối nào chứa từ khóa sẽ bị ẩn.</span>
+            </label>
+            <textarea id="fbBlockKeywords" rows="7" placeholder="Nhập từ khóa, mỗi dòng một từ..."></textarea>
         </div>
 
         <div class="setting-row">
