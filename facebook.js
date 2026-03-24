@@ -314,11 +314,28 @@ function initializeFacebookHandler(settings) {
 
     // === API & UI ===
 
+    const getApiPass = async () => {
+        try {
+            const result = await chrome.storage.local.get(CACHE_PASS);
+            if (result[CACHE_PASS]) {
+                return result[CACHE_PASS];
+            }
+        } catch (e) {
+            console.error(`[Ext] Lỗi khi đọc '${CACHE_PASS}' từ storage:`, e);
+        }
+        return null;
+    };
+
     const summarizePostContent = async (content, postUrl) => {
         if (!PROXY_URL || PROXY_URL === "PROXY_URL_NOT_FOUND")
             return "Lỗi cấu hình: Không tìm thấy URL Proxy trong config.js.";
 
-        const pass = await new Promise(r => chrome.storage.local.get(['pass'], d => r(d.pass || '')));
+        const pass = await getApiPass();
+        if (!pass) {
+            alert("Cảnh báo: Bạn chưa cấu hình mật khẩu API trong cài đặt. Vui lòng kiểm tra lại!");
+            return;
+        }
+
         try {
             const res = await fetch(PROXY_URL, {
                 method: 'POST',

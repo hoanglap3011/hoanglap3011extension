@@ -80,17 +80,14 @@ async function initializeYouTubeHandler(settings) {
     };
     const getApiPass = async () => {
         try {
-            // DÙNG HẰNG SỐ
             const result = await chrome.storage.local.get(CACHE_PASS);
-
-            // DÙNG HẰNG SỐ
-            if (result[CACHE_PASS] !== undefined) {
+            if (result[CACHE_PASS]) {
                 return result[CACHE_PASS];
             }
         } catch (e) {
             console.error(`[Ext] Lỗi khi đọc '${CACHE_PASS}' từ storage:`, e);
         }
-        return "hihi";
+        return null;
     };
 
     // Định nghĩa ID (Đã loại bỏ NEW_SUMMARY_BUTTON_ID)
@@ -501,6 +498,10 @@ async function initializeYouTubeHandler(settings) {
         try {
             // --- BƯỚC 1: GỌI API ĐỂ CHECK DỮ LIỆU CŨ ---
             const currentPass = await getApiPass();
+            if (!currentPass) {
+                alert("Cảnh báo: Bạn chưa cấu hình mật khẩu API trong cài đặt. Vui lòng kiểm tra lại!");
+                return; // DỪNG LUÔN TẠI ĐÂY
+            }
             console.log("📡 [Ext] Check dữ liệu cũ...");
 
             const response = await fetch(API, {
