@@ -43,6 +43,18 @@ const YOUTUBE_PANEL_FIXED_HEIGHT = "230px";
 // =======================================================
 // --- CÀI ĐẶT TOÀN BỘ EXTENSION (ĐÃ CHUẨN HÓA) ---
 // =======================================================
+
+// Từ khóa ẩn khối mặc định cho Facebook (dùng chung bởi options.js và facebook.js)
+const DEFAULT_FB_KEYWORDS = [
+    "Những người bạn có thể biết",
+    "People You May Know",
+    "Reels",
+    "Phòng họp mặt và Reels",
+    "Được đề xuất cho bạn",
+    "Suggested for you",
+    "Bí Mật Showbiz"
+];
+
 // Key lưu trữ CHUNG cho tất cả cài đặt
 const SETTINGS_KEY = 'LapsExtensionSettings';
 

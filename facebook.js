@@ -1,18 +1,3 @@
-/*
-Tuyệt! Glad it works! 🎉
-Để dễ maintain sau này, mỗi khi Facebook deploy update và extension bị hỏng lại, chỉ cần chạy đúng 2 đoạn debug này:
-Bước 1 — Tìm post selector mới:
-jsconst btn = document.querySelector('[aria-haspopup="menu"]');
-let el = btn, path = [];
-while (el) { path.push(el); el = el.parentElement; if (path.length > 15) break; }
-path.forEach((e,i) => console.log(`+${i}:`, e.tagName, [...e.attributes].map(a=>`${a.name}="${a.value.substring(0,50)}"`).join(' ').substring(0,100)));
-Bước 2 — Update 2 dòng trong CONFIG:
-jsPOST_SELECTOR: 'div.CLASSNAME[style*="--card-corner-radius"]',  // class của outermost card
-INJECT_ROW_DEPTH: N,      // cấp +N chứa row Like/Comment/Share
-INJECT_BEFORE_DEPTH: N-1, // cấp +N-1
-Chúc extension chạy ổn! 😊 Sonnet 4.6
-*/
-
 // == RUNNER ==
 (function() {
     const storage = {
@@ -118,26 +103,16 @@ function initializeFacebookHandler(settings) {
 
     // === BLOCKLIST ===
 
-    // Từ khóa mặc định — dùng khi storage chưa có data (lần đầu cài)
-    const DEFAULT_KEYWORDS = [
-        "Những người bạn có thể biết",
-        "People You May Know",
-        "Reels",
-        "Phòng họp mặt và Reels",
-        "Được đề xuất cho bạn",
-        "Suggested for you",
-        "Bí Mật Showbiz"
-    ];
-
+    // DEFAULT_FB_KEYWORDS được định nghĩa trong config.js (load trước)
     async function loadBlocklist() {
         return new Promise(resolve => {
             chrome.storage.local.get(CONFIG.KEYWORDS_STORAGE_KEY, (data) => {
                 const raw = data[CONFIG.KEYWORDS_STORAGE_KEY];
                 if (raw === undefined) {
                     // Lần đầu chạy: seed default vào storage luôn
-                    const defaultRaw = DEFAULT_KEYWORDS.join('\n');
+                    const defaultRaw = DEFAULT_FB_KEYWORDS.join('\n');
                     chrome.storage.local.set({ [CONFIG.KEYWORDS_STORAGE_KEY]: defaultRaw });
-                    g_blockList = DEFAULT_KEYWORDS;
+                    g_blockList = [...DEFAULT_FB_KEYWORDS];
                     console.log("[Ext] Blocklist: dùng default, đã seed vào storage.");
                 } else {
                     g_blockList = raw.split('\n').map(s => s.trim()).filter(s => s.length > 0);
@@ -168,8 +143,12 @@ function initializeFacebookHandler(settings) {
         document.querySelectorAll(CONFIG.POST_SELECTOR).forEach((post, index) => {
             if (post.hasAttribute(CONFIG.PROCESSED_MARKER)) return;
 
-            // Bỏ qua nếu post này nằm lồng bên trong một post khác (nested card)
+            // Bỏ qua nested card
             if (post.parentElement?.closest(CONFIG.POST_SELECTOR)) return;
+
+            // Bỏ qua các khối bị block (Reels, Gợi ý, v.v.) — không cần nút Tóm Tắt
+            const headerText = (post.innerText || '').substring(0, CONFIG.HEADER_SCAN_LENGTH);
+            if (g_blockList.some(kw => headerText.includes(kw))) return;
 
             const anchorBtn = findAnchorButton(post);
             if (!anchorBtn) return;
@@ -392,24 +371,25 @@ function initializeFacebookHandler(settings) {
     };
 
     // === INITIALIZATION ===
+    // Load blocklist TRƯỚC, rồi mới khởi động tất cả — đảm bảo g_blockList
+    // luôn có data trước khi bất kỳ scan nào chạy (kể cả nút Tóm Tắt)
+    loadBlocklist().then(() => {
 
-    if (settings.fbEnableBlockByKeyword) {
-        // loadBlocklist trước, SAU ĐÓ mới scan (fix race condition)
-        loadBlocklist().then(() => scanAndBlockModules());
-    }
-
-    if (settings.fbEnableSummarize) {
-        setTimeout(scanAndAttachSummarizeButtons, CONFIG.INITIAL_SCAN_DELAY);
-    }
-
-    let debounceTimer;
-    const observer = new MutationObserver(() => {
         if (settings.fbEnableBlockByKeyword) scanAndBlockModules();
         if (settings.fbEnableSummarize) {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(scanAndAttachSummarizeButtons, CONFIG.DEBOUNCE_TIME);
+            setTimeout(scanAndAttachSummarizeButtons, CONFIG.INITIAL_SCAN_DELAY);
         }
+
+        let debounceTimer;
+        const observer = new MutationObserver(() => {
+            if (settings.fbEnableBlockByKeyword) scanAndBlockModules();
+            if (settings.fbEnableSummarize) {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(scanAndAttachSummarizeButtons, CONFIG.DEBOUNCE_TIME);
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+
     });
-    observer.observe(document.body, { childList: true, subtree: true });
 
 } // initializeFacebookHandler

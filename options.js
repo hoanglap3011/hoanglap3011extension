@@ -1,15 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // Từ khóa mặc định (thay thế facebook_blocklist.json)
-    const DEFAULT_KEYWORDS = [
-        "Những người bạn có thể biết",
-        "People You May Know",
-        "Reels",
-        "Phòng họp mặt và Reels",
-        "Được đề xuất cho bạn",
-        "Suggested for you",
-        "Bí Mật Showbiz"
-    ].join('\n');
+    // DEFAULT_FB_KEYWORDS được định nghĩa trong config.js (load trước)
+    const DEFAULT_KEYWORDS = DEFAULT_FB_KEYWORDS.join('\n');
 
     const KEYWORDS_KEY = 'fbBlockKeywordsList';
 

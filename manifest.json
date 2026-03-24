@@ -94,10 +94,6 @@
     {
       "resources": ["image/add.png"],
       "matches": ["*://*.ticketbox.vn/*", "*://ticketbox.vn/*"]
-    },
-    {
-      "resources": ["facebook_blocklist.json"],
-      "matches": ["*://*.facebook.com/*","*://facebook.com/*"]
     }  
   ],
   "commands": {
