@@ -1,33 +1,100 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // DEFAULT_FB_KEYWORDS được định nghĩa trong config.js (load trước)
-    const DEFAULT_KEYWORDS = DEFAULT_FB_KEYWORDS.join('\n');
+    // Defaults từ config.js
+    const FB_KEYWORDS_DEFAULT      = DEFAULT_FB_KEYWORDS.join('\n');
+    const WEBSITE_BLOCKLIST_DEFAULT = DEFAULT_WEBSITE_BLOCKLIST;
 
-    const KEYWORDS_KEY = 'fbBlockKeywordsList';
-
-    // DOM Elements — switches
+    // === SWITCHES ===
     const switches = {
-        fbEnableSummarize:        document.getElementById('fbEnableSummarize'),
-        fbEnableBlockByKeyword:   document.getElementById('fbEnableBlockByKeyword'),
-        fbEnableHideStories:      document.getElementById('fbEnableHideStories'),
-        ytEnableHomepageHider:    document.getElementById('ytEnableHomepageHider'),
-        ytEnableSummaryBox:       document.getElementById('ytEnableSummaryBox'),
-        ytEnableAutoSummarize:    document.getElementById('ytEnableAutoSummarize'),
-        ytEnableAutoCloseNotebook:document.getElementById('ytEnableAutoCloseNotebook'),
-        ytEnableHideRelated:      document.getElementById('ytEnableHideRelated'),
+        // Website blocker
+        enableWebsiteBlocker:      document.getElementById('enableWebsiteBlocker'),
+        // Facebook
+        fbEnableSummarize:         document.getElementById('fbEnableSummarize'),
+        fbEnableBlockByKeyword:    document.getElementById('fbEnableBlockByKeyword'),
+        fbEnableHideStories:       document.getElementById('fbEnableHideStories'),
+        // YouTube
+        ytEnableHomepageHider:     document.getElementById('ytEnableHomepageHider'),
+        ytEnableSummaryBox:        document.getElementById('ytEnableSummaryBox'),
+        ytEnableAutoSummarize:     document.getElementById('ytEnableAutoSummarize'),
+        ytEnableAutoCloseNotebook: document.getElementById('ytEnableAutoCloseNotebook'),
+        ytEnableHideRelated:       document.getElementById('ytEnableHideRelated'),
     };
 
-    const keywordsTextarea  = document.getElementById('fbBlockKeywords');
-    const keywordSection    = document.getElementById('blockKeywordSection');
-    const saveStatus        = document.getElementById('saveStatus');
+    const fbKeywordsTextarea       = document.getElementById('fbBlockKeywords');
+    const fbKeywordSection         = document.getElementById('blockKeywordSection');
+    const websiteBlocklistTextarea = document.getElementById('websiteBlocklist');
+    const saveStatus               = document.getElementById('saveStatus');
 
-    // Hiện/ẩn textarea theo trạng thái toggle
+    // === COLLAPSE / EXPAND ===
+    const COLLAPSE_KEY = 'optionsCollapseState';
+
+    function saveCollapseState() {
+        const state = {};
+        document.querySelectorAll('.section-header').forEach(header => {
+            const targetId = header.getAttribute('data-target');
+            state[targetId] = document.getElementById(targetId).classList.contains('open');
+        });
+        chrome.storage.local.set({ [COLLAPSE_KEY]: state });
+    }
+
+    function loadCollapseState() {
+        chrome.storage.local.get(COLLAPSE_KEY, (data) => {
+            const state = data[COLLAPSE_KEY] || {}; // mặc định: tất cả thu gọn
+            document.querySelectorAll('.section-header').forEach(header => {
+                const targetId = header.getAttribute('data-target');
+                const isOpen = state[targetId] === true;
+                document.getElementById(targetId).classList.toggle('open', isOpen);
+                header.classList.toggle('open', isOpen);
+            });
+        });
+    }
+
+    document.querySelectorAll('.section-header').forEach(header => {
+        header.addEventListener('click', (e) => {
+            if (e.target.closest('.switch')) return;
+
+            const targetId = header.getAttribute('data-target');
+            const body = document.getElementById(targetId);
+            const isOpen = body.classList.contains('open');
+
+            body.classList.toggle('open', !isOpen);
+            header.classList.toggle('open', !isOpen);
+            saveCollapseState();
+        });
+    });
+
+    loadCollapseState();
+
+    // === BADGE helpers ===
+    function updateBadge(badgeId, isOn) {
+        const badge = document.getElementById(badgeId);
+        if (!badge) return;
+        badge.textContent = isOn ? 'Bật' : 'Tắt';
+        badge.classList.toggle('off', !isOn);
+    }
+
+    function refreshBadges(settings) {
+        // Website blocker badge
+        updateBadge('badge-blocker', settings.enableWebsiteBlocker ?? true);
+        // Facebook: bật nếu ít nhất 1 tính năng FB đang bật
+        const fbOn = settings.fbEnableSummarize || settings.fbEnableBlockByKeyword || settings.fbEnableHideStories;
+        updateBadge('badge-facebook', fbOn);
+        // YouTube: bật nếu ít nhất 1 tính năng YT đang bật
+        const ytOn = settings.ytEnableHomepageHider || settings.ytEnableSummaryBox ||
+                     settings.ytEnableAutoSummarize || settings.ytEnableHideRelated;
+        updateBadge('badge-youtube', ytOn);
+    }
+
+    // === VISIBILITY helpers ===
     function updateKeywordSectionVisibility() {
-        if (switches.fbEnableBlockByKeyword.checked) {
-            keywordSection.classList.remove('hidden');
-        } else {
-            keywordSection.classList.add('hidden');
-        }
+        fbKeywordSection.classList.toggle('hidden', !switches.fbEnableBlockByKeyword.checked);
+    }
+
+    // === SAVE ===
+    function showSaved() {
+        saveStatus.textContent = 'Đã lưu cài đặt!';
+        saveStatus.style.opacity = '1';
+        setTimeout(() => { saveStatus.style.opacity = '0'; }, 2000);
     }
 
     function saveSettings() {
@@ -35,52 +102,51 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const key in switches) {
             if (switches[key]) currentSettings[key] = switches[key].checked;
         }
-
-        // Lưu keywords riêng (không nằm trong SETTINGS_KEY để dễ quản lý)
-        const keywords = keywordsTextarea.value;
-
-        chrome.storage.local.set(
-            { [SETTINGS_KEY]: currentSettings, [KEYWORDS_KEY]: keywords },
-            () => {
-                saveStatus.textContent = 'Đã lưu cài đặt!';
-                saveStatus.style.opacity = '1';
-                setTimeout(() => { saveStatus.style.opacity = '0'; }, 2000);
-            }
-        );
+        chrome.storage.local.set({
+            [SETTINGS_KEY]: currentSettings,
+            [FB_KEYWORDS_KEY]: fbKeywordsTextarea.value,
+            [WEBSITE_BLOCKLIST_KEY]: websiteBlocklistTextarea.value,
+        }, () => {
+            refreshBadges(currentSettings);
+            showSaved();
+        });
     }
 
+    // === LOAD ===
     function loadSettings() {
-        chrome.storage.local.get([SETTINGS_KEY, KEYWORDS_KEY], (data) => {
-            // Load switches
-            const settings = { ...DEFAULT_SETTINGS, ...(data[SETTINGS_KEY] || {}) };
+        chrome.storage.local.get([SETTINGS_KEY, FB_KEYWORDS_KEY, WEBSITE_BLOCKLIST_KEY], (data) => {
+            const settings = { ...DEFAULT_SETTINGS, enableWebsiteBlocker: true, ...(data[SETTINGS_KEY] || {}) };
+
             for (const key in switches) {
                 if (switches[key] && settings[key] !== undefined) {
                     switches[key].checked = settings[key];
                 }
             }
 
-            // Load keywords — dùng default nếu chưa có
-            keywordsTextarea.value = data[KEYWORDS_KEY] ?? DEFAULT_KEYWORDS;
+            fbKeywordsTextarea.value       = data[FB_KEYWORDS_KEY]       ?? FB_KEYWORDS_DEFAULT;
+            websiteBlocklistTextarea.value = data[WEBSITE_BLOCKLIST_KEY] ?? WEBSITE_BLOCKLIST_DEFAULT;
 
-            // Cập nhật visibility sau khi load
             updateKeywordSectionVisibility();
+            refreshBadges(settings);
         });
     }
 
     loadSettings();
 
-    // Listeners cho switches
+    // === LISTENERS ===
     Object.values(switches).forEach(el => {
         if (el) el.addEventListener('change', saveSettings);
     });
 
-    // Toggle visibility khi bật/tắt tính năng block
+    // Toggle visibility keyword section
     switches.fbEnableBlockByKeyword.addEventListener('change', updateKeywordSectionVisibility);
 
-    // Lưu khi textarea thay đổi (debounce nhẹ)
-    let keywordTimer;
-    keywordsTextarea.addEventListener('input', () => {
-        clearTimeout(keywordTimer);
-        keywordTimer = setTimeout(saveSettings, 600);
-    });
+    // Textareas — debounce 600ms
+    let debounceTimer;
+    const onTextareaInput = () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(saveSettings, 600);
+    };
+    fbKeywordsTextarea.addEventListener('input', onTextareaInput);
+    websiteBlocklistTextarea.addEventListener('input', onTextareaInput);
 });

@@ -1,145 +1,368 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cài đặt Lập's Extension</title>
+    <title>Cài đặt Lập's Extension</title>
     <link rel="stylesheet" href="options.css">
     <style>
+        /* === SECTION CARD === */
+        .section-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+
+        /* Header của mỗi section — click để collapse */
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            cursor: pointer;
+            user-select: none;
+            background: #f8f9fa;
+            border-bottom: 1px solid transparent;
+            transition: background 0.15s;
+        }
+        .section-header:hover { background: #f0f2f5; }
+        .section-header.open { border-bottom-color: #e0e0e0; }
+
+        .section-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-icon {
+            font-size: 18px;
+            line-height: 1;
+        }
+        .section-title {
+            font-size: 1.05em;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin: 0;
+        }
+        .section-badge {
+            font-size: 11px;
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-radius: 10px;
+            padding: 2px 8px;
+            font-weight: 600;
+        }
+        .section-badge.off {
+            background: #fce4ec;
+            color: #c62828;
+        }
+
+        /* Mũi tên collapse */
+        .collapse-arrow {
+            font-size: 12px;
+            color: #888;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+        .section-header.open .collapse-arrow { transform: rotate(180deg); }
+
+        /* Nội dung section */
+        .section-body {
+            display: none;
+            padding: 0 20px;
+            background: #fff;
+        }
+        .section-body.open { display: block; }
+
+        /* Master switch row (on/off cả section) */
+        .master-switch-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .master-switch-label strong { font-size: 1em; color: #333; }
+        .master-switch-label .description {
+            font-size: 0.85em; color: #888; display: block; margin-top: 2px;
+        }
+
+        /* Setting rows bên trong section */
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .setting-row:last-child { border-bottom: none; }
+
+        .switchLabel { cursor: pointer; flex-grow: 1; margin-right: 15px; }
+        .switchLabel strong { font-size: 1em; color: #050505; }
+        .switchLabel .description {
+            font-size: 0.88em; color: #555; display: block; margin-top: 3px;
+        }
+
+        /* Sub-row (textarea) */
         .setting-sub-row {
             display: flex;
             flex-direction: column;
             gap: 6px;
-            padding: 0 12px 14px 16px;
-            margin-top: -8px;
+            padding: 0 0 14px 0;
+            border-bottom: 1px solid #eee;
         }
+        .setting-sub-row:last-child { border-bottom: none; }
+        .setting-sub-row.hidden { display: none; }
+
         .setting-sub-row textarea {
             width: 100%;
             box-sizing: border-box;
             padding: 8px 10px;
-            border: 1px solid #ccc;
+            border: 1px solid #ddd;
             border-radius: 6px;
-            font-size: 13px;
-            font-family: inherit;
+            font-size: 12.5px;
+            font-family: monospace;
             resize: vertical;
-            line-height: 1.5;
+            line-height: 1.6;
             color: #333;
+            background: #fafafa;
         }
         .setting-sub-row textarea:focus {
             outline: none;
             border-color: #1877f2;
+            background: #fff;
         }
-        .setting-sub-row.hidden {
-            display: none;
+        .textarea-hint {
+            font-size: 11px;
+            color: #999;
+            line-height: 1.6;
+        }
+        .textarea-hint code {
+            background: #f0f0f0;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 11px;
+            color: #555;
+        }
+
+        /* Switch toggle */
+        .switch {
+            position: relative; display: inline-block;
+            width: 40px; height: 22px; flex-shrink: 0;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; inset: 0;
+            background-color: #d1d5db; border-radius: 20px; transition: .2s;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .slider:before {
+            position: absolute; content: "";
+            height: 16px; width: 16px; left: 3px; bottom: 3px;
+            background-color: white; border-radius: 50%; transition: .2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+        input:checked + .slider { background-color: #22c55e; }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        /* Save status */
+        #saveStatus {
+            text-align: center; color: #16a34a; font-weight: bold;
+            margin-top: 12px; opacity: 0; transition: opacity 0.3s;
+        }
+
+        code {
+            background: #eee; padding: 2px 4px;
+            border-radius: 4px; font-family: monospace;
+        }
+
+        /* === TOOLTIP === */
+        .switchLabel { position: relative; }
+        .switchLabel::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 0; top: calc(100% + 6px);
+            background: #333; color: #fff;
+            font-size: 11.5px; line-height: 1.5;
+            padding: 6px 10px; border-radius: 6px;
+            white-space: pre-line;
+            width: 260px; z-index: 9999;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.15s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        }
+        .switchLabel:hover::after { opacity: 1; }
+        /* Item cuối section: tooltip hiện lên trên thay vì xuống dưới */
+        .setting-row:last-child .switchLabel::after {
+            top: auto;
+            bottom: calc(100% + 6px);
         }
     </style>
 </head>
-
 <body>
     <main class="container">
-        <h1>Cài đặt Extension</h1>
+        <h1>Cài đặt Extension</h1>
 
-        <h2>Facebook</h2>
-        <div class="setting-row">
-            <label for="fbEnableSummarize" class="switchLabel">
-                <strong>Bật nút "Tóm Tắt"</strong>
-                <span class="description">Thêm nút "Tóm Tắt" (AI) vào mỗi bài đăng.</span>
-            </label>
-            <label class="switch">
-                <input type="checkbox" id="fbEnableSummarize">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="setting-row">
-            <label for="fbEnableBlockByKeyword" class="switchLabel">
-                <strong>Ẩn khối theo từ khóa</strong>
-                <span class="description">Tự động ẩn các khối chứa từ khóa trong danh sách bên dưới.</span>
-            </label>
-            <label class="switch">
-                <input type="checkbox" id="fbEnableBlockByKeyword">
-                <span class="slider"></span>
-            </label>
-        </div>
-        <div class="setting-sub-row" id="blockKeywordSection">
-            <label for="fbBlockKeywords" class="switchLabel">
-                <strong>Danh sách từ khóa</strong>
-                <span class="description">Mỗi dòng một từ khóa. Khối nào chứa từ khóa sẽ bị ẩn.</span>
-            </label>
-            <textarea id="fbBlockKeywords" rows="7" placeholder="Nhập từ khóa, mỗi dòng một từ..."></textarea>
-        </div>
-
-        <div class="setting-row">
-            <label for="fbEnableHideStories" class="switchLabel">
-                <strong>Ẩn khối Story (Tin)</strong>
-                <span class="description">Ẩn toàn bộ khu vực "Tin" (Stories) ở đầu trang.</span>
-            </label>
-            <label class="switch">
-                <input type="checkbox" id="fbEnableHideStories">
-                <span class="slider"></span>
-            </label>
+        <!-- ============================= -->
+        <!-- SECTION: CHẶN WEBSITE        -->
+        <!-- ============================= -->
+        <div class="section-card" id="card-blocker">
+            <div class="section-header" data-target="body-blocker">
+                <div class="section-header-left">
+                    <span class="section-icon">🚫</span>
+                    <span class="section-title">Chặn Website</span>
+                    <span class="section-badge off" id="badge-blocker">Tắt</span>
+                </div>
+                <span class="collapse-arrow">▼</span>
+            </div>
+            <div class="section-body" id="body-blocker">
+                <div class="master-switch-row">
+                    <label for="enableWebsiteBlocker" class="master-switch-label switchLabel" data-tooltip="Bật/tắt toàn bộ tính năng chặn
+và giới hạn thời gian website.">
+                        <strong>Bật tính năng chặn website</strong>
+                    </label>
+                    <label class="switch">
+                        <input type="checkbox" id="enableWebsiteBlocker">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-sub-row" id="websiteBlocklistSection">
+                    <label for="websiteBlocklist" class="switchLabel" style="margin-right:0;" data-tooltip="Mỗi dòng một website. Dòng bắt đầu bằng # là ghi chú.">
+                        <strong>Danh sách website</strong>
+                    </label>
+                    <textarea id="websiteBlocklist" rows="8" placeholder="tiktok.com&#10;voz.vn | 00:10&#10;vnexpress.net | 00:10 | 12:00-14:00"></textarea>
+                    <div class="textarea-hint">
+                        <strong>Cú pháp:</strong> <code>url</code> &nbsp;|&nbsp; <code>url | HH:MM</code> &nbsp;|&nbsp; <code>url | HH:MM | HH:MM-HH:MM</code><br>
+                         <code>tiktok.com</code> → chặn vĩnh viễn &nbsp;&nbsp;
+                         <code>voz.vn | 00:10</code> → tối đa 10 phút/ngày &nbsp;&nbsp;
+                         <code>vnexpress.net | 00:10 | 12:00-14:00</code> → 10 phút, chỉ trong 12h–14h
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <h2 style="margin-top: 24px;">YouTube</h2>
-        <div class="setting-row">
-            <label for="ytEnableHomepageHider" class="switchLabel">
-                <strong>Ẩn Video Trang Chủ</strong>
-                <span class="description">Ẩn tất cả video gợi ý ở trang chủ (youtube.com).</span>
-            </label>
-            <label class="switch">
-                <input type="checkbox" id="ytEnableHomepageHider">
-                <span class="slider"></span>
-            </label>
+        <!-- ============================= -->
+        <!-- SECTION: FACEBOOK            -->
+        <!-- ============================= -->
+        <div class="section-card" id="card-facebook">
+            <div class="section-header" data-target="body-facebook">
+                <div class="section-header-left">
+                    <span class="section-icon">📘</span>
+                    <span class="section-title">Facebook</span>
+                    <span class="section-badge" id="badge-facebook">Bật</span>
+                </div>
+                <span class="collapse-arrow">▼</span>
+            </div>
+            <div class="section-body" id="body-facebook">
+                <div class="setting-row">
+                    <label for="fbEnableSummarize" class="switchLabel" data-tooltip="Thêm nút "Tóm Tắt" (AI)
+vào mỗi bài đăng Facebook.">
+                        <strong>Bật nút "Tóm Tắt"</strong>
+                    </label>
+                    <label class="switch">
+                        <input type="checkbox" id="fbEnableSummarize">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-row">
+                    <label for="fbEnableBlockByKeyword" class="switchLabel" data-tooltip="Tự động ẩn các khối chứa
+từ khóa trong danh sách bên dưới.">
+                        <strong>Ẩn khối theo từ khóa</strong>
+                    </label>
+                    <label class="switch">
+                        <input type="checkbox" id="fbEnableBlockByKeyword">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-sub-row" id="blockKeywordSection">
+                    <label for="fbBlockKeywords" class="switchLabel" style="margin-right:0;" data-tooltip="Mỗi dòng một từ khóa. Khối nào chứa từ khóa sẽ bị ẩn.">
+                        <strong>Danh sách từ khóa</strong>
+                    </label>
+                    <textarea id="fbBlockKeywords" rows="7" placeholder="Nhập từ khóa, mỗi dòng một từ..."></textarea>
+                </div>
+                <div class="setting-row">
+                    <label for="fbEnableHideStories" class="switchLabel" data-tooltip="Ẩn toàn bộ khu vực "Tin"
+(Stories) ở đầu trang Facebook.">
+                        <strong>Ẩn khối Story (Tin)</strong>
+                    </label>
+                    <label class="switch">
+                        <input type="checkbox" id="fbEnableHideStories">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
         </div>
 
-        <div class="setting-row">
-            <label for="ytEnableSummaryBox" class="switchLabel">
-                <strong>Bật Box Tóm Tắt</strong>
-                <span class="description">Hiển thị Box "Tóm Tắt", "Quotes", "Key" bên cạnh video.</span>
-            </label>
-            <label class="switch">
-                <input type="checkbox" id="ytEnableSummaryBox">
-                <span class="slider"></span>
-            </label>
+        <!-- ============================= -->
+        <!-- SECTION: YOUTUBE             -->
+        <!-- ============================= -->
+        <div class="section-card" id="card-youtube">
+            <div class="section-header" data-target="body-youtube">
+                <div class="section-header-left">
+                    <span class="section-icon">▶️</span>
+                    <span class="section-title">YouTube</span>
+                    <span class="section-badge" id="badge-youtube">Bật</span>
+                </div>
+                <span class="collapse-arrow">▼</span>
+            </div>
+            <div class="section-body" id="body-youtube">
+                <div class="setting-row">
+                    <label for="ytEnableHomepageHider" class="switchLabel" data-tooltip="Ẩn tất cả video gợi ý
+ở trang chủ youtube.com.">
+                        <strong>Ẩn Video Trang Chủ</strong>
+                    </label>
+                    <label class="switch">
+                        <input type="checkbox" id="ytEnableHomepageHider">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-row">
+                    <label for="ytEnableSummaryBox" class="switchLabel" data-tooltip='Hiển thị Box "Tóm Tắt", "Quotes",
+"Key" bên cạnh video YouTube.'>
+                        <strong>Bật Box Tóm Tắt</strong>
+                    </label>
+                    <label class="switch">
+                        <input type="checkbox" id="ytEnableSummaryBox">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-row">
+                    <label for="ytEnableAutoSummarize" class="switchLabel" data-tooltip="Tự động chạy tóm tắt khi vào video
+mà không cần bấm nút.">
+                        <strong>Tự động Tóm Tắt</strong>
+                    </label>
+                    <label class="switch">
+                        <input type="checkbox" id="ytEnableAutoSummarize">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-row">
+                    <label for="ytEnableAutoCloseNotebook" class="switchLabel" data-tooltip="Sau khi tạo xong "Tài liệu tóm tắt",
+tự động đóng tab NotebookLM.">
+                        <strong>Tự động đóng Tab NotebookLM</strong>
+                    </label>
+                    <label class="switch">
+                        <input type="checkbox" id="ytEnableAutoCloseNotebook">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-row">
+                    <label for="ytEnableHideRelated" class="switchLabel" data-tooltip="Ẩn danh sách video gợi ý
+bên cạnh video đang xem.">
+                        <strong>Ẩn Video Gợi Ý (Sidebar)</strong>
+                    </label>
+                    <label class="switch">
+                        <input type="checkbox" id="ytEnableHideRelated">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
         </div>
 
-        <div class="setting-row">
-            <label for="ytEnableAutoSummarize" class="switchLabel">
-                <strong>Tự động Tóm Tắt</strong>
-                <span class="description">Tự động chạy tóm tắt khi vào video mà không cần bấm nút.</span>
-            </label>
-            <label class="switch">
-                <input type="checkbox" id="ytEnableAutoSummarize">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="setting-row">
-            <label for="ytEnableAutoCloseNotebook" class="switchLabel">
-                <strong>Tự động đóng Tab NotebookLM</strong>
-                <span class="description">Sau khi tạo xong "Tài liệu tóm tắt", tự động đóng tab đó lại.</span>
-            </label>
-            <label class="switch">
-                <input type="checkbox" id="ytEnableAutoCloseNotebook">
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div class="setting-row">
-            <label for="ytEnableHideRelated" class="switchLabel">
-                <strong>Ẩn Video Gợi Ý (Sidebar)</strong>
-                <span class="description">Ẩn danh sách video tiếp theo bên cạnh video đang xem.</span>
-            </label>
-            <label class="switch">
-                <input type="checkbox" id="ytEnableHideRelated">
-                <span class="slider"></span>
-            </label>
-        </div>
         <p id="saveStatus"></p>
     </main>
+
     <script src="config.js"></script>
     <script src="options.js"></script>
 </body>
-
 </html>

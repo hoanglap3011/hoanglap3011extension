@@ -12,7 +12,6 @@ const API_ACTION_GET_TODOLIST_WEEK = "getToDoListWeek";
 const API_ACTION_GET_METADATA_INTENT_TIME = "getMetaDataIntentTime";
 const API_ACTION_ADD_INTENT_TIME_DATA = "addIntentTimeData";
 
-
 // CACHE KEYS
 const CACHE_PASS = "pass";
 const CACHE_QUOTES = "quotes";
@@ -35,7 +34,7 @@ const CACHE_HABIT_LIST = 'habitList';
 const CACHE_DATA_RECAP = 'dataRecap';
 
 // facebook
-const MIN_SUMMARY_LENGTH = 1000; // Giới hạn tóm tắt là 150 ký tự
+const MIN_SUMMARY_LENGTH = 1000;
 
 // youtube
 const YOUTUBE_PANEL_FIXED_HEIGHT = "230px";
@@ -44,7 +43,7 @@ const YOUTUBE_PANEL_FIXED_HEIGHT = "230px";
 // --- CÀI ĐẶT TOÀN BỘ EXTENSION (ĐÃ CHUẨN HÓA) ---
 // =======================================================
 
-// Từ khóa ẩn khối mặc định cho Facebook (dùng chung bởi options.js và facebook.js)
+// Từ khóa ẩn khối mặc định cho Facebook
 const DEFAULT_FB_KEYWORDS = [
     "Những người bạn có thể biết",
     "People You May Know",
@@ -55,10 +54,24 @@ const DEFAULT_FB_KEYWORDS = [
     "Bí Mật Showbiz"
 ];
 
-// Key lưu trữ CHUNG cho tất cả cài đặt
-const SETTINGS_KEY = 'LapsExtensionSettings';
+// Danh sách chặn website mặc định
+// Cú pháp mỗi dòng: url | duration(HH:MM) | allowed_frames(HH:MM-HH:MM,...)
+// Chỉ url là bắt buộc. Dòng bắt đầu bằng # là comment.
+const DEFAULT_WEBSITE_BLOCKLIST = `# Chặn vĩnh viễn
+tiktok.com
 
-// Cài đặt mặc định CHUNG cho toàn bộ extension
+# Giới hạn thời gian + khung giờ
+vnexpress.net | 00:10 | 12:00-14:00
+
+# Chỉ giới hạn thời gian
+voz.vn | 00:10`;
+
+// Storage keys
+const SETTINGS_KEY = 'LapsExtensionSettings';
+const FB_KEYWORDS_KEY = 'fbBlockKeywordsList';
+const WEBSITE_BLOCKLIST_KEY = 'websiteBlocklist';
+
+// Cài đặt mặc định CHUNG
 const DEFAULT_SETTINGS = {
     // Facebook
     fbEnableSummarize: true,
