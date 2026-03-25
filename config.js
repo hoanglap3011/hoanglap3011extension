@@ -1,6 +1,6 @@
 // api
 const API = 
-"https://script.google.com/macros/s/AKfycbwSAiyfqNznJcUZfCZ0MDghpPMVrvZg6e6fINkM0Fqr6XU5BQTf8tkXN1CVbdHWjv56ZA/exec"
+"https://script.google.com/macros/s/AKfycbzDsNSqsJd9BVD-kpcF0CWK1V38NEh8iAayqNy5C9V3fdZAik-10KhCjS11XL71xBCVaA/exec"
 ;
 
 const API_ACTION_GET_SUMMARY_BY_CODE = "getSummaryByCode";
