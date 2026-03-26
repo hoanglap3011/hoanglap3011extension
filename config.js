@@ -18,7 +18,6 @@ const CACHE_QUOTES = "quotes";
 
 // hoanglap3011
 const CACHE_TODOLIST = "todolist";
-const CACHE_TODOLIST_WEEK_PREFIX = "toDoListWeek.";
 
 // vietgido
 const CACHE_DANH_MUC = 'selectedDanhMuc';

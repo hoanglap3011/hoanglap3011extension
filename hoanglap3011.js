@@ -101,8 +101,7 @@ function openToDoListThisWeek(){
 }
 
 function openToDoListWeekFromDay(dayStr){  
-  const { week, weekYear: year } = getInfoWeek(dayStr);
-  const keyToDoList = CACHE_TODOLIST_WEEK_PREFIX + week + "." + year;  
+  const keyToDoList = CACHE_TODOLIST + "." + dayStr;  
   StorageUtil.get([CACHE_TODOLIST], (obj) => {
     const raw = obj[CACHE_TODOLIST];
     if (raw) {
