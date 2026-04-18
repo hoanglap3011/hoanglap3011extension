@@ -109,6 +109,7 @@ const VietGidoApp = {
     this.dom.updateDanhMucBtn?.addEventListener('click', this.handlers.updateCategories.bind(this));
     this.dom.danhMucSelect?.addEventListener('change', this.handlers.onCategoryChange.bind(this));
     document.addEventListener('click', this.handlers.onDocumentClick.bind(this));
+    document.addEventListener('keydown', this.handlers.onGlobalKeydown.bind(this));
 
     if (this.dom.autoNextTheLoaiBietOnSwtich) {
       this.dom.autoNextTheLoaiBietOnSwtich.addEventListener('change', e => {
@@ -232,6 +233,16 @@ const VietGidoApp = {
   // --- HANDLERS (Xử lý sự kiện) ---
   // =================================================================
   handlers: {
+    onGlobalKeydown(e) {
+      const isSaveShortcut = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's';
+      if (!isSaveShortcut || e.repeat) return;
+
+      e.preventDefault();
+
+      if (this.dom.submitBtn?.disabled) return;
+      this.handlers.submitData.call(this);
+    },
+
     onCategoryChange() {
       const value = this.dom.danhMucSelect.value;
       this.render.buildEntriesForSelected.call(this, value);

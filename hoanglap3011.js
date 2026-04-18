@@ -1,3 +1,7 @@
+// Import các hàm xử lý ngày tháng từ dateUtil.js
+// <script src="dateUtil.js"></script>
+// Hoặc nếu dùng ES module: import { getDDMMYYYYHienTai, formatDate, parseDate, getInfoWeek, hienThiNgayHienTai } from './dateUtil.js';
+
 let urlToOpen = "";
 
 let hitThoIndex = 0;
@@ -13,7 +17,7 @@ document.addEventListener("DOMContentLoaded", function () {
       cacheQuotesKey: CACHE_QUOTES 
   });
   document.getElementById('versionJS').innerHTML = '10';
-  hienThiNgayHienTai();
+  DateUtil.hienThiNgayHienTai();
   const clickHandlers = [
     ["btnHabit", openHabit],
     ["btnEnter", openPasswordPopup],
@@ -52,11 +56,9 @@ document.addEventListener("DOMContentLoaded", function () {
     ["btnPrevQuote", showPrevQuote],
     ["btnNextQuote", showNextQuote],
   ];
-  // Tạo handler động cho các nút tương ứng với DATA
   clickHandlers.forEach(([id, handler]) => addClick(id, handler));
 
-
-  // Dynamically populate quote category options (no need to import quotes.js here)
+  // Dynamically populate quote category options
   const categories = [
     { id: "cauToan", label: "Cầu Toàn" },
     { id: "baySuyNghi", label: "Bẫy Suy Nghĩ" },
@@ -82,128 +84,26 @@ document.addEventListener("DOMContentLoaded", function () {
 
 });
 
-function openToDoListWeekCustom(){
-  flatpickr("#datepicker", {
-    defaultDate: new Date(),
-    dateFormat: "d.m.Y",
-    locale: "vn",
-    position: "below",
-    onChange: function (selectedDates, dateStr, instance) {
-      openToDoListWeekFromDay(dateStr);
-    }
-  }).open();
-
-}
-
-function openToDoListThisWeek(){  
-  const todayStr = getDDMMYYYYHienTai(); 
-  openToDoListWeekFromDay(todayStr);
-}
-
-function openToDoListWeekFromDay(dayStr){  
-  const keyToDoList = CACHE_TODOLIST + "." + dayStr;  
-  StorageUtil.get([CACHE_TODOLIST], (obj) => {
-    const raw = obj[CACHE_TODOLIST];
-    if (raw) {
-      try {
-        const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
-        if (Array.isArray(arr)) {
-          const foundObj = arr.find(item => item && Object.prototype.hasOwnProperty.call(item, keyToDoList));
-          if (foundObj) {
-            urlToOpen = foundObj[keyToDoList];
-            if (urlToOpen) {
-              window.open(urlToOpen, '_blank');
-              return;
-            }
-          }
-        }
-      } catch (e) {
-        alert('Lỗi khi parse todolist từ cache', e);
-      }
-    }    
-    fetchLinkToDoListWeek(dayStr, (url) => {
-      window.open(url, '_blank');
-      StorageUtil.get([CACHE_TODOLIST], (obj) => {
-        const raw = obj[CACHE_TODOLIST];
-        let arr = [];
-        if (raw) {
-          try {
-            arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
-            if (!Array.isArray(arr)) arr = [];
-          } catch (e) {
-            console.error('Không parse được todolist hiện có, sẽ ghi đè mới', e);
-            arr = [];
-          }
-        }
-        const idx = arr.findIndex(item => item && Object.prototype.hasOwnProperty.call(item, keyToDoList));
-        if (idx >= 0) {
-          arr[idx] = { [keyToDoList]: url };
-        } else {
-          arr.push({ [keyToDoList]: url });
-        }
-        StorageUtil.set({ [CACHE_TODOLIST]: arr }, () => {
-        });
-      });            
-    });
+function openToDoListWeekCustom(event) {
+  const currentTarget = event.currentTarget;
+  DatePickerUtil.pickDate(currentTarget, (selectedDate) => {
+    const dateStr = DateUtil.formatDate(selectedDate);
+    TodolistUtil.openToDoListWeekFromDay(dateStr);
   });
 }
 
-function fetchLinkToDoListWeek(dayStr, callback) {
-
-  // Lấy pass từ storage
-  StorageUtil.get([CACHE_PASS], (result) => {
-    const pass = result[CACHE_PASS] || "";
-    
-    if (!pass || pass.length === 0) {
-      // Nếu không có pass, mở popup
-      openPasswordPopup();
-      return;
-    }
-
-    LoadingOverlayUtil.show();
-
-    fetch(API, {
-      method: 'POST',
-      body: JSON.stringify({
-        pass: pass,
-        action: API_ACTION_GET_TODOLIST_WEEK,
-        dayStr: dayStr
-      })
-    })
-      .then(response => {
-        if (!response.ok) {
-          alert('Lỗi khi gọi API');
-          throw new Error("Lỗi khi gọi API");
-        }
-        return response.json();
-      })
-      .then(result => {
-        const code = result.code;
-        if (code !== 1) {
-          const errMsg = result.error || 'Có lỗi xảy ra';
-          alert('Lỗi: ' + errMsg);
-          return;
-        }
-        const url = result.data;
-        if (typeof callback === 'function') {
-          callback(url);
-        }      
-      })
-      .catch(err => {
-        alert('Lỗi khi gọi API: ' + err);
-      }).finally(() => {  
-        LoadingOverlayUtil.hide();
-      });
-  });
+function openToDoListThisWeek() {
+  const todayStr = DateUtil.getDDMMYYYYHienTai();
+  TodolistUtil.openToDoListWeekFromDay(todayStr);
 }
 
 
 function addClick(id, handler) {
   const el = document.getElementById(id);
-  if (el) el.addEventListener('click', handler);
+  if (el) {
+    el.addEventListener('click', (e) => handler(e));
+  }
 }
-
-
 
 function openPanel() {
   const mainWidth = window.screen.availWidth;
@@ -243,28 +143,9 @@ function playNhacVui() {
   }
 }
 
-
-
-
-
-
-
-function hienThiNgayHienTai() {
-  const today = new Date();
-  document.getElementById("current-date").textContent = today.toLocaleDateString('vi-VN', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-  });
-}
-
-
-
-
 function isMobile() {
   return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
-
-
-
 
 function updateQuoteDisplay() {
   const quoteDiv = document.getElementById("daily-quote");
@@ -272,20 +153,16 @@ function updateQuoteDisplay() {
   const btnNext = document.getElementById("btnNextQuote");
 
   if (quoteDiv && quoteArray.length > 0) {
-    // Thêm hiệu ứng chuyển đổi mượt khi thay đổi nội dung
     quoteDiv.style.transition = "opacity 0.3s";
     quoteDiv.style.opacity = 0;
-
     setTimeout(() => {
       quoteDiv.textContent = quoteArray[quoteIndex];
       quoteDiv.style.opacity = 1;
     }, 200);
-
     if (btnPrev) btnPrev.disabled = quoteIndex === 0;
     if (btnNext) btnNext.disabled = quoteIndex === quoteArray.length - 1;
   }
 }
-
 
 function setQuoteCategory(category) {
   switch (category) {
@@ -334,6 +211,7 @@ function setQuoteCategory(category) {
       quoteIndex = 0;
   }
 }
+
 function showPrevQuote() {
   const btnPrevQuote = document.getElementById("btnPrevQuote");
   const btnNextQuote = document.getElementById("btnNextQuote");
@@ -356,16 +234,6 @@ function showNextQuote() {
   if (btnNextQuote) btnNextQuote.disabled = quoteIndex === quoteArray.length - 1;
 }
 
-
-
-function getCurrentDateFormatted() {
-  const today = new Date();
-  const day = String(today.getDate()).padStart(2, '0');
-  const month = String(today.getMonth() + 1).padStart(2, '0'); // tháng bắt đầu từ 0
-  const year = today.getFullYear();
-  return `${day}.${month}.${year}`;
-}
-
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -373,105 +241,18 @@ function shuffleArray(array) {
   }
 }
 
-
-
-function vietGiDo(){
+function vietGiDo() {
   window.open("vietgido.html", '_blank');
 }
 
-function openIntentTime(){
+function openIntentTime() {
   window.open("intent-time.html", '_blank');
 }
 
-function openHabit(){
+function openHabit() {
   window.open("habit.html", '_blank');
 }
 
-function recap(){
+function recap() {
   window.open("recap.html", '_blank');
-}
-
-function getInfoWeek(dateStr) {
-    const date = parseDate(dateStr);
-
-    // 0 = Monday
-    const dayOfWeek = (date.getDay() + 6) % 7;
-
-    // Monday và Sunday
-    const monday = new Date(date);
-    monday.setDate(date.getDate() - dayOfWeek);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-
-    // Tính tuần theo ISO 8601
-    const thursday = new Date(monday);
-    thursday.setDate(monday.getDate() + 3);
-    const weekYear = thursday.getFullYear();
-
-    const firstThursday = new Date(weekYear, 0, 4);
-    const firstThursdayDay = (firstThursday.getDay() + 6) % 7;
-    firstThursday.setDate(firstThursday.getDate() - firstThursdayDay + 3);
-
-    const diffInDays = (monday - firstThursday) / (1000 * 60 * 60 * 24);
-    const weekNumber = 1 + Math.round(diffInDays / 7);
-
-    // Tạo mảng các ngày trong tuần theo định dạng dd.MM.yyyy
-    const daysOfWeek = [];
-    for (let i = 0; i < 7; i++) {
-        const d = new Date(monday);
-        d.setDate(monday.getDate() + i);
-        daysOfWeek.push(formatDate(d));
-    }
-
-    return {
-        week: weekNumber,
-        month: String(sunday.getMonth() + 1).padStart(2, '0'),
-        startOfWeek: formatDate(monday),
-        endOfWeek: formatDate(sunday),
-        weekYear,
-        daysOfWeek
-    };
-}
-
-function formatDate(d) {
-    return [
-        String(d.getDate()).padStart(2, '0'),
-        String(d.getMonth() + 1).padStart(2, '0'),
-        d.getFullYear()
-    ].join('.');
-}
-
-function parseDate(dateStr) {
-    const [day, month, year] = dateStr.split('.').map(Number);
-    return new Date(year, month - 1, day);
-}
-
-function getDDMMYYYYHienTai() {
-  const today = new Date();
-  const day = String(today.getDate()).padStart(2, '0');
-  const month = String(today.getMonth() + 1).padStart(2, '0'); 
-  const year = today.getFullYear();
-  return `${day}.${month}.${year}`;
-}
-
-function openPasswordPopup() {
-    const popupWidth = 400;
-    const popupHeight = 250;
-    const left = (window.screen.width / 2) - (popupWidth / 2);
-    const top = (window.screen.height / 2) - (popupHeight / 2);
-    window.open('password.html', 'passwordPopup', `width=${popupWidth},height=${popupHeight},top=${top},left=${left},resizable=yes`);
-}
-
-function openPasswordPopup() {
-    const popupWidth = 400;
-    const popupHeight = 250;
-    // Tính toán vị trí để mở popup ở giữa màn hình
-    const left = (window.screen.width / 2) - (popupWidth / 2);
-    const top = (window.screen.height / 2) - (popupHeight / 2);
-    // Gọi popup (đảm bảo file 'password.html' nằm cùng cấp)
-    window.open(
-        'password.html', 
-        'passwordPopup', 
-        `width=${popupWidth},height=${popupHeight},top=${top},left=${left},resizable=yes`
-    );
 }

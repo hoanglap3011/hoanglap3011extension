@@ -26,6 +26,73 @@ document.addEventListener('DOMContentLoaded', () => {
             name: 'Mở trang recap',
             keywords: 'recap tóm tắt',
             action: () => chrome.tabs.create({ url: chrome.runtime.getURL('recap.html') })
+        },
+        {
+            id: 'open_todolist',
+            name: 'Mở trang To Do List',
+            keywords: 'to do list todolist',
+            keepOpen: true,
+            action: () => {
+                DatePickerUtil.pickDate(searchInput, (selectedDate) => {
+                    const dateStr = DateUtil.formatDate(selectedDate);
+                    TodolistUtil.openToDoListWeekFromDay(dateStr);
+                });
+            }
+        },
+        {
+            id: 'open_bieton',
+            name: 'Mở trang Biết Ơn',
+            keywords: 'biết ơn biet on',
+            action: () => {
+                const danhMuc = 'Biết Ơn';
+                chrome.tabs.create({ url: chrome.runtime.getURL(`vietgido.html?danhMuc=${encodeURIComponent(danhMuc)}`) })
+            }
+        },
+        {
+            id: 'open_nhatkytrangthai',
+            name: 'Mở trang Nhật Ký',
+            keywords: 'giác ngộ nhật ký trạng thái cảm xúc',
+            action: () => {
+                const danhMuc = 'Giác Ngộ - Nhật Ký Trạng Thái';
+                chrome.tabs.create({ url: chrome.runtime.getURL(`vietgido.html?danhMuc=${encodeURIComponent(danhMuc)}`) })
+            }
+        },
+        {
+            id: 'open_nguphaptienganh',
+            name: 'Ngữ pháp tiếng Anh',
+            keywords: 'giác ngộ nhật ký trạng thái cảm xúc',
+            action: () => chrome.tabs.create({ url: chrome.runtime.getURL('recap.html') })
+        },
+        {
+            id: 'open_nhatkytrangthai',
+            name: 'Mindomo map problem',
+            keywords: 'giác ngộ nhật ký trạng thái cảm xúc',
+            action: () => chrome.tabs.create({ url: chrome.runtime.getURL('recap.html') })
+        },
+        {
+            id: 'open_pomodoro',
+            name: 'Pomodoro',
+            keywords: 'pomodoro đồng hồ bấm giờ nhắc nhở đứng dậy nghỉ ngơi',
+            action: () => {
+                chrome.tabs.create({ url: 'https://hoanglap3011.github.io/hoanglap3011extension/panel.html' })
+            }
+        },
+        {
+            id: 'open_parkingLot',
+            name: 'Parking Lot',
+            keywords: 'parking lot delay muốn làm sau',
+            action: () => {
+                const danhMuc = 'Parking Lot';
+                chrome.tabs.create({ url: chrome.runtime.getURL(`vietgido.html?danhMuc=${encodeURIComponent(danhMuc)}`) })
+            }
+        },
+        {
+            id: 'open_tamsubuonvui',
+            name: 'Tâm sự buồn vui - web5ngay',
+            keywords: 'tâm sự buồn vui tam su buon vui web5ngay',
+            action: () => {
+                chrome.tabs.create({ url: 'https://notebooklm.google.com/notebook/97ddf6ac-d209-4bb2-86bb-e7cfc9b48129' })
+            }
         }
         // Thêm bao nhiêu lệnh tuỳ thích vào đây
     ];
@@ -42,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         commands.forEach((command, index) => {
             const li = document.createElement('li');
             li.dataset.id = command.id;
-            
+
             const nameSpan = document.createElement('span');
             nameSpan.textContent = command.name;
             li.appendChild(nameSpan);
@@ -52,10 +119,10 @@ document.addEventListener('DOMContentLoaded', () => {
             li.appendChild(keywordSpan);
 
             // Xử lý click chuột
-            li.addEventListener('click', () => {
-                executeCommand(command);
+            li.addEventListener('click', (e) => {
+                executeCommand(command, e);
             });
-            
+
             commandList.appendChild(li);
         });
 
@@ -81,11 +148,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 5. HÀM THỰC THI LỆNH ---
-    function executeCommand(command) {
+    function executeCommand(command, event) {
         if (command) {
-            command.action();
-            // Tự động đóng cửa sổ popup sau khi chạy lệnh
-            window.close();
+            command.action(event);
+            if (!command.keepOpen) {
+                window.close();
+            }
         }
     }
 
@@ -97,12 +165,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Lọc danh sách khi gõ
     searchInput.addEventListener('input', () => {
         const query = searchInput.value.toLowerCase().trim();
-        
-        filteredCommands = ALL_COMMANDS.filter(command => 
-            command.name.toLowerCase().includes(query) || 
+
+        filteredCommands = ALL_COMMANDS.filter(command =>
+            command.name.toLowerCase().includes(query) ||
             command.keywords.toLowerCase().includes(query)
         );
-        
+
         renderList(filteredCommands);
     });
 

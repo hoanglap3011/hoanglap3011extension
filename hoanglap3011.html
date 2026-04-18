@@ -6,12 +6,12 @@
   <title>Link động từ API</title>
 
   <link rel="stylesheet" href="library/bootstrap.min.css">  
-  <link rel="stylesheet" href="library/flatpickr.min.css">  
+  <link rel="stylesheet" href="library/datepicker-bs5.min.css">
   <link rel="stylesheet" href="loadingOverlay.css">
+
   <link rel="stylesheet" href="hoanglap3011.css">
 </head>
 <body>
-  <input type="text" id="datepicker" style="display: none;">
   <div class="text-center fw-bold text-success fs-4 mb-4">
     Chào Lập, chúc bạn một ngày tốt lành ❤️<br>
     Hôm nay là <span id="current-date"></span>.
@@ -116,11 +116,17 @@
   </div>  
 
   
-  <script src="library/flatpickr.min.js"></script>  
-  <script src="library/vn.js"></script>   
+  <script src="library/datepicker-full.min.js"></script>
+  <script src="library/vi.js"></script>   
+  <script src="DatePickerUtil.js"></script>  
+
   <script src="config.js"></script> 
   <script src="loadingOverlay.js" defer></script>
   <script src="storageUtil.js" defer></script>
+  <script src="DateUtil.js"></script>
+  <script src="TodolistUtil.js"></script>
+
+  
   <script src="hoanglap3011.js"></script>
 </body>
 </html>
