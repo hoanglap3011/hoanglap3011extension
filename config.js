@@ -82,7 +82,11 @@ const DEFAULT_SETTINGS = {
     ytEnableSummaryBox: true,
     ytEnableHideRelated: true,
     ytEnableAutoSummarize: false,
-    ytEnableAutoCloseNotebook: false
+    ytEnableAutoCloseNotebook: false,
+
+    // box tóm tắt toàn cầu
+    sbEnable: true,
+    
 };
 // =======================================================
 

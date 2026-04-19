@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
         ytEnableAutoSummarize:     document.getElementById('ytEnableAutoSummarize'),
         ytEnableAutoCloseNotebook: document.getElementById('ytEnableAutoCloseNotebook'),
         ytEnableHideRelated:       document.getElementById('ytEnableHideRelated'),
+        // Box tóm tắt toàn cầu
+        sbEnable:    document.getElementById('sbEnable'),        
     };
 
     const fbKeywordsTextarea       = document.getElementById('fbBlockKeywords');
@@ -83,6 +85,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const ytOn = settings.ytEnableHomepageHider || settings.ytEnableSummaryBox ||
                      settings.ytEnableAutoSummarize || settings.ytEnableHideRelated;
         updateBadge('badge-youtube', ytOn);
+        // Box Tóm Tắt Toàn Cầu
+        updateBadge('badge-summary-box', settings.sbEnable ?? true);
     }
 
     // === VISIBILITY helpers ===
