@@ -1,0 +1,91 @@
+:root {
+    --accent-color: #d63031; /* Màu đỏ Bò Húc */
+    --gold-color: #f1c40f;
+    --bg-color: #f9f9f9;
+    --text-color: #2d3436;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+.container {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.header-center {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+}
+
+.search-wrapper {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 500px;
+}
+
+#search-input {
+    flex: 1;
+    padding: 12px 20px;
+    border-radius: 30px;
+    border: 1px solid #ddd;
+    font-size: 16px;
+    outline: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+#btn-refresh {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+
+#btn-refresh:hover { transform: rotate(-180deg); }
+
+.habit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 15px;
+    width: 100%;
+}
+
+.bo-huc-card {
+    background: white;
+    padding: 20px 10px;
+    border-radius: 10px;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    font-weight: 600;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.bo-huc-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    box-shadow: 0 4px 12px rgba(214, 48, 49, 0.15);
+}
+
+/* Mobile Responsive */
+@media (max-width: 600px) {
+    .habit-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+}

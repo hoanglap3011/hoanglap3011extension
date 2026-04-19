@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Style Form - Cầu Toàn</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="cautoan.css">
+</head>
+<body>
+
+    <div class="container">
+        <form id="internalForm">
+            <h2>🎯 Đối thoại nội tâm</h2>
+            <p class="subtitle">Hãy trung thực để nhìn nhận vấn đề rõ ràng hơn. ✨</p>
+
+            <div class="mdc-field">
+                <input type="text" name="problem" placeholder=" " required>
+                <label>📌 Vấn đề là gì?</label>
+            </div>
+
+            <div class="mdc-field">
+                <input type="text" name="hindrance" placeholder=" " required>
+                <label>🧠 Suy nghĩ nào đang cản trở hành động?</label>
+            </div>
+
+            <div class="mdc-field">
+                <input type="text" name="harsh_truth" placeholder=" " required>
+                <label>🧱 Sự thật phũ phàng thay vì lý tưởng là gì?</label>
+            </div>
+
+            <div class="mdc-field">
+                <input type="text" name="good_enough" placeholder=" " required>
+                <label>✅ Những nội dung cụ thể cho "đủ tốt" là gì?</label>
+            </div>
+
+            <div class="mdc-field">
+                <input type="datetime-local" name="deadline" placeholder=" " required>
+                <label class="label-date">⏰ Deadline cho vấn đề này</label>
+            </div>
+
+            <div class="row">
+                <div class="mdc-field">
+                    <input type="text" name="input_20_80" placeholder=" " required>
+                    <label>⚡ 20% Input (80% Output)</label>
+                </div>
+                <div class="mdc-field">
+                    <input type="text" name="input_80_20" placeholder=" " required>
+                    <label>🐢 80% Input (20% Output)</label>
+                </div>
+            </div>
+
+            <div class="mdc-field">
+                <input type="text" name="gain" placeholder=" " required>
+                <label>🎁 Luôn có cái ĐƯỢC. Đó là gì?</label>
+            </div>
+
+            <div class="mdc-field">
+                <input type="text" name="loss" placeholder=" " required>
+                <label>💸 Luôn có cái MẤT. Chấp nhận mất gì?</label>
+            </div>
+
+            <div class="button-area">
+                <button type="submit" id="saveBtn">🚀 Lưu thông tin</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="cautoan.js"></script>
+</body>
+</html>

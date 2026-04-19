@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bò Húc - Công cụ hỗ trợ</title>
+    <link rel="stylesheet" href="loadingOverlay.css">    
+    <link rel="stylesheet" href="notificationUtil.css"> 
+    <link rel="stylesheet" href="bo-huc.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header-center">
+            <div class="search-wrapper">
+                <input type="text" id="search-input" placeholder="Tìm kiếm tính năng..." autofocus>
+                <button id="btn-refresh" title="Đặt lại danh sách">🔄</button>
+            </div>
+        </header>
+
+        <div id="bo-huc-list" class="habit-grid"></div>
+    </div>
+
+    <script src="config.js"></script> 
+    <script src="notificationUtil.js"></script>
+    <script src="loadingOverlay.js" defer></script>
+    <script src="storageUtil.js" defer></script>    
+    <script src="bo-huc.js"></script>
+</body>
+</html>
