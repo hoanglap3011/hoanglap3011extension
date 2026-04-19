@@ -215,11 +215,18 @@ const TuVungUtil = (() => {
         </div>` : ''}
       ${entry.note ? `<div class="popup-note">${_esc(entry.note)}</div>` : ''}
       <div class="popup-footer">
-        <button class="popup-close-btn" id="popupCloseBtn">Đóng ✕</button>
-      </div>
+        <button class="popup-close-btn" id="popupCloseBtn">${_esc(entry.word)} - ${_esc(entry.meaning)}</button>
+    </div>
     `;
 
-    document.getElementById('popupCloseBtn').addEventListener('click', () => window.close());
+    // Đảm bảo logic tự động đóng 10 giây và click đóng vẫn hoạt động
+    const closePopup = () => window.close();
+
+    document.getElementById('popupCloseBtn').addEventListener('click', closePopup);
+
+    // Logic tự động đóng sau 10 giây mà bạn đã chốt
+    setTimeout(closePopup, 10000);
+
   }
 
 

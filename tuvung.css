@@ -556,6 +556,10 @@ textarea { resize: vertical; }
   border-radius: 50px;
   transition: background var(--transition), transform var(--transition);
   letter-spacing: .3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* Hiện dấu ... nếu quá dài */
+  max-width: 100%;        /* Không cho vượt quá chiều ngang popup */  
 }
 .popup-close-btn:hover { background: var(--gold-light); transform: translateY(-1px); }
 .popup-close-btn:active { transform: translateY(0); }
