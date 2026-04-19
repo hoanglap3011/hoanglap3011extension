@@ -64,10 +64,12 @@ document.addEventListener('DOMContentLoaded', () => {
             action: () => chrome.tabs.create({ url: chrome.runtime.getURL('recap.html') })
         },
         {
-            id: 'open_nhatkytrangthai',
+            id: 'open_mapproblem',
             name: 'Mindomo map problem',
             keywords: 'giác ngộ nhật ký trạng thái cảm xúc',
-            action: () => chrome.tabs.create({ url: chrome.runtime.getURL('recap.html') })
+            action: () => {
+                chrome.tabs.create({ url: 'https://hoanglap3011.github.io/hoanglap3011extension/panel.html' })
+            }
         },
         {
             id: 'open_pomodoro',
@@ -92,6 +94,14 @@ document.addEventListener('DOMContentLoaded', () => {
             keywords: 'tâm sự buồn vui tam su buon vui web5ngay',
             action: () => {
                 chrome.tabs.create({ url: 'https://notebooklm.google.com/notebook/97ddf6ac-d209-4bb2-86bb-e7cfc9b48129' })
+            }
+        },
+        {
+            id: 'open_tuvungbatky',
+            name: 'Từ vựng bất kỳ',
+            keywords: 'từ vựng bất kỳ tu vung bat ky',
+            action: async () => {
+                await TuVungUtil.show();
             }
         }
         // Thêm bao nhiêu lệnh tuỳ thích vào đây
@@ -148,11 +158,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 5. HÀM THỰC THI LỆNH ---
-    function executeCommand(command, event) {
+    async function executeCommand(command, event) {
         if (command) {
-            command.action(event);
+            await command.action(event);   // ← chờ action xong
             if (!command.keepOpen) {
-                window.close();
+                window.close();            // ← sau đó mới đóng
             }
         }
     }
@@ -182,18 +192,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedIndex = (selectedIndex + 1) % filteredCommands.length;
                 updateSelection();
                 break;
-            
+
             case 'ArrowUp':
                 e.preventDefault(); // Ngăn con trỏ di chuyển trong input
                 selectedIndex = (selectedIndex - 1 + filteredCommands.length) % filteredCommands.length;
                 updateSelection();
                 break;
-            
+
             case 'Enter':
                 e.preventDefault();
                 executeCommand(filteredCommands[selectedIndex]);
                 break;
-            
+
             case 'Escape':
                 window.close(); // Đóng popup nếu nhấn Escape
                 break;

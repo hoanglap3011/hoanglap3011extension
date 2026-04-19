@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", function () {
   DateUtil.hienThiNgayHienTai();
   const clickHandlers = [
     ["btnHabit", openHabit],
-    ["btnEnter", openPasswordPopup],
+    ["btnEnter", PasswordUtil.openPasswordPopup],
     ["btnVietGiDo", vietGiDo],
     ["btnIntentTime", openIntentTime],
     ["btnRecap", recap],

@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Link động từ API</title>
 
-  <link rel="stylesheet" href="library/bootstrap.min.css">  
+  <link rel="stylesheet" href="library/bootstrap.min.css">
   <link rel="stylesheet" href="library/datepicker-bs5.min.css">
-  <link rel="stylesheet" href="loadingOverlay.css">
+  <link rel="stylesheet" href="util/LoadingOverlay.css">
 
   <link rel="stylesheet" href="hoanglap3011.css">
 </head>
+
 <body>
   <div class="text-center fw-bold text-success fs-4 mb-4">
     Chào Lập, chúc bạn một ngày tốt lành ❤️<br>
@@ -39,7 +41,8 @@
       <!-- Danh sách button giữ nguyên, chỉ rút gọn cú pháp -->
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnVietGiDo">🖊️ Viết Gì Đó</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnToDoListThisWeek">✅ To Do List</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnToDoListWeekCustom">📅 To Do List tuần</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnToDoListWeekCustom">📅 To Do List tuần</button>
+      </div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnParkingLot">🅿️ Parking Lot</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnIntentTime">🏋️ Intent-time</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnCauHinh">⚙️ Cấu Hình</button></div>
@@ -47,7 +50,9 @@
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnHabit">👏 Habit</button></div>
 
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnToDoListTong">✅ All To Do List</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnCalendar"><img src="https://ssl.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_24_2x.png" alt="Google Calendar" style="vertical-align:text-bottom; height:1.2em;"> Lịch</button></div>      
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnCalendar"><img
+            src="https://ssl.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_24_2x.png" alt="Google Calendar"
+            style="vertical-align:text-bottom; height:1.2em;"> Lịch</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnDiaryDay">Sắp xếp ưu tiên</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnDiaryDay">Brainstorm</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnDiaryDay">📅 Nhật ký ngày</button></div>
@@ -77,14 +82,19 @@
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnDocSachKindle">📖 Kindle</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTamLy">Nếu tôi chết</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTamLy">Mất thiết bị</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTamLy">Đánh thẳng vào Điểm yếu hiện tại</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTamLy">Đánh thẳng vào Điểm yếu hiện tại</button>
+      </div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTamLy">Kiểm tra quyền Google đã cấp</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnNhatKyHomQua">Nhật ký ngày hôm qua</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">Nhật ký tuần trước</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">Nhật ký tháng trước</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">Nhật ký tuần trước</button>
+      </div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">Nhật ký tháng trước</button>
+      </div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">Nhật ký năm trước</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">Nhật ký quãng đời đã qua</button></div>
-      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">Nhập ngày cụ thể xem nhật ký</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">Nhật ký quãng đời đã
+          qua</button></div>
+      <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTongHopNhatKyNgay">Nhập ngày cụ thể xem nhật
+          ký</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnTamLy">❤️ Trauma</button></div>
       <div class="col-6 col-md-3 mb-3"><button class="a-like" id="btnEnter">Enter</button></div>
       <div class="col-6 col-md-3 mb-3">ver js: <label id="versionJS"></label></div>
@@ -104,29 +114,34 @@
   </div>
   <div class="container-fluid px-4 mt-4">
     <div id="divIframeYoutube" style="height:150px; border:1px solid #010628; display:none">
-      <iframe id="iframeYoutube" width="100%" height="100%" src="https://www.youtube.com/embed/QhIxGtxIFF4?si=umecJ5wXItfUmMoA" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      <iframe id="iframeYoutube" width="100%" height="100%"
+        src="https://www.youtube.com/embed/QhIxGtxIFF4?si=umecJ5wXItfUmMoA" title="YouTube video player" frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
     </div>
   </div>
 
-<div id="loadingOverlay">
+  <div id="loadingOverlay">
     <div class="loading-content">
-        <div class="loader"></div>
-        <p id="loadingQuote"></p>
+      <div class="loader"></div>
+      <p id="loadingQuote"></p>
     </div>
-  </div>  
+  </div>
 
-  
+
   <script src="library/datepicker-full.min.js"></script>
-  <script src="library/vi.js"></script>   
-  <script src="DatePickerUtil.js"></script>  
+  <script src="library/vi.js"></script>
+  <script src="util/DatePickerUtil.js"></script>
 
-  <script src="config.js"></script> 
-  <script src="loadingOverlay.js" defer></script>
-  <script src="storageUtil.js" defer></script>
-  <script src="DateUtil.js"></script>
-  <script src="TodolistUtil.js"></script>
+  <script src="config.js"></script>
+  <script src="util/LoadingOverlay.js" defer></script>
+  <script src="util/StorageUtil.js" defer></script>
+  <script src="util/DateUtil.js"></script>
+  <script src="util/PasswordUtil.js"></script>
+  <script src="util/TodolistUtil.js"></script>
 
-  
+
   <script src="hoanglap3011.js"></script>
 </body>
+
 </html>
