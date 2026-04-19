@@ -1,6 +1,35 @@
-importScripts('tuvung.js');
-TuVungUtil.startRandomTimer();
+importScripts('config.js');
 
+importScripts('tuvung.js');
+
+// xử lý tự động hiển thị popup từ vựng
+chrome.storage.local.get(SETTINGS_KEY, (data) => {
+    const settings = { ...DEFAULT_SETTINGS, ...(data[SETTINGS_KEY] || {}) };
+    if (settings.tvEnableAutoPopup) {
+        TuVungUtil.startRandomTimer();
+    }
+});
+
+// Lắng nghe thay đổi từ màn hình Options
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && changes[SETTINGS_KEY]) {
+        const newSettings = changes[SETTINGS_KEY].newValue;
+        const oldSettings = changes[SETTINGS_KEY].oldValue;
+
+        if (newSettings && oldSettings) {
+            // Nếu người dùng vừa BẬT
+            if (newSettings.tvEnableAutoPopup && !oldSettings.tvEnableAutoPopup) {
+                TuVungUtil.startRandomTimer();
+                console.log("🚀 [Background] Đã bật timer từ vựng.");
+            }
+            // Nếu người dùng vừa TẮT
+            else if (!newSettings.tvEnableAutoPopup && oldSettings.tvEnableAutoPopup) {
+                chrome.alarms.clear('tuvung_random_popup'); // Tên alarm lấy từ tuvung.js
+                console.log("🛑 [Background] Đã dừng timer từ vựng.");
+            }
+        }
+    }
+});
 
 let cachedTokens = {
     at: null,

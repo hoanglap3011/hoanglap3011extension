@@ -45,49 +45,49 @@ const VietGidoApp = {
     this.loadInitialState();
     this.initDanhMucSelect();
 
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      // Kiểm tra action
-      if (request.action === "autofillNotebookLink") {
-        console.log("🔗 [VietGido] Nhận được link NotebookLM:", request.notebookUrl);
 
-        // 1. Tìm tất cả các trường đang hiển thị
-        const allFields = document.querySelectorAll('.vg-field');
-        let targetInput = null;
+    // Thêm điều kiện kiểm tra sự tồn tại của chrome.runtime
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+      chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        // Kiểm tra action
+        if (request.action === "autofillNotebookLink") {
+          console.log("🔗 [VietGido] Nhận được link NotebookLM:", request.notebookUrl);
 
-        // 2. Duyệt qua để tìm trường có tên cột là "NotebookLM" (hoặc chứa chữ notebook)
-        for (const field of allFields) {
-          // Lấy tên cột từ dataset (do render._createField tạo ra)
-          const columnName = (field.dataset.headerColumn || '').toLowerCase();
-          
-          // Kiểm tra logic tên cột
-          if (columnName.includes('notebook')) {
-            targetInput = field.querySelector('input, textarea');
-            break; // Tìm thấy rồi thì dừng
+          // 1. Tìm tất cả các trường đang hiển thị
+          const allFields = document.querySelectorAll('.vg-field');
+          let targetInput = null;
+
+          // 2. Duyệt qua để tìm trường có tên cột là "NotebookLM"
+          for (const field of allFields) {
+            const columnName = (field.dataset.headerColumn || '').toLowerCase();
+            if (columnName.includes('notebook')) {
+              targetInput = field.querySelector('input, textarea');
+              break;
+            }
           }
-        }
 
-        // 3. Nếu tìm thấy input, điền dữ liệu và tạo hiệu ứng
-        if (targetInput) {
-          targetInput.value = request.notebookUrl;
-          
-          // Hiệu ứng nháy màu xanh để báo hiệu
-          targetInput.style.transition = "background-color 0.5s";
-          const originalBg = targetInput.style.backgroundColor;
-          targetInput.style.backgroundColor = "#d1fae5"; // Màu xanh nhạt
-          
-          // Hiển thị thông báo nhỏ
-          this.ui.showNotification.call(this, '🔗 Đã tự động điền link NotebookLM!', 'success', 2000);
+          // 3. Nếu tìm thấy input, điền dữ liệu và tạo hiệu ứng
+          if (targetInput) {
+            targetInput.value = request.notebookUrl;
+            targetInput.style.transition = "background-color 0.5s";
+            const originalBg = targetInput.style.backgroundColor;
+            targetInput.style.backgroundColor = "#d1fae5"; 
+            
+            this.ui.showNotification.call(this, '🔗 Đã tự động điền link NotebookLM!', 'success', 2000);
 
-          setTimeout(() => {
-            targetInput.style.backgroundColor = originalBg;
-          }, 1000);
-        } else {
-            console.warn("⚠️ Không tìm thấy trường nhập liệu nào có tên chứa 'notebook'");
+            setTimeout(() => {
+              targetInput.style.backgroundColor = originalBg;
+            }, 1000);
+          } else {
+              console.warn("⚠️ Không tìm thấy trường nhập liệu nào có tên chứa 'notebook'");
+          }
+          
+          sendResponse({ received: true });
         }
-        
-        sendResponse({ received: true });
-      }
-    });
+      });
+    } else {
+      console.log("ℹ️ [VietGido] Không ở trong môi trường Extension. Bỏ qua lắng nghe tin nhắn.");
+    }
   },
 
   // =================================================================

@@ -5,7 +5,12 @@
   "description": "extension của Lập",
   "options_page": "options.html",
   "permissions": [
-    "activeTab", "storage","tabs", "alarms","windows","notifications"
+    "activeTab",
+    "storage",
+    "tabs",
+    "alarms",
+    "windows",
+    "notifications"
   ],
   "host_permissions": [
     "*://script.google.com/*",
@@ -16,49 +21,86 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["config.js", "summaryBox.js"], 
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "config.js",
+        "summaryBox.js"
+      ],
       "run_at": "document_end"
     },
     {
-      "matches": ["*://*/*"],
-      "js": ["handleBlocking.js"],
-      "run_at": "document_start",
-      "all_frames": false 
-    },
-    {
-      "matches": ["*://*/*"],
-      "exclude_matches": ["*://open.spotify.com/*"],
-      "js": ["media_detector.js"],
-      "run_at": "document_idle",
-      "all_frames": false
-    },
-    {
-      "matches": ["*://open.spotify.com/*"],
-      "js": ["spotify_detector.js"],
-      "run_at": "document_idle",
-      "all_frames": false
-    },
-    {
-      "matches": ["*://*.youtube.com/*", "*://youtube.com/*"],
+      "matches": [
+        "*://*/*"
+      ],
       "js": [
-        "config.js","youtube.js"
+        "handleBlocking.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "*://*/*"
+      ],
+      "exclude_matches": [
+        "*://open.spotify.com/*"
+      ],
+      "js": [
+        "media_detector.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "*://open.spotify.com/*"
+      ],
+      "js": [
+        "spotify_detector.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "*://*.youtube.com/*",
+        "*://youtube.com/*"
+      ],
+      "js": [
+        "config.js",
+        "youtube.js"
       ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["*://*.google.com/search*","*://google.com/search*"],
-      "js": ["google_search.js"],
+      "matches": [
+        "*://*.google.com/search*",
+        "*://google.com/search*"
+      ],
+      "js": [
+        "google_search.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["*://*.ticketbox.vn/*", "*://ticketbox.vn/*"],
-      "js": ["ticketbox.js"],
+      "matches": [
+        "*://*.ticketbox.vn/*",
+        "*://ticketbox.vn/*"
+      ],
+      "js": [
+        "ticketbox.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["*://calendar.google.com/calendar/u/0/r/eventedit?ofe=true*"],
-      "js": ["google_calendar.js"],
+      "matches": [
+        "*://calendar.google.com/calendar/u/0/r/eventedit?ofe=true*"
+      ],
+      "js": [
+        "google_calendar.js"
+      ],
       "run_at": "document_idle"
     },
     {
@@ -66,8 +108,11 @@
         "*://*.facebook.com/*",
         "*://facebook.com/*"
       ],
-      "js": ["config.js","facebook_init.js"],
-      "run_at": "document_start" 
+      "js": [
+        "config.js",
+        "facebook_init.js"
+      ],
+      "run_at": "document_start"
     },
     {
       "matches": [
@@ -80,24 +125,46 @@
       "run_at": "document_end"
     },
     {
-      "matches": ["*://notebooklm.google.com/*"],
-      "js": ["notebooklm.js"],
+      "matches": [
+        "*://notebooklm.google.com/*"
+      ],
+      "js": [
+        "notebooklm.js"
+      ],
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["football-teams.json","handleFootballMatch.js","image/add.png"],
-      "matches": ["*://*.google.com/*","*://google.com/*"]
+      "resources": [
+        "football-teams.json",
+        "handleFootballMatch.js",
+        "image/add.png"
+      ],
+      "matches": [
+        "*://*.google.com/*",
+        "*://google.com/*"
+      ]
     },
     {
-      "resources": ["image/add.png"],
-      "matches": ["*://*.ticketbox.vn/*", "*://ticketbox.vn/*"]
+      "resources": [
+        "image/add.png"
+      ],
+      "matches": [
+        "*://*.ticketbox.vn/*",
+        "*://ticketbox.vn/*"
+      ]
     },
     {
-       "resources": ["tuvung_popup.html", "tuvung.css", "tuvung.js"],
-       "matches": ["<all_urls>"]
-     }    
+      "resources": [
+        "tuvung.html",
+        "tuvung.css",
+        "tuvung.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
   ],
   "commands": {
     "open_command_hub": {
@@ -127,6 +194,6 @@
         "mac": "Command+Shift+P"
       },
       "description": "Mở Media Hub"
-    }    
-  }  
+    }
+  }
 }

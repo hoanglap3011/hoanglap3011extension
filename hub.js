@@ -97,14 +97,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
         {
+            id: 'open_quanlytuvung',
+            name: 'Quản lý từ vựng',
+            keywords: 'quản lý từ vựng quanlytuvung',
+            action: async () => {
+                chrome.tabs.create({ url: chrome.runtime.getURL('tuvung.html') })
+            }
+        },
+        {
             id: 'open_tuvungbatky',
-            name: 'Từ vựng bất kỳ',
+            name: 'Từ vựng bất kỳ tuvungbatky',
             keywords: 'từ vựng bất kỳ tu vung bat ky',
             action: async () => {
                 await TuVungUtil.show();
             }
         }
-        // Thêm bao nhiêu lệnh tuỳ thích vào đây
     ];
 
     // --- 2. CACHE DOM VÀ TRẠNG THÁI ---

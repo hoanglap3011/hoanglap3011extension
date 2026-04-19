@@ -86,6 +86,9 @@ const DEFAULT_SETTINGS = {
 
     // box tóm tắt toàn cầu
     sbEnable: true,
+
+    // từ vựng
+    tvEnableAutoPopup: true, // Mặc định là bật
     
 };
 // =======================================================

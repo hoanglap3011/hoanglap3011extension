@@ -19,7 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
         ytEnableAutoCloseNotebook: document.getElementById('ytEnableAutoCloseNotebook'),
         ytEnableHideRelated:       document.getElementById('ytEnableHideRelated'),
         // Box tóm tắt toàn cầu
-        sbEnable:    document.getElementById('sbEnable'),        
+        sbEnable:    document.getElementById('sbEnable'),       
+        // TỪ VỰNG
+        tvEnableAutoPopup: document.getElementById('tvEnableAutoPopup'), 
     };
 
     const fbKeywordsTextarea       = document.getElementById('fbBlockKeywords');

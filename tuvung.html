@@ -9,112 +9,122 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="tuvung.css" />
 </head>
-<body class="manager-body">
 
-  <!-- HEADER -->
-  <header class="mgr-header">
-    <div class="mgr-header-inner">
-      <div class="mgr-logo">
-        <span class="mgr-logo-icon">辞</span>
-        <div>
-          <h1 class="mgr-title">Từ Vựng</h1>
-          <p class="mgr-subtitle">Vocabulary Manager</p>
+<!--
+  MODE DETECTION (do tuvung.js xử lý tự động):
+    tuvung.html              → trang quản lý từ vựng  (class="manager-body")
+    tuvung.html?mode=popup   → popup hiển thị từ ngẫu nhiên (class="popup-body")
+  
+  JS tự ẩn/hiện đúng section và gán class cho <body> theo ?mode=
+-->
+<body>
+
+  <!-- ═══════════════════════════════════════════
+       SECTION A — MANAGER (mặc định)
+       ═══════════════════════════════════════════ -->
+  <div id="sectionManager" style="display:none">
+
+    <header class="mgr-header">
+      <div class="mgr-header-inner">
+        <div class="mgr-logo">
+          <span class="mgr-logo-icon">辞</span>
+          <div>
+            <h1 class="mgr-title">Từ Vựng</h1>
+            <p class="mgr-subtitle">Vocabulary Manager</p>
+          </div>
+        </div>
+        <div class="mgr-header-actions">
+          <span class="mgr-count" id="wordCount">0 từ</span>
+          <button class="btn-primary" id="btnOpenForm">+ Thêm từ mới</button>
         </div>
       </div>
-      <div class="mgr-header-actions">
-        <span class="mgr-count" id="wordCount">0 từ</span>
-        <button class="btn-primary" id="btnOpenForm">+ Thêm từ mới</button>
-      </div>
-    </div>
-  </header>
+    </header>
 
-  <!-- MAIN -->
-  <main class="mgr-main">
-
-    <!-- SEARCH BAR -->
-    <div class="mgr-search-bar">
-      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-      </svg>
-      <input type="text" id="searchInput" class="search-input" placeholder="Tìm từ vựng…" />
-      <button class="btn-demo" id="btnDemo" title="Xem lại từ bất kỳ">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+    <main class="mgr-main">
+      <div class="mgr-search-bar">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
-        Xem lại từ bất kỳ
-      </button>
-    </div>
-
-    <!-- WORD LIST -->
-    <div class="word-list" id="wordList">
-      <!-- cards injected by JS -->
-    </div>
-
-    <!-- EMPTY STATE -->
-    <div class="empty-state" id="emptyState" style="display:none">
-      <div class="empty-icon">📖</div>
-      <p class="empty-text">Chưa có từ vựng nào.<br/>Nhấn <strong>+ Thêm từ mới</strong> để bắt đầu!</p>
-    </div>
-
-  </main>
-
-  <!-- MODAL FORM (thêm / sửa) -->
-  <div class="modal-overlay" id="modalOverlay">
-    <div class="modal-box" id="modalBox">
-      <div class="modal-header">
-        <h2 class="modal-title" id="modalTitle">Thêm từ mới</h2>
-        <button class="modal-close" id="btnCloseModal" aria-label="Đóng">✕</button>
+        <input type="text" id="searchInput" class="search-input" placeholder="Tìm từ vựng…" />
+        <button class="btn-demo" id="btnDemo" title="Xem lại từ bất kỳ">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+          Xem lại từ bất kỳ
+        </button>
       </div>
-      <form class="modal-form" id="wordForm" autocomplete="off">
-        <input type="hidden" id="editIndex" value="-1" />
 
-        <div class="form-group">
-          <label class="form-label" for="fieldWord">Từ mới <span class="required">*</span></label>
-          <input type="text" id="fieldWord" class="form-input" placeholder="e.g. ephemeral" required />
+      <div class="word-list" id="wordList"></div>
+
+      <div class="empty-state" id="emptyState" style="display:none">
+        <div class="empty-icon">📖</div>
+        <p class="empty-text">Chưa có từ vựng nào.<br/>Nhấn <strong>+ Thêm từ mới</strong> để bắt đầu!</p>
+      </div>
+    </main>
+
+    <!-- Modal thêm/sửa -->
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h2 class="modal-title" id="modalTitle">Thêm từ mới</h2>
+          <button class="modal-close" id="btnCloseModal" aria-label="Đóng">✕</button>
         </div>
+        <form class="modal-form" id="wordForm" autocomplete="off">
+          <input type="hidden" id="editIndex" value="-1" />
+          <div class="form-group">
+            <label class="form-label" for="fieldWord">Từ mới <span class="required">*</span></label>
+            <input type="text" id="fieldWord" class="form-input" placeholder="e.g. ephemeral" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="fieldMeaning">Nghĩa tiếng Việt <span class="required">*</span></label>
+            <input type="text" id="fieldMeaning" class="form-input" placeholder="e.g. phù du, thoáng qua" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="fieldExample">Câu ví dụ</label>
+            <textarea id="fieldExample" class="form-input form-textarea" placeholder="e.g. Beauty is ephemeral, but art endures."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="fieldExampleMeaning">Nghĩa câu ví dụ</label>
+            <textarea id="fieldExampleMeaning" class="form-input form-textarea" placeholder="e.g. Vẻ đẹp thì phù du, nhưng nghệ thuật trường tồn."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="fieldNote">Ghi chú thêm</label>
+            <textarea id="fieldNote" class="form-input form-textarea" placeholder="Từ loại, gốc từ, cách dùng…"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-cancel" id="btnCancelForm">Hủy</button>
+            <button type="submit" class="btn-primary">Lưu từ</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
-        <div class="form-group">
-          <label class="form-label" for="fieldMeaning">Nghĩa tiếng Việt <span class="required">*</span></label>
-          <input type="text" id="fieldMeaning" class="form-input" placeholder="e.g. phù du, thoáng qua" required />
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="fieldExample">Câu ví dụ</label>
-          <textarea id="fieldExample" class="form-input form-textarea" placeholder="e.g. Beauty is ephemeral, but art endures."></textarea>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="fieldExampleMeaning">Nghĩa câu ví dụ</label>
-          <textarea id="fieldExampleMeaning" class="form-input form-textarea" placeholder="e.g. Vẻ đẹp thì phù du, nhưng nghệ thuật trường tồn."></textarea>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="fieldNote">Ghi chú thêm</label>
-          <textarea id="fieldNote" class="form-input form-textarea" placeholder="Từ loại, gốc từ, cách dùng…"></textarea>
-        </div>
-
+    <!-- Modal xác nhận xóa -->
+    <div class="modal-overlay" id="confirmOverlay">
+      <div class="modal-box confirm-box">
+        <div class="confirm-icon">🗑️</div>
+        <h3 class="confirm-title">Xóa từ vựng?</h3>
+        <p class="confirm-msg" id="confirmMsg">Bạn có chắc muốn xóa từ này không?</p>
         <div class="form-actions">
-          <button type="button" class="btn-cancel" id="btnCancelForm">Hủy</button>
-          <button type="submit" class="btn-primary" id="btnSubmitForm">Lưu từ</button>
+          <button class="btn-cancel" id="btnCancelDelete">Hủy</button>
+          <button class="btn-danger" id="btnConfirmDelete">Xóa</button>
         </div>
-      </form>
+      </div>
+    </div>
+
+  </div><!-- /sectionManager -->
+
+
+  <!-- ═══════════════════════════════════════════
+       SECTION B — POPUP WINDOW (?mode=popup)
+       ═══════════════════════════════════════════ -->
+  <div id="sectionPopup" style="display:none">
+    <div class="popup-card" id="popupContent">
+      <div style="color:#aaa;text-align:center;padding:40px">Đang tải…</div>
     </div>
   </div>
 
-  <!-- CONFIRM DELETE -->
-  <div class="modal-overlay" id="confirmOverlay">
-    <div class="modal-box confirm-box">
-      <div class="confirm-icon">🗑️</div>
-      <h3 class="confirm-title">Xóa từ vựng?</h3>
-      <p class="confirm-msg" id="confirmMsg">Bạn có chắc muốn xóa từ này không?</p>
-      <div class="form-actions">
-        <button class="btn-cancel" id="btnCancelDelete">Hủy</button>
-        <button class="btn-danger" id="btnConfirmDelete">Xóa</button>
-      </div>
-    </div>
-  </div>
 
   <script src="tuvung.js"></script>
-  <script src="tuvung_init.js"></script>
 </body>
 </html>
