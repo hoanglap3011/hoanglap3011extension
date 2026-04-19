@@ -5,7 +5,7 @@
   "description": "extension của Lập",
   "options_page": "options.html",
   "permissions": [
-    "activeTab", "storage","tabs"
+    "activeTab", "storage","tabs", "alarms","windows","notifications"
   ],
   "host_permissions": [
     "*://script.google.com/*",
@@ -15,6 +15,11 @@
     "service_worker": "background.js"
   },
   "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["config.js", "summaryBox.js"], 
+      "run_at": "document_end"
+    },
     {
       "matches": ["*://*/*"],
       "js": ["handleBlocking.js"],
@@ -88,7 +93,11 @@
     {
       "resources": ["image/add.png"],
       "matches": ["*://*.ticketbox.vn/*", "*://ticketbox.vn/*"]
-    }  
+    },
+    {
+       "resources": ["tuvung_popup.html", "tuvung.css", "tuvung.js"],
+       "matches": ["<all_urls>"]
+     }    
   ],
   "commands": {
     "open_command_hub": {
