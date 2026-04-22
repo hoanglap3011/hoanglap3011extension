@@ -1,6 +1,6 @@
 // api
 const API = 
-"https://script.google.com/macros/s/AKfycbzxxpX5QTvYy7LODOSZ9xfquxjM6ru_YvWdjfnN29rNxal1dvRLUtOBQK2c-1_a16b_mg/exec"
+"https://script.google.com/macros/s/AKfycbwv3RCl6kyDGcfMn6MyijSUZiIQFP30z7rTKs1rDPf1A_lE1KsXmllKSEhIFLd15JK5/exec"
 ;
 
 const API_ACTION_GET_SUMMARY_BY_CODE = "getSummaryByCode";
@@ -9,6 +9,7 @@ const API_ACTION_GET_QUOTES = "getQuotes";
 const API_ACTION_ADD_VIETGIDO = "addVietGiDo";
 const API_ACTION_GET_DANHMUC_QUOTES = "getDanhMucAndQuote";
 const API_ACTION_GET_TODOLIST_WEEK = "getToDoListWeek";
+const API_ACTION_GET_THIS_WEEK_TIMELINE_FOLDER = "getThisWeekTimelineFolder";
 const API_ACTION_GET_METADATA_INTENT_TIME = "getMetaDataIntentTime";
 const API_ACTION_ADD_INTENT_TIME_DATA = "addIntentTimeData";
 

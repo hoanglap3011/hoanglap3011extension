@@ -89,6 +89,46 @@ const TodolistUtil = {
         });
       });
     });
+  },
+
+  openThisWeekTimelineFolder() {
+    StorageUtil.get([CACHE_PASS], (result) => {
+      const pass = result[CACHE_PASS] || "";
+      if (!pass || pass.length === 0) {
+        PasswordUtil.openPasswordPopup();
+        return;
+      }
+      LoadingOverlayUtil.show();
+      fetch(API, {
+        method: 'POST',
+        body: JSON.stringify({
+          pass: pass,
+          action: API_ACTION_GET_THIS_WEEK_TIMELINE_FOLDER,
+        })
+      })
+        .then(response => {
+          if (!response.ok) {
+            alert('Lỗi khi gọi API');
+            throw new Error("Lỗi khi gọi API");
+          }
+          return response.json();
+        })
+        .then(result => {
+          const code = result.code;
+          if (code !== 1) {
+            const errMsg = result.error || 'Có lỗi xảy ra';
+            alert('Lỗi: ' + errMsg);
+            return;
+          }
+          const url = result.data;
+          window.open(url, '_blank');
+        })
+        .catch(err => {
+          alert('Lỗi khi gọi API: ' + err);
+        }).finally(() => {
+          LoadingOverlayUtil.hide();
+        });
+    });
   }
 
 };

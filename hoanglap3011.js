@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const clickHandlers = [
     ["btnHabit", openHabit],
     ["btnEnter", PasswordUtil.openPasswordPopup],
+    ["btnThisWeek", TodolistUtil.openThisWeekTimelineFolder],
     ["btnVietGiDo", vietGiDo],
     ["btnIntentTime", openIntentTime],
     ["btnRecap", recap],
