@@ -49,9 +49,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
         {
+            id: 'open_thanhtuu',
+            name: 'Mở trang Thành Tựu',
+            keywords: 'biết ơn biet on thành tựu thanh tuu',
+            action: () => {
+                const danhMuc = 'Thành Tựu';
+                chrome.tabs.create({ url: chrome.runtime.getURL(`vietgido.html?danhMuc=${encodeURIComponent(danhMuc)}`) })
+            }
+        },        
+        {
             id: 'open_nhatkytrangthai',
             name: 'Mở trang Nhật Ký',
-            keywords: 'giác ngộ nhật ký trạng thái cảm xúc',
+            keywords: 'giác ngộ nhật ký trạng thái cảm xúc giac ngo nhat ky trang thai cam xuc bai hoc',
             action: () => {
                 const danhMuc = 'Giác Ngộ - Nhật Ký Trạng Thái';
                 chrome.tabs.create({ url: chrome.runtime.getURL(`vietgido.html?danhMuc=${encodeURIComponent(danhMuc)}`) })
