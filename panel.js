@@ -1,5 +1,4 @@
-// panel.js - Pomodoro Panel Logic
-// Author: GitHub Copilot
+const YOUTUBE_URL = "https://www.youtube.com/embed/videoseries?list=PLpl9CTbHHB9V4EnssGiNqAYcI67gj4qdx";
 
 // ====== Motivation Texts ======
 const MOTIVATION_TEXTS = [
@@ -181,6 +180,30 @@ function runPomodoroCycle() {
 
 // ====== Event Listeners ======
 document.addEventListener('DOMContentLoaded', () => {
+  // Khởi tạo Youtube Iframe từ biến JS
+  const iframeYoutube = document.getElementById('iframeYoutube');
+  if (iframeYoutube) {
+    iframeYoutube.src = YOUTUBE_URL;
+  }
+
+  // Logic Ẩn/Hiện Youtube
+  const btnToggleYoutube = document.getElementById('btn-toggle-youtube');
+  const divIframeYoutube = document.getElementById('divIframeYoutube');
+  
+  if (btnToggleYoutube && divIframeYoutube) {
+    btnToggleYoutube.onclick = () => {
+      // Kiểm tra trạng thái hiện tại
+      if (divIframeYoutube.style.display === 'none') {
+        divIframeYoutube.style.display = 'block';
+        btnToggleYoutube.innerHTML = '<i class="bi bi-eye-slash"></i> Ẩn Nhạc';
+      } else {
+        // Khi ẩn bằng display: none, Iframe vẫn tồn tại trong DOM nên nhạc vẫn phát bình thường
+        divIframeYoutube.style.display = 'none';
+        btnToggleYoutube.innerHTML = '<i class="bi bi-youtube"></i> Hiện Nhạc';
+      }
+    };
+  }
+
   // Motivation
   shuffledTexts = shuffleArray(MOTIVATION_TEXTS);
   currentTextIdx = 0;

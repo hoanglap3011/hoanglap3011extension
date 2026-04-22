@@ -75,3 +75,16 @@
   }
 }
 
+/* Thêm vào panel.css */
+
+#btn-toggle-youtube {
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  border-radius: 15px;
+  transition: all 0.3s;
+}
+
+#divIframeYoutube {
+  transition: opacity 0.3s ease;
+  overflow: hidden;
+}
