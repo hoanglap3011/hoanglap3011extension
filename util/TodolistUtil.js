@@ -65,7 +65,7 @@ const TodolistUtil = {
         }
       }
 
-      fetchLinkToDoListWeek(dayStr, (url) => {
+      this.fetchLinkToDoListWeek(dayStr, (url) => {
         window.open(url, '_blank');
         StorageUtil.get([CACHE_TODOLIST], (obj) => {
           const raw = obj[CACHE_TODOLIST];
