@@ -1,10 +1,61 @@
-// DatePickerUtil.js
-const DatePickerUtil = (function () {
+export const DatePickerModule = (function () {
     let datepickerInstance = null;
     let inputEl = null;
     let currentCallback = null;
     let lastExecutionTime = 0;
     let isDeleting = false;
+    let dependenciesLoaded = false;
+
+    // --- Hàm nạp động (Dynamic Import) CSS/JS ---
+    function loadDependencies() {
+        return new Promise((resolve) => {
+            // Nếu đã tải hoặc biến thư viện đã tồn tại thì bỏ qua
+            if (dependenciesLoaded || window.Datepicker) {
+                resolve();
+                return;
+            }
+
+            // 1. Chèn file CSS tự động
+            if (!document.querySelector('link[href*="datepicker-bs5.min.css"]')) {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'library/datepicker-bs5.min.css';
+                document.head.appendChild(link);
+            }
+
+            // 2. Chèn file JS tự động (Sửa lại đường dẫn nếu tên file js của bạn khác)
+            const scriptsToLoad = [
+                'library/datepicker-full.min.js', 
+                // Nếu bạn có file ngôn ngữ vi.js trong thư mục local thì bỏ comment dòng dưới
+                // 'library/locales/vi.js' 
+            ];
+
+            let loadedCount = 0;
+            function checkDone() {
+                loadedCount++;
+                if (loadedCount === scriptsToLoad.length) {
+                    dependenciesLoaded = true;
+                    resolve();
+                }
+            }
+
+            scriptsToLoad.forEach(src => {
+                if (document.querySelector(`script[src="${src}"]`)) {
+                    checkDone();
+                } else {
+                    const script = document.createElement('script');
+                    script.src = src;
+                    script.onload = checkDone;
+                    script.onerror = () => {
+                        console.error(`Không thể tải ${src}`);
+                        checkDone(); 
+                    };
+                    document.body.appendChild(script);
+                }
+            });
+        });
+    }
+
 
     // --- Helpers ---
 
@@ -108,7 +159,10 @@ const DatePickerUtil = (function () {
         });
     }
 
-    function pickDate(triggerElement, onSelectCallback) {
+    async function pickDate(triggerElement, onSelectCallback) {
+        // Chờ tải xong CSS và JS trước khi khởi tạo
+        await loadDependencies();
+
         initInput();
         currentCallback = onSelectCallback;
         inputEl.value = '';

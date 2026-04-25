@@ -1,9 +1,4 @@
-/**
- * dateUtil.js
- * Các hàm tiện ích xử lý ngày tháng
- */
-
-const DateUtil = {
+export const DateModule = {
 
   /**
    * Trả về chuỗi ngày hiện tại theo định dạng dd.MM.yyyy
@@ -53,7 +48,7 @@ const DateUtil = {
    * }}
    */
   getInfoWeek(dateStr) {
-    const date = DateUtil.parseDate(dateStr);
+    const date = DateModule.parseDate(dateStr);
 
     // 0 = Monday
     const dayOfWeek = (date.getDay() + 6) % 7;
@@ -81,14 +76,14 @@ const DateUtil = {
     for (let i = 0; i < 7; i++) {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
-      daysOfWeek.push(DateUtil.formatDate(d));
+      daysOfWeek.push(DateModule.formatDate(d));
     }
 
     return {
       week: weekNumber,
       month: String(sunday.getMonth() + 1).padStart(2, '0'),
-      startOfWeek: DateUtil.formatDate(monday),
-      endOfWeek: DateUtil.formatDate(sunday),
+      startOfWeek: DateModule.formatDate(monday),
+      endOfWeek: DateModule.formatDate(sunday),
       weekYear,
       daysOfWeek
     };

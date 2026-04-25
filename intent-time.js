@@ -1,8 +1,4 @@
 document.addEventListener('DOMContentLoaded', function () {
-    LoadingOverlayUtil.init({
-        getStorageFunc: StorageUtil.get,
-        cacheQuotesKey: CACHE_QUOTES 
-    });
 
     // Lấy dữ liệu từ Cache khi mở Extension
     StorageUtil.get([CACHE_HABIT_LIST], (obj) => {

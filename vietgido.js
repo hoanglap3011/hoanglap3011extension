@@ -1,6 +1,6 @@
-// =================================================================
-// --- VIETGIDO APPLICATION MODULE ---
-// =================================================================
+import { StorageModule } from './StorageModule.js';
+import { LoadingModule } from './LoadingModule.js';
+
 const VietGidoApp = {
   // --- Cấu hình & Hằng số ---
   config: {
@@ -33,11 +33,7 @@ const VietGidoApp = {
   init() {
     // --- THÊM MỚI TẠI ĐÂY ---
     // Khởi tạo Loading Overlay Utility
-    const getStorageFunc = StorageUtil.get;
-    LoadingOverlayUtil.init({
-      getStorageFunc: getStorageFunc,
-      cacheQuotesKey: this.config.CACHE_QUOTES
-    });
+    const getStorageFunc = StorageModule.get;
     // --- KẾT THÚC THÊM MỚI ---    
     this.cacheDomElements();
     this.setupEventListeners();
@@ -113,7 +109,7 @@ const VietGidoApp = {
 
     if (this.dom.autoNextTheLoaiBietOnSwtich) {
       this.dom.autoNextTheLoaiBietOnSwtich.addEventListener('change', e => {
-        StorageUtil.set({ [this.config.CACHE_AUTO_NEXT]: e.target.checked });
+        StorageModule.set({ [this.config.CACHE_AUTO_NEXT]: e.target.checked });
       });
     }
 
@@ -127,19 +123,19 @@ const VietGidoApp = {
 
     if (this.dom.toggleCongratsOverlaySwitch) {
         this.dom.toggleCongratsOverlaySwitch.addEventListener('change', e => {
-            StorageUtil.set({ [this.config.CACHE_SHOW_CONGRATS]: e.target.checked });
+            StorageModule.set({ [this.config.CACHE_SHOW_CONGRATS]: e.target.checked });
         });
     }    
   },
 
   loadInitialState() {
-    StorageUtil.get(this.config.CACHE_AUTO_NEXT, data => {
+    StorageModule.get(this.config.CACHE_AUTO_NEXT, data => {
       if (this.dom.autoNextTheLoaiBietOnSwtich && data[this.config.CACHE_AUTO_NEXT] != null) {
         this.dom.autoNextTheLoaiBietOnSwtich.checked = data[this.config.CACHE_AUTO_NEXT];
       }
     });
 
-    StorageUtil.get(this.config.CACHE_SHOW_TOOLBAR, data => {
+    StorageModule.get(this.config.CACHE_SHOW_TOOLBAR, data => {
       // Mặc định là OFF (ẩn toolbar) để duy trì hành vi cũ
       let show = data[this.config.CACHE_SHOW_TOOLBAR];
       if (show == null) {
@@ -152,7 +148,7 @@ const VietGidoApp = {
       this.ui.applyToolbarVisibility.call(this, show);
     });
 
-    StorageUtil.get(this.config.CACHE_HIDE_UNREQUIRED, data => {
+    StorageModule.get(this.config.CACHE_HIDE_UNREQUIRED, data => {
       let hideUnrequired = data[this.config.CACHE_HIDE_UNREQUIRED];
       // Mặc định là 'true' (checked) theo file HTML
       if (hideUnrequired == null) {
@@ -166,7 +162,7 @@ const VietGidoApp = {
       this.ui.applyFieldVisibility.call(this, hideUnrequired);
     });
 
-    StorageUtil.get(this.config.CACHE_SHOW_CONGRATS, data => {
+    StorageModule.get(this.config.CACHE_SHOW_CONGRATS, data => {
         let show = data[this.config.CACHE_SHOW_CONGRATS];
         if (show == null) show = true; // Mặc định là bật
         if (this.dom.toggleCongratsOverlaySwitch) {
@@ -188,7 +184,7 @@ const VietGidoApp = {
       this.dom.danhMucSelect.addEventListener('search', this.handlers.onCategorySearch.bind(this));
     }
 
-    StorageUtil.get('danhMuc', data => {
+    StorageModule.get('danhMuc', data => {
       const categories = data?.danhMuc || [];
       if (categories.length > 0) {
         this.render.populateCategories.call(this, categories);
@@ -202,7 +198,7 @@ const VietGidoApp = {
             this.render.buildEntriesForSelected.call(this, targetCategory.table);
             this.ui.applyTheme.call(this, targetCategory);
             // Cập nhật cache thành giá trị mới này luôn
-            StorageUtil.set({ [this.config.CACHE_DANH_MUC]: targetCategory.table });
+            StorageModule.set({ [this.config.CACHE_DANH_MUC]: targetCategory.table });
             this.ui.setButtonsState.call(this, true);
             return; // Xong việc, không cần chạy logic cache cũ
           }
@@ -210,7 +206,7 @@ const VietGidoApp = {
         }
 
         // 3. LOGIC CŨ (chạy khi không có paramDanhMuc hoặc paramDanhMuc bị sai)
-        StorageUtil.get(this.config.CACHE_DANH_MUC, cache => {
+        StorageModule.get(this.config.CACHE_DANH_MUC, cache => {
           const saved = cache[this.config.CACHE_DANH_MUC];
           const targetCategory = categories.find(c => c.table === saved) || categories[0];
           if (targetCategory) {
@@ -246,8 +242,8 @@ const VietGidoApp = {
     onCategoryChange() {
       const value = this.dom.danhMucSelect.value;
       this.render.buildEntriesForSelected.call(this, value);
-      StorageUtil.set({ [this.config.CACHE_DANH_MUC]: value });
-      StorageUtil.get('danhMuc', data => {
+      StorageModule.set({ [this.config.CACHE_DANH_MUC]: value });
+      StorageModule.get('danhMuc', data => {
         const category = (data?.danhMuc || []).find(c => c.table === value);
         this.ui.applyTheme.call(this, category);
       });
@@ -298,7 +294,7 @@ const VietGidoApp = {
         return;
       }
 
-      LoadingOverlayUtil.show(); // <-- THÊM DÒNG NÀY
+      LoadingModule.show(); // <-- THÊM DÒNG NÀY
       this.ui.setButtonsState.call(this, false);
 
       try {
@@ -318,7 +314,7 @@ const VietGidoApp = {
       } catch (err) {
         this.ui.showNotification.call(this, `❌ Lỗi: ${err.message}`, 'error');
       } finally {
-        LoadingOverlayUtil.hide();
+        LoadingModule.hide();
         this.ui.setButtonsState.call(this, true);
       }
     },
@@ -332,7 +328,7 @@ const VietGidoApp = {
     // Thay thế toàn bộ hàm này trong VietGidoApp.handlers
     async updateCategories() {
       this.ui.setButtonsState.call(this, false);
-      LoadingOverlayUtil.show();
+      LoadingModule.show();
 
       const oldSelectedValue = this.dom.danhMucSelect?.value;
       let success = false; // Dùng để theo dõi trạng thái cuối cùng
@@ -352,7 +348,7 @@ const VietGidoApp = {
         }
 
         if (success) {
-          StorageUtil.get('danhMuc', data => {
+          StorageModule.get('danhMuc', data => {
             const newCategories = data?.danhMuc || [];
             let targetCategory = newCategories.find(c => c.table === oldSelectedValue) || newCategories[0];
 
@@ -361,10 +357,10 @@ const VietGidoApp = {
               this.ui.applyTheme.call(this, targetCategory);
               this.render.buildEntriesForSelected.call(this, targetCategory.table);
               if (oldSelectedValue !== targetCategory.table) {
-                StorageUtil.set({ [this.config.CACHE_DANH_MUC]: targetCategory.table });
+                StorageModule.set({ [this.config.CACHE_DANH_MUC]: targetCategory.table });
               }
             } else {
-              StorageUtil.set({ [this.config.CACHE_DANH_MUC]: null });
+              StorageModule.set({ [this.config.CACHE_DANH_MUC]: null });
               this.ui.applyTheme.call(this, null);
               this.render.buildEntriesForSelected.call(this, null);
             }
@@ -376,19 +372,19 @@ const VietGidoApp = {
         console.error("Lỗi trong quá trình updateCategories:", err);
         success = false;
       } finally {
-        LoadingOverlayUtil.hide();
+        LoadingModule.hide();
         // 3. Cập nhật trạng thái nút dựa trên 'success'
         this.ui.setButtonsState.call(this, success, true);
       }
     },
     onToggleAllToolbars(e) {
       const isChecked = e.target.checked;
-      StorageUtil.set({ [this.config.CACHE_SHOW_TOOLBAR]: isChecked });
+      StorageModule.set({ [this.config.CACHE_SHOW_TOOLBAR]: isChecked });
       this.ui.applyToolbarVisibility.call(this, isChecked);
     },
     onToggleHideUnrequired(e) {
       const hideUnrequired = e.target.checked; // ON (checked) = true = Ẩn
-      StorageUtil.set({ [this.config.CACHE_HIDE_UNREQUIRED]: hideUnrequired });
+      StorageModule.set({ [this.config.CACHE_HIDE_UNREQUIRED]: hideUnrequired });
       this.ui.applyFieldVisibility.call(this, hideUnrequired);
     }
   },
@@ -416,7 +412,7 @@ const VietGidoApp = {
         return;
       }
 
-      StorageUtil.get('danhMuc', data => {
+      StorageModule.get('danhMuc', data => {
         const categories = data?.danhMuc || [];
         const category = categories.find(c => c?.table === categoryName);
         this.state.currentCategoryConfig = category ? { ...category, header: category.header || [] } : null;
@@ -818,11 +814,11 @@ const VietGidoApp = {
   // =================================================================
   data: {
     async collectData() {
-      const passData = await new Promise(resolve => StorageUtil.get(this.config.CACHE_PASS, resolve));
+      const passData = await new Promise(resolve => StorageModule.get(this.config.CACHE_PASS, resolve));
       const pass = passData[this.config.CACHE_PASS] || '';
 
       const selectedCategoryName = this.dom.danhMucSelect?.value;
-      const categories = await new Promise(resolve => StorageUtil.get('danhMuc', data => resolve(data.danhMuc || [])));
+      const categories = await new Promise(resolve => StorageModule.get('danhMuc', data => resolve(data.danhMuc || [])));
       const selectedCategory = categories.find(c => c.table === selectedCategoryName);
 
       const entries = Array.from(this.dom.entriesContainer.querySelectorAll('.vg-entry')).map((entry, idx) => {
@@ -896,7 +892,7 @@ const VietGidoApp = {
     },
 
     async updateCategoriesFromAPI() {
-      const passData = await new Promise(resolve => StorageUtil.get(this.config.CACHE_PASS, resolve));
+      const passData = await new Promise(resolve => StorageModule.get(this.config.CACHE_PASS, resolve));
       const pass = (passData[this.config.CACHE_PASS] || '').trim();
 
       if (!pass) return false;
@@ -926,7 +922,7 @@ const VietGidoApp = {
         }
 
         // Lưu cả hai vào cache
-        await new Promise(resolve => StorageUtil.set({
+        await new Promise(resolve => StorageModule.set({
           danhMuc: categories,
           [this.config.CACHE_QUOTES]: quotes || [] // Lưu cả quotes
         }, resolve));

@@ -1,12 +1,16 @@
-importScripts('config.js');
+import { TuVungModule } from './tuvung.js';
+const SETTINGS_KEY = 'LapsExtensionSettings';
+const DEFAULT_SETTINGS = {
+  tvEnableAutoPopup: true,
+  // ... các key khác nếu background dùng đến
+};
 
-importScripts('tuvung.js');
 
 // xử lý tự động hiển thị popup từ vựng
 chrome.storage.local.get(SETTINGS_KEY, (data) => {
     const settings = { ...DEFAULT_SETTINGS, ...(data[SETTINGS_KEY] || {}) };
     if (settings.tvEnableAutoPopup) {
-        TuVungUtil.startRandomTimer();
+        TuVungModule.startRandomTimer();
     }
 });
 
@@ -19,7 +23,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         if (newSettings && oldSettings) {
             // Nếu người dùng vừa BẬT
             if (newSettings.tvEnableAutoPopup && !oldSettings.tvEnableAutoPopup) {
-                TuVungUtil.startRandomTimer();
+                TuVungModule.startRandomTimer();
                 console.log("🚀 [Background] Đã bật timer từ vựng.");
             }
             // Nếu người dùng vừa TẮT

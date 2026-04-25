@@ -14,8 +14,6 @@
   MODE DETECTION (do tuvung.js xử lý tự động):
     tuvung.html              → trang quản lý từ vựng  (class="manager-body")
     tuvung.html?mode=popup   → popup hiển thị từ ngẫu nhiên (class="popup-body")
-  
-  JS tự ẩn/hiện đúng section và gán class cho <body> theo ?mode=
 -->
 <body>
 
@@ -35,6 +33,14 @@
         </div>
         <div class="mgr-header-actions">
           <span class="mgr-count" id="wordCount">0 từ</span>
+          <!-- 🆕 Nút đồng bộ từ server -->
+          <button class="btn-pull-server" id="btnPullServer" title="Ghi đè local bằng dữ liệu từ Google Sheet">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+              <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+            Đồng bộ từ server
+          </button>
           <button class="btn-primary" id="btnOpenForm">+ Thêm từ mới</button>
         </div>
       </div>
@@ -71,26 +77,49 @@
         </div>
         <form class="modal-form" id="wordForm" autocomplete="off">
           <input type="hidden" id="editIndex" value="-1" />
+
           <div class="form-group">
             <label class="form-label" for="fieldWord">Từ mới <span class="required">*</span></label>
             <input type="text" id="fieldWord" class="form-input" placeholder="e.g. ephemeral" required />
           </div>
+
           <div class="form-group">
             <label class="form-label" for="fieldMeaning">Nghĩa tiếng Việt <span class="required">*</span></label>
             <input type="text" id="fieldMeaning" class="form-input" placeholder="e.g. phù du, thoáng qua" required />
           </div>
+
+          <!-- 🆕 Phát âm IPA -->
+          <div class="form-group">
+            <label class="form-label" for="fieldIpa">Phát âm IPA</label>
+            <input type="text" id="fieldIpa" class="form-input form-input--ipa" placeholder="e.g. /ɪˈfem.ər.əl/" />
+          </div>
+
           <div class="form-group">
             <label class="form-label" for="fieldExample">Câu ví dụ</label>
             <textarea id="fieldExample" class="form-input form-textarea" placeholder="e.g. Beauty is ephemeral, but art endures."></textarea>
           </div>
+
           <div class="form-group">
             <label class="form-label" for="fieldExampleMeaning">Nghĩa câu ví dụ</label>
             <textarea id="fieldExampleMeaning" class="form-input form-textarea" placeholder="e.g. Vẻ đẹp thì phù du, nhưng nghệ thuật trường tồn."></textarea>
           </div>
+
+          <!-- Ảnh câu ví dụ -->
+          <div class="form-group">
+            <label class="form-label" for="fieldImageFile">Ảnh câu ví dụ</label>
+            <!-- Preview ảnh hiện tại hoặc ảnh vừa chọn -->
+            <div id="imagePreviewWrap" style="display:none; margin-bottom:10px;">
+              <img id="imagePreview" src="" alt="Preview" style="width:100%;max-height:180px;object-fit:cover;border-radius:8px;border:1px solid #eaedf2;" />
+            </div>
+            <input type="file" id="fieldImageFile" class="form-input form-input--file" accept="image/*" />
+            <p class="form-hint">Khi sửa, chỉ chọn file mới nếu muốn thay ảnh. Để trống = giữ ảnh cũ.</p>
+          </div>
+
           <div class="form-group">
             <label class="form-label" for="fieldNote">Ghi chú thêm</label>
             <textarea id="fieldNote" class="form-input form-textarea" placeholder="Từ loại, gốc từ, cách dùng…"></textarea>
           </div>
+
           <div class="form-actions">
             <button type="button" class="btn-cancel" id="btnCancelForm">Hủy</button>
             <button type="submit" class="btn-primary">Lưu từ</button>
@@ -114,7 +143,6 @@
 
   </div><!-- /sectionManager -->
 
-
   <!-- ═══════════════════════════════════════════
        SECTION B — POPUP WINDOW (?mode=popup)
        ═══════════════════════════════════════════ -->
@@ -125,6 +153,8 @@
   </div>
 
 
-  <script src="tuvung.js"></script>
+
+  <script src="config.js"></script>
+  <script type="module" src="tuvung.js"></script>
 </body>
 </html>

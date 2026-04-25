@@ -1,20 +1,7 @@
-/**
- * TUVUNG.JS — Vocabulary Util
- * ============================
- * File duy nhất cho toàn bộ chức năng từ vựng.
- * Tự detect context khi load (manager page / popup window / background SW).
- *
- * PUBLIC API — gọi từ bất kỳ đâu trong extension:
- *   TuVungUtil.show()              — mở popup từ ngẫu nhiên
- *   TuVungUtil.startRandomTimer()  — khởi động auto-popup (gọi trong background.js)
- *   TuVungUtil.getAll()            — lấy toàn bộ danh sách
- *   TuVungUtil.add(entry)          — thêm từ mới
- *   TuVungUtil.update(index, entry)— cập nhật từ
- *   TuVungUtil.remove(index)       — xóa từ
- *   TuVungUtil.getRandom()         — lấy 1 từ ngẫu nhiên
- */
+import { LoadingModule } from './LoadingModule.js';
+import { StorageModule } from './StorageModule.js';
 
-const TuVungUtil = (() => {
+export const TuVungModule = (() => {
 
   // ─────────────────────────────────────────────────────────────
   // CONSTANTS
@@ -23,9 +10,8 @@ const TuVungUtil = (() => {
   const PENDING_KEY  = 'tuvung_pending';
   const ALARM_NAME   = 'tuvung_random_popup';
   const POPUP_WIDTH  = 480;
-  const POPUP_HEIGHT = 520;
+  const POPUP_HEIGHT = 560; // tăng nhẹ để chứa ảnh
 
-  // URL của popup window — tuvung.html?mode=popup
   const POPUP_URL = (typeof chrome !== 'undefined' && chrome.runtime?.getURL)
     ? chrome.runtime.getURL('tuvung.html') + '?mode=popup'
     : 'tuvung.html?mode=popup';
@@ -64,7 +50,101 @@ const TuVungUtil = (() => {
       example:       (raw.example       || '').trim(),
       exampleMeaning:(raw.exampleMeaning|| '').trim(),
       note:          (raw.note          || '').trim(),
+      ipa:           (raw.ipa           || '').trim(),   // 🆕 Phát âm IPA
+      imageUrl:      (raw.imageUrl      || '').trim(),   // 🆕 URL ảnh câu ví dụ
     };
+  }
+
+
+  // ─────────────────────────────────────────────────────────────
+  // IMAGE HELPERS (private)
+  // ─────────────────────────────────────────────────────────────
+
+  // File ảnh đang được chọn trong form (null nếu chưa chọn / không thay đổi)
+  let _selectedImageFile = null;
+
+  /** Đọc File object → base64 thuần (không có prefix data:...) */
+  function _fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload  = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = () => reject(new Error('Không đọc được file ảnh'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /** Hiển thị preview ảnh trong form (src = objectURL hoặc imageUrl hiện tại) */
+  function _updateImagePreview(src) {
+    const wrap = document.getElementById('imagePreviewWrap');
+    const img  = document.getElementById('imagePreview');
+    if (!wrap || !img) return;
+    if (src) {
+      img.src = src;
+      wrap.style.display = 'block';
+    } else {
+      img.src = '';
+      wrap.style.display = 'none';
+    }
+  }
+
+
+  // ─────────────────────────────────────────────────────────────
+  // SERVER SYNC HELPERS (private)
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Lấy pass từ storage rồi gọi API — theo đúng pattern của TodolistUtil.
+   * Trả về Promise<{ code, data, error }> hoặc throw nếu không có pass.
+   */
+  function _callApi(body) {
+    return new Promise((resolve, reject) => {
+      StorageUtil.get([CACHE_PASS], (result) => {
+        const pass = result[CACHE_PASS] || '';
+        if (!pass) {
+          PasswordUtil.openPasswordPopup();
+          reject(new Error('Chưa có mật khẩu'));
+          return;
+        }
+
+        fetch(API, {
+          method: 'POST',
+          body: JSON.stringify({ pass, ...body }),
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error('Lỗi kết nối server (' + res.status + ')');
+            return res.json();
+          })
+          .then(resolve)
+          .catch(reject);
+      });
+    });
+  }
+
+  /**
+   * Sync 1 từ lên server.
+   * - op = 'add' | 'update': có thể kèm imageBase64 (string base64 thuần) nếu có ảnh mới
+   * - op = 'delete': server sẽ tự xóa ảnh trên Drive nếu có imageUrl
+   * Trả về Promise để caller có thể await lấy imageUrl từ server.
+   */
+  async function _syncOneToServer(op, entry, imageBase64 = null) {
+    try {
+      const body = {
+        action: API_ACTION_TUVUNG_SYNC_ONE,
+        op,
+        entry,
+      };
+      if (imageBase64) body.imageBase64 = imageBase64;
+
+      const result = await _callApi(body);
+      if (result.code !== 1) {
+        console.warn('[TuVung] Sync server thất bại:', result.error);
+        return null;
+      }
+      return result.data ?? null; // server trả về { imageUrl } nếu có upload ảnh
+    } catch (err) {
+      console.warn('[TuVung] Lỗi sync server:', err.message);
+      return null;
+    }
   }
 
 
@@ -76,25 +156,68 @@ const TuVungUtil = (() => {
     return (await _storageGet(STORAGE_KEY)) || [];
   }
 
-  async function add(entry) {
-    const list = await getAll();
-    list.unshift({ id: Date.now(), ..._normalizeEntry(entry), createdAt: new Date().toISOString() });
+  /**
+   * @param {object} entry  - dữ liệu từ vựng
+   * @param {File|null} imageFile - file ảnh mới (null nếu không có)
+   */
+  async function add(entry, imageFile = null) {
+    const list       = await getAll();
+    const normalized = _normalizeEntry(entry);
+    const newEntry   = {
+      id: Date.now(),
+      ...normalized,
+      createdAt: new Date().toISOString(),
+    };
+    list.unshift(newEntry);
     await _storageSet(STORAGE_KEY, list);
+
+    // Sync lên server — nếu có ảnh thì encode base64 rồi gửi kèm
+    const imageBase64 = imageFile ? await _fileToBase64(imageFile) : null;
+    const serverData  = await _syncOneToServer('add', newEntry, imageBase64);
+
+    // Nếu server trả về imageUrl (sau khi upload Drive), cập nhật lại local
+    if (serverData?.imageUrl) {
+      list[0].imageUrl = serverData.imageUrl;
+      await _storageSet(STORAGE_KEY, list);
+    }
+
     return list;
   }
 
-  async function update(index, entry) {
+  /**
+   * @param {number} index   - vị trí trong _allWords
+   * @param {object} entry   - dữ liệu từ vựng
+   * @param {File|null} imageFile - file ảnh mới (null = giữ nguyên ảnh cũ)
+   */
+  async function update(index, entry, imageFile = null) {
     const list = await getAll();
     if (index < 0 || index >= list.length) return list;
-    list[index] = { ...list[index], ..._normalizeEntry(entry), updatedAt: new Date().toISOString() };
+    list[index] = {
+      ...list[index],
+      ..._normalizeEntry(entry),
+      updatedAt: new Date().toISOString(),
+    };
     await _storageSet(STORAGE_KEY, list);
+
+    const imageBase64 = imageFile ? await _fileToBase64(imageFile) : null;
+    const serverData  = await _syncOneToServer('update', list[index], imageBase64);
+
+    // Nếu server upload ảnh mới và trả về url, cập nhật lại local
+    if (serverData?.imageUrl) {
+      list[index].imageUrl = serverData.imageUrl;
+      await _storageSet(STORAGE_KEY, list);
+    }
+
     return list;
   }
 
   async function remove(index) {
-    const list = await getAll();
+    const list  = await getAll();
+    const entry = list[index];
     list.splice(index, 1);
     await _storageSet(STORAGE_KEY, list);
+    // Gửi cả imageUrl để server xóa ảnh trên Drive
+    if (entry) _syncOneToServer('delete', { id: entry.id, imageUrl: entry.imageUrl });
     return list;
   }
 
@@ -104,15 +227,50 @@ const TuVungUtil = (() => {
     return list[Math.floor(Math.random() * list.length)];
   }
 
+  /**
+   * Kéo toàn bộ dữ liệu từ server về, ghi đè local.
+   * Gọi khi người dùng bấm nút "Lấy dữ liệu từ server".
+   */
+  async function pullFromServer() {
+    return new Promise((resolve, reject) => {
+      StorageUtil.get([CACHE_PASS], async (result) => {
+        const pass = result[CACHE_PASS] || '';
+        if (!pass) {
+          PasswordUtil.openPasswordPopup();
+          reject(new Error('Chưa có mật khẩu'));
+          return;
+        }
+
+        LoadingOverlayUtil.show();
+        try {
+          const res = await fetch(API, {
+            method: 'POST',
+            body: JSON.stringify({ pass, action: API_ACTION_TUVUNG_GET_ALL }),
+          });
+
+          if (!res.ok) throw new Error('Lỗi kết nối server (' + res.status + ')');
+
+          const json = await res.json();
+          if (json.code !== 1) throw new Error(json.error || 'Server trả về lỗi');
+
+          const serverList = Array.isArray(json.data) ? json.data : [];
+          await _storageSet(STORAGE_KEY, serverList);
+          resolve(serverList);
+        } catch (err) {
+          alert('Lỗi khi lấy dữ liệu từ server: ' + err.message);
+          reject(err);
+        } finally {
+          LoadingOverlayUtil.hide();
+        }
+      });
+    });
+  }
+
 
   // ─────────────────────────────────────────────────────────────
   // PUBLIC — POPUP
   // ─────────────────────────────────────────────────────────────
 
-  /**
-   * Mở popup hiển thị từ ngẫu nhiên (chrome window riêng biệt).
-   * Gọi được từ bất kỳ context nào: hub, manager, background...
-   */
   async function show() {
     const entry = await getRandom();
 
@@ -128,10 +286,8 @@ const TuVungUtil = (() => {
       return;
     }
 
-    // Lưu từ tạm để popup window đọc lại
     await _storageSet(PENDING_KEY, entry);
 
-    // Tính vị trí giữa màn hình — an toàn cho cả Service Worker (không có window.screen)
     let left = 480, top = 190;
     try {
       if (typeof chrome !== 'undefined' && chrome.system?.display) {
@@ -155,32 +311,26 @@ const TuVungUtil = (() => {
   // PUBLIC — BACKGROUND TIMER
   // ─────────────────────────────────────────────────────────────
 
-  /**
-   * Khởi động auto-popup ngẫu nhiên mỗi 30s–60s.
-   * Gọi ở TOP-LEVEL trong background.js (ngoài mọi listener).
-   */
   function startRandomTimer() {
-    // Listener phải register mỗi lần Service Worker khởi động
     chrome.alarms.onAlarm.addListener((alarm) => {
       if (alarm.name !== ALARM_NAME) return;
       show();
-      _scheduleAlarm(); // lên lịch tiếp ngay sau khi fire
+      _scheduleAlarm();
     });
 
-    // Chỉ TẠO alarm nếu chưa tồn tại (tránh reset thời gian khi SW restart)
     chrome.alarms.get(ALARM_NAME, (existing) => {
       if (!existing) _scheduleAlarm();
     });
   }
 
   function _scheduleAlarm() {
-    const delayMin = (Math.random() * 30 + 30) / 60; // 30s–60s tính bằng phút
+    const delayMin = (Math.random() * 30 + 30) / 60;
     chrome.alarms.create(ALARM_NAME, { delayInMinutes: delayMin });
   }
 
 
   // ─────────────────────────────────────────────────────────────
-  // POPUP WINDOW RENDERER (chạy khi tuvung.html?mode=popup load)
+  // POPUP WINDOW RENDERER
   // ─────────────────────────────────────────────────────────────
 
   function _esc(str) {
@@ -202,11 +352,17 @@ const TuVungUtil = (() => {
     container.innerHTML = `
       <div class="popup-badge">✦ Từ Vựng Hôm Nay</div>
       <div class="popup-word">${_esc(entry.word)}</div>
+      ${entry.ipa ? `<div class="popup-ipa">${_esc(entry.ipa)}</div>` : ''}
       <div class="popup-meaning">${_esc(entry.meaning)}</div>
       ${entry.example ? `
         <div class="popup-section">
           <div class="popup-section-label">Câu ví dụ</div>
           <div class="popup-section-text">${_esc(entry.example)}</div>
+        </div>` : ''}
+      ${entry.imageUrl ? `
+        <div class="popup-section popup-section--image">
+          <div class="popup-section-label">Hình ảnh</div>
+          <img class="popup-example-img" src="${_esc(entry.imageUrl)}" alt="Hình minh hoạ" loading="lazy" />
         </div>` : ''}
       ${entry.exampleMeaning ? `
         <div class="popup-section">
@@ -215,54 +371,52 @@ const TuVungUtil = (() => {
         </div>` : ''}
       ${entry.note ? `<div class="popup-note">${_esc(entry.note)}</div>` : ''}
       <div class="popup-footer">
-        <button class="popup-close-btn" id="popupCloseBtn">${_esc(entry.word)} - ${_esc(entry.meaning)}</button>
-    </div>
+        <button class="popup-close-btn" id="popupCloseBtn">${_esc(entry.word)} — ${_esc(entry.meaning)}</button>
+      </div>
     `;
 
-    // Đảm bảo logic tự động đóng 10 giây và click đóng vẫn hoạt động
     const closePopup = () => window.close();
-
     document.getElementById('popupCloseBtn').addEventListener('click', closePopup);
-
-    // Logic tự động đóng sau 10 giây mà bạn đã chốt
     setTimeout(closePopup, 10000);
-
   }
 
 
   // ─────────────────────────────────────────────────────────────
-  // MANAGER PAGE (chạy khi tuvung.html?mode=manager hoặc mặc định)
+  // MANAGER PAGE
   // ─────────────────────────────────────────────────────────────
 
-  let _allWords = [];
-  let _filtered = [];
+  let _allWords   = [];
+  let _filtered   = [];
   let _deleteIndex = -1;
 
   const _$ = (id) => document.getElementById(id);
 
   function _domRefs() {
     return {
-      wordList:       _$('wordList'),
-      emptyState:     _$('emptyState'),
-      wordCount:      _$('wordCount'),
-      searchInput:    _$('searchInput'),
-      modalOverlay:   _$('modalOverlay'),
-      confirmOverlay: _$('confirmOverlay'),
-      modalTitle:     _$('modalTitle'),
-      wordForm:       _$('wordForm'),
-      editIndex:      _$('editIndex'),
-      fieldWord:      _$('fieldWord'),
-      fieldMeaning:   _$('fieldMeaning'),
-      fieldExample:   _$('fieldExample'),
-      fieldExMeaning: _$('fieldExampleMeaning'),
-      fieldNote:      _$('fieldNote'),
-      confirmMsg:     _$('confirmMsg'),
-      btnOpenForm:    _$('btnOpenForm'),
-      btnCloseModal:  _$('btnCloseModal'),
-      btnCancelForm:  _$('btnCancelForm'),
-      btnCancelDel:   _$('btnCancelDelete'),
-      btnConfirmDel:  _$('btnConfirmDelete'),
-      btnDemo:        _$('btnDemo'),
+      wordList:        _$('wordList'),
+      emptyState:      _$('emptyState'),
+      wordCount:       _$('wordCount'),
+      searchInput:     _$('searchInput'),
+      modalOverlay:    _$('modalOverlay'),
+      confirmOverlay:  _$('confirmOverlay'),
+      modalTitle:      _$('modalTitle'),
+      wordForm:        _$('wordForm'),
+      editIndex:       _$('editIndex'),
+      fieldWord:       _$('fieldWord'),
+      fieldMeaning:    _$('fieldMeaning'),
+      fieldIpa:        _$('fieldIpa'),
+      fieldExample:    _$('fieldExample'),
+      fieldExMeaning:  _$('fieldExampleMeaning'),
+      fieldImageFile:  _$('fieldImageFile'),   // 🆕 input[type=file]
+      fieldNote:       _$('fieldNote'),
+      confirmMsg:      _$('confirmMsg'),
+      btnOpenForm:     _$('btnOpenForm'),
+      btnCloseModal:   _$('btnCloseModal'),
+      btnCancelForm:   _$('btnCancelForm'),
+      btnCancelDel:    _$('btnCancelDelete'),
+      btnConfirmDel:   _$('btnConfirmDelete'),
+      btnDemo:         _$('btnDemo'),
+      btnPullServer:   _$('btnPullServer'),
     };
   }
 
@@ -280,8 +434,30 @@ const TuVungUtil = (() => {
     r.btnCancelDel .addEventListener('click',  ()    => _closeConfirm(r));
     r.btnConfirmDel.addEventListener('click',  ()    => _handleDelete(r));
     r.btnDemo      .addEventListener('click',  ()    => show());
+    r.btnPullServer.addEventListener('click',  ()    => _handlePullServer(r));
     r.modalOverlay .addEventListener('click',  (e)   => { if (e.target === r.modalOverlay)  _closeModal(r);   });
     r.confirmOverlay.addEventListener('click', (e)   => { if (e.target === r.confirmOverlay) _closeConfirm(r); });
+
+    // Listener chọn ảnh: lưu file + hiện preview
+    r.fieldImageFile.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) { _selectedImageFile = null; return; }
+      _selectedImageFile = file;
+      _updateImagePreview(URL.createObjectURL(file));
+    });
+  }
+
+  // 🆕 Xử lý kéo dữ liệu từ server về
+  async function _handlePullServer(r) {
+    if (!confirm('Dữ liệu local sẽ bị ghi đè bằng dữ liệu từ server. Bạn có chắc không?')) return;
+    try {
+      _allWords = await pullFromServer();
+      _filtered = [..._allWords];
+      _renderList(r);
+      alert(`✅ Đã đồng bộ ${_allWords.length} từ từ server.`);
+    } catch (_) {
+      // Lỗi đã được alert bên trong pullFromServer
+    }
   }
 
   function _renderList(r) {
@@ -297,9 +473,16 @@ const TuVungUtil = (() => {
     r.wordList.innerHTML = _filtered.map((e) => `
       <div class="word-card" data-word-id="${e.id}">
         <div class="card-word">${_esc(e.word)}</div>
+        ${e.ipa ? `<div class="card-ipa">${_esc(e.ipa)}</div>` : ''}
         <div class="card-meaning">${_esc(e.meaning)}</div>
-        ${e.example ? `<div class="card-divider"></div>
+        ${(e.example || e.imageUrl) ? `<div class="card-divider"></div>` : ''}
+        ${e.example ? `
           <div class="card-field"><strong>Câu ví dụ</strong>${_esc(e.example)}</div>` : ''}
+        ${e.imageUrl ? `
+          <div class="card-field card-field--image">
+            <strong>Hình ảnh</strong>
+            <img class="card-example-img" src="${_esc(e.imageUrl)}" alt="Hình minh hoạ" loading="lazy" />
+          </div>` : ''}
         ${e.exampleMeaning ? `
           <div class="card-field"><strong>Nghĩa câu ví dụ</strong>${_esc(e.exampleMeaning)}</div>` : ''}
         ${e.note ? `
@@ -311,14 +494,15 @@ const TuVungUtil = (() => {
       </div>`).join('');
 
     r.wordList.querySelectorAll('[data-action="edit"]').forEach((btn) => {
-      btn.addEventListener('click', () => _openForm(r, _idxById(Number(btn.dataset.id))));
+      btn.addEventListener('click', () => _openForm(r, _idxById(btn.dataset.id)));
     });
     r.wordList.querySelectorAll('[data-action="delete"]').forEach((btn) => {
-      btn.addEventListener('click', () => _openConfirm(r, _idxById(Number(btn.dataset.id))));
+      btn.addEventListener('click', () => _openConfirm(r, _idxById(btn.dataset.id)));
     });
   }
 
-  function _idxById(id)    { return _allWords.findIndex((e) => e.id === id); }
+  // So sánh dạng string để xử lý cả id number (từ local) lẫn string base36 (từ server)
+  function _idxById(id)    { return _allWords.findIndex((e) => String(e.id) === String(id)); }
 
   function _handleSearch(r) {
     const q = r.searchInput.value.trim().toLowerCase();
@@ -326,6 +510,7 @@ const TuVungUtil = (() => {
       ? _allWords.filter((e) =>
           e.word.toLowerCase().includes(q) ||
           e.meaning.toLowerCase().includes(q) ||
+          (e.ipa     || '').toLowerCase().includes(q) ||
           (e.example || '').toLowerCase().includes(q) ||
           (e.note    || '').toLowerCase().includes(q))
       : [..._allWords];
@@ -333,36 +518,63 @@ const TuVungUtil = (() => {
   }
 
   function _openForm(r, idx) {
+    _selectedImageFile = null; // reset file mỗi lần mở form
     r.editIndex.value = idx;
     if (idx === -1) {
       r.modalTitle.textContent = 'Thêm từ mới';
       r.wordForm.reset();
+      _updateImagePreview(null);
     } else {
       const e = _allWords[idx];
       r.modalTitle.textContent = 'Sửa từ vựng';
-      r.fieldWord.value      = e.word;
-      r.fieldMeaning.value   = e.meaning;
-      r.fieldExample.value   = e.example       || '';
-      r.fieldExMeaning.value = e.exampleMeaning || '';
-      r.fieldNote.value      = e.note           || '';
+      r.fieldWord.value        = e.word;
+      r.fieldMeaning.value     = e.meaning;
+      r.fieldIpa.value         = e.ipa            || '';
+      r.fieldExample.value     = e.example        || '';
+      r.fieldExMeaning.value   = e.exampleMeaning || '';
+      r.fieldNote.value        = e.note           || '';
+      // Hiện ảnh hiện tại nếu có
+      _updateImagePreview(e.imageUrl || null);
     }
     r.modalOverlay.classList.add('active');
     r.fieldWord.focus();
   }
 
-  function _closeModal(r)   { r.modalOverlay.classList.remove('active');   r.wordForm.reset(); }
+  function _closeModal(r) {
+    r.modalOverlay.classList.remove('active');
+    r.wordForm.reset();
+    _selectedImageFile = null;
+    _updateImagePreview(null);
+  }
   function _closeConfirm(r) { _deleteIndex = -1; r.confirmOverlay.classList.remove('active'); }
 
   async function _handleSubmit(e, r) {
     e.preventDefault();
     const idx   = Number(r.editIndex.value);
-    const entry = { word: r.fieldWord.value, meaning: r.fieldMeaning.value,
-                    example: r.fieldExample.value, exampleMeaning: r.fieldExMeaning.value,
-                    note: r.fieldNote.value };
-    _allWords = idx === -1 ? await add(entry) : await update(idx, entry);
-    _filtered = [..._allWords];
-    _closeModal(r);
-    _renderList(r);
+    const entry = {
+      word:          r.fieldWord.value,
+      meaning:       r.fieldMeaning.value,
+      ipa:           r.fieldIpa.value,
+      example:       r.fieldExample.value,
+      exampleMeaning:r.fieldExMeaning.value,
+      note:          r.fieldNote.value,
+      // imageUrl giữ nguyên từ local; sẽ được cập nhật sau khi server trả về nếu có ảnh mới
+      imageUrl:      idx === -1 ? '' : (_allWords[idx].imageUrl || ''),
+    };
+
+    LoadingOverlayUtil.show();
+    try {
+      _allWords = idx === -1
+        ? await add(entry, _selectedImageFile)
+        : await update(idx, entry, _selectedImageFile);
+      _filtered = [..._allWords];
+      _closeModal(r);
+      _renderList(r);
+    } catch (err) {
+      alert('Lỗi khi lưu từ: ' + err.message);
+    } finally {
+      LoadingOverlayUtil.hide();
+    }
   }
 
   function _openConfirm(r, idx) {
@@ -381,21 +593,13 @@ const TuVungUtil = (() => {
 
 
   // ─────────────────────────────────────────────────────────────
-  // AUTO-INIT — tự detect context khi file được load
-  // ─────────────────────────────────────────────────────────────
-  //
-  // Chỉ chạy khi có DOM (không chạy trong background Service Worker).
-  // Service Worker dùng importScripts('tuvung.js') + TuVungUtil.startRandomTimer()
-  // ở top-level — không có document nên đoạn này bị bỏ qua hoàn toàn.
-
-// ─────────────────────────────────────────────────────────────
-  // AUTO-INIT — Cập nhật phiên bản an toàn
+  // AUTO-INIT
   // ─────────────────────────────────────────────────────────────
   if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', () => {
       const mode = new URLSearchParams(window.location.search).get('mode');
-      
-      const sectionPopup = document.getElementById('sectionPopup');
+
+      const sectionPopup   = document.getElementById('sectionPopup');
       const sectionManager = document.getElementById('sectionManager');
 
       if (mode === 'popup') {
@@ -410,7 +614,6 @@ const TuVungUtil = (() => {
           sectionManager.style.display = 'block';
           _initManager();
         }
-        
       }
     });
   }
@@ -420,10 +623,9 @@ const TuVungUtil = (() => {
   // PUBLIC API
   // ─────────────────────────────────────────────────────────────
   return {
-    // Storage
     getAll, add, update, remove, getRandom,
-    // UI
     show, startRandomTimer,
+    pullFromServer,
   };
 
 })();

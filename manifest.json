@@ -17,7 +17,8 @@
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
@@ -69,7 +70,6 @@
         "*://youtube.com/*"
       ],
       "js": [
-        "config.js",
         "youtube.js"
       ],
       "run_at": "document_idle"
@@ -109,7 +109,6 @@
         "*://facebook.com/*"
       ],
       "js": [
-        "config.js",
         "facebook_init.js"
       ],
       "run_at": "document_start"

@@ -12,6 +12,8 @@ const API_ACTION_GET_TODOLIST_WEEK = "getToDoListWeek";
 const API_ACTION_GET_THIS_WEEK_TIMELINE_FOLDER = "getThisWeekTimelineFolder";
 const API_ACTION_GET_METADATA_INTENT_TIME = "getMetaDataIntentTime";
 const API_ACTION_ADD_INTENT_TIME_DATA = "addIntentTimeData";
+const API_ACTION_TUVUNG_GET_ALL = "tuvungGetAll";
+const API_ACTION_TUVUNG_SYNC_ONE = "tuvungSyncOne";
 
 // CACHE KEYS
 const CACHE_PASS = "pass";

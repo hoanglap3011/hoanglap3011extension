@@ -569,3 +569,106 @@ textarea { resize: vertical; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #bbb; }
+/* ============================================================
+   ADDITIONS — IPA, Image, Pull-server button, Form hint
+   ============================================================ */
+
+/* ── Card: IPA ── */
+.card-ipa {
+  font-family: 'DM Mono', 'Courier New', monospace;
+  font-size: 13px;
+  color: var(--text-muted);
+  letter-spacing: .4px;
+  margin-bottom: 10px;
+}
+
+/* ── Card: ảnh câu ví dụ ── */
+.card-field--image { margin-top: 8px; }
+.card-example-img {
+  display: block;
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  margin-top: 6px;
+  border: 1px solid #eaedf2;
+}
+
+/* ── Form: IPA input ── */
+.form-input--ipa {
+  font-family: 'DM Mono', 'Courier New', monospace;
+  letter-spacing: .4px;
+}
+
+/* ── Form: hint text ── */
+.form-hint {
+  font-size: 11.5px;
+  color: var(--text-light);
+  margin-top: 5px;
+  line-height: 1.5;
+}
+
+/* ── Button: Đồng bộ từ server ── */
+.btn-pull-server {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gold-light);
+  background: rgba(200,168,75,.1);
+  border: 1.5px solid rgba(200,168,75,.35);
+  padding: 7px 14px;
+  border-radius: 50px;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.btn-pull-server:hover {
+  background: rgba(200,168,75,.2);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ── Popup: IPA ── */
+.popup-ipa {
+  font-family: 'DM Mono', 'Courier New', monospace;
+  font-size: 14px;
+  color: var(--text-light);
+  letter-spacing: .5px;
+  margin-bottom: 4px;
+  margin-top: -4px;
+}
+
+/* ── Popup: ảnh câu ví dụ ── */
+.popup-section--image { padding: 10px 16px; }
+.popup-example-img {
+  display: block;
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+/* ── Form: input file ── */
+.form-input--file {
+  padding: 8px 10px;
+  font-size: 13px;
+  background: var(--cream);
+  cursor: pointer;
+}
+.form-input--file::file-selector-button {
+  background: var(--gold);
+  color: var(--navy);
+  border: none;
+  padding: 5px 12px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 10px;
+  transition: background var(--transition);
+}
+.form-input--file::file-selector-button:hover {
+  background: var(--gold-light);
+}

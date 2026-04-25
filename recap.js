@@ -129,11 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function init() {
-        // Khởi tạo Loading Overlay
-        LoadingOverlayUtil.init({
-            getStorageFunc: StorageUtil.get,
-            cacheQuotesKey: CACHE_QUOTES
-        });
+
 
         // Tự động focus vào input
         searchInput.focus();

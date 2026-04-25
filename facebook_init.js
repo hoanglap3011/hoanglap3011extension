@@ -7,11 +7,16 @@ const HIDE_STORY_CSS = `
     }
 `;
 
+
 (function() {
     // Sử dụng API của extension
     if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-        
-        // THAY ĐỔI: Dùng SETTINGS_KEY chung (từ config.js)
+      
+        // SETTINGS_KEY và DEFAULT_SETTINGS chưa có ở document_start
+        // → hardcode thẳng giá trị vào đây, không phụ thuộc config.js
+        const SETTINGS_KEY = 'LapsExtensionSettings';
+        const DEFAULT_SETTINGS = { fbEnableHideStories: true };
+
         chrome.storage.local.get(SETTINGS_KEY, (data) => {
             
             // THAY ĐỔI: Dùng DEFAULT_SETTINGS chung và data[SETTINGS_KEY] (từ config.js)

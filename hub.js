@@ -1,3 +1,6 @@
+import { TodolistModule } from './TodolistModule.js';
+import { DatePickerModule } from './DatePickerModule.js';
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- 1. DANH SÁCH LỆNH CỐ ĐỊNH ---
@@ -33,9 +36,9 @@ document.addEventListener('DOMContentLoaded', () => {
             keywords: 'to do list todolist',
             keepOpen: true,
             action: () => {
-                DatePickerUtil.pickDate(searchInput, (selectedDate) => {
+                DatePickerModule.pickDate(searchInput, (selectedDate) => {
                     const dateStr = DateUtil.formatDate(selectedDate);
-                    TodolistUtil.openToDoListWeekFromDay(dateStr);
+                    TodolistModule.openToDoListWeekFromDay(dateStr);
                 });
             }
         },
