@@ -98,7 +98,7 @@ export const TuVungModule = (() => {
    */
   function _callApi(body) {
     return new Promise((resolve, reject) => {
-      StorageUtil.get([CACHE_PASS], (result) => {
+      StorageModule.get([CACHE_PASS], (result) => {
         const pass = result[CACHE_PASS] || '';
         if (!pass) {
           PasswordUtil.openPasswordPopup();
@@ -233,7 +233,7 @@ export const TuVungModule = (() => {
    */
   async function pullFromServer() {
     return new Promise((resolve, reject) => {
-      StorageUtil.get([CACHE_PASS], async (result) => {
+      StorageModule.get([CACHE_PASS], async (result) => {
         const pass = result[CACHE_PASS] || '';
         if (!pass) {
           PasswordUtil.openPasswordPopup();
@@ -241,7 +241,7 @@ export const TuVungModule = (() => {
           return;
         }
 
-        LoadingOverlayUtil.show();
+        LoadingModule.show();
         try {
           const res = await fetch(API, {
             method: 'POST',
@@ -260,7 +260,7 @@ export const TuVungModule = (() => {
           alert('Lỗi khi lấy dữ liệu từ server: ' + err.message);
           reject(err);
         } finally {
-          LoadingOverlayUtil.hide();
+          LoadingModule.hide();
         }
       });
     });
@@ -562,7 +562,7 @@ export const TuVungModule = (() => {
       imageUrl:      idx === -1 ? '' : (_allWords[idx].imageUrl || ''),
     };
 
-    LoadingOverlayUtil.show();
+    LoadingModule.show();
     try {
       _allWords = idx === -1
         ? await add(entry, _selectedImageFile)
@@ -573,7 +573,7 @@ export const TuVungModule = (() => {
     } catch (err) {
       alert('Lỗi khi lưu từ: ' + err.message);
     } finally {
-      LoadingOverlayUtil.hide();
+      LoadingModule.hide();
     }
   }
 
