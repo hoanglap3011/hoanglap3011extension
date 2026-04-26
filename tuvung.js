@@ -10,7 +10,24 @@ export const TuVungModule = (() => {
   const PENDING_KEY  = 'tuvung_pending';
   const ALARM_NAME   = 'tuvung_random_popup';
   const POPUP_WIDTH  = 480;
-  const POPUP_HEIGHT = 560; // tăng nhẹ để chứa ảnh
+  // Chiều cao khởi tạo — sẽ được resize tự động sau khi render xong nội dung
+  const POPUP_HEIGHT_INITIAL = 300;
+
+  // ── Timer config — đọc từ storage (người dùng cấu hình trong Options) ──
+  const _TV_TIMER_KEY      = 'tvTimerSettings';
+  const _TV_TIMER_DEFAULTS = { autoCloseMs: 10, timerMinSec: 30, timerMaxSec: 60 };
+
+  async function _getTvTimerSettings() {
+    return new Promise((resolve) => {
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.get([_TV_TIMER_KEY], (r) => {
+          resolve({ ..._TV_TIMER_DEFAULTS, ...(r[_TV_TIMER_KEY] || {}) });
+        });
+      } else {
+        resolve(_TV_TIMER_DEFAULTS);
+      }
+    });
+  }
 
   const POPUP_URL = (typeof chrome !== 'undefined' && chrome.runtime?.getURL)
     ? chrome.runtime.getURL('tuvung.html') + '?mode=popup'
@@ -294,16 +311,16 @@ export const TuVungModule = (() => {
         const displays = await new Promise(r => chrome.system.display.getInfo(r));
         const primary  = displays.find(d => d.isPrimary) || displays[0];
         if (primary) {
-          left = Math.round((primary.workArea.width  - POPUP_WIDTH)  / 2) + primary.workArea.left;
-          top  = Math.round((primary.workArea.height - POPUP_HEIGHT) / 2) + primary.workArea.top;
+          left = Math.round((primary.workArea.width  - POPUP_WIDTH)        / 2) + primary.workArea.left;
+          top  = Math.round((primary.workArea.height - POPUP_HEIGHT_INITIAL) / 2) + primary.workArea.top;
         }
       } else if (typeof window !== 'undefined' && window.screen) {
-        left = Math.round((window.screen.width  - POPUP_WIDTH)  / 2);
-        top  = Math.round((window.screen.height - POPUP_HEIGHT) / 2);
+        left = Math.round((window.screen.width  - POPUP_WIDTH)        / 2);
+        top  = Math.round((window.screen.height - POPUP_HEIGHT_INITIAL) / 2);
       }
     } catch (_) { /* dùng fallback */ }
 
-    chrome.windows.create({ url: POPUP_URL, type: 'popup', width: POPUP_WIDTH, height: POPUP_HEIGHT, left, top, focused: true });
+    chrome.windows.create({ url: POPUP_URL, type: 'popup', width: POPUP_WIDTH, height: POPUP_HEIGHT_INITIAL, left, top, focused: true });
   }
 
 
@@ -323,8 +340,11 @@ export const TuVungModule = (() => {
     });
   }
 
-  function _scheduleAlarm() {
-    const delayMin = (Math.random() * 30 + 30) / 60;
+  async function _scheduleAlarm() {
+    const tv       = await _getTvTimerSettings();
+    const minSec   = tv.timerMinSec;
+    const maxSec   = Math.max(minSec, tv.timerMaxSec);
+    const delayMin = (Math.random() * (maxSec - minSec) + minSec) / 60;
     chrome.alarms.create(ALARM_NAME, { delayInMinutes: delayMin });
   }
 
@@ -377,7 +397,35 @@ export const TuVungModule = (() => {
 
     const closePopup = () => window.close();
     document.getElementById('popupCloseBtn').addEventListener('click', closePopup);
-    setTimeout(closePopup, 10000);
+
+    // Đọc thời gian tự đóng từ storage (người dùng cấu hình trong Options)
+    _getTvTimerSettings().then((tv) => {
+      setTimeout(closePopup, tv.autoCloseMs * 1000);
+    });
+
+    // ── Hướng A: Resize cửa sổ Chrome khớp với nội dung thực ──
+    // Đợi ảnh load xong (nếu có) rồi mới đo
+    const imgs = container.querySelectorAll('img');
+    const imgLoads = Array.from(imgs).map(img =>
+      img.complete ? Promise.resolve() : new Promise(res => { img.onload = res; img.onerror = res; })
+    );
+
+    Promise.all(imgLoads).then(() => {
+      // Đo chiều cao thực của toàn bộ trang
+      const contentH = document.documentElement.scrollHeight;
+      // Thêm padding nhỏ phòng trường hợp thanh tiêu đề browser ăn vào
+      const targetH  = contentH + 40;
+
+      if (typeof chrome !== 'undefined' && chrome.windows) {
+        chrome.windows.getCurrent((win) => {
+          // Tính lại top để popup nằm giữa màn hình theo chiều dọc sau resize
+          // Dùng win.top hiện tại làm gốc, dịch ngược lên để căn giữa
+          const screenH    = window.screen.availHeight;
+          const newTop     = Math.max(0, Math.round((screenH - targetH) / 2));
+          chrome.windows.update(win.id, { height: targetH, top: newTop });
+        });
+      }
+    });
   }
 
 
@@ -407,6 +455,7 @@ export const TuVungModule = (() => {
       fieldIpa:        _$('fieldIpa'),
       fieldExample:    _$('fieldExample'),
       fieldExMeaning:  _$('fieldExampleMeaning'),
+      fieldImageUrl:   _$('fieldImageUrl'),
       fieldImageFile:  _$('fieldImageFile'),   // 🆕 input[type=file]
       fieldNote:       _$('fieldNote'),
       confirmMsg:      _$('confirmMsg'),
@@ -438,13 +487,33 @@ export const TuVungModule = (() => {
     r.modalOverlay .addEventListener('click',  (e)   => { if (e.target === r.modalOverlay)  _closeModal(r);   });
     r.confirmOverlay.addEventListener('click', (e)   => { if (e.target === r.confirmOverlay) _closeConfirm(r); });
 
-    // Listener chọn ảnh: lưu file + hiện preview
+
     r.fieldImageFile.addEventListener('change', (e) => {
       const file = e.target.files[0];
-      if (!file) { _selectedImageFile = null; return; }
+      
+      // Nếu người dùng bấm "Hủy" (Cancel) lúc chọn file
+      if (!file) { 
+        _selectedImageFile = null; 
+        // Phục hồi lại preview của ô URL (nếu có)
+        _updateImagePreview(r.fieldImageUrl.value.trim() || null);
+        return; 
+      }
+
+      // Nếu đã chọn file thành công
       _selectedImageFile = file;
       _updateImagePreview(URL.createObjectURL(file));
+      
+      // 🆕 Xóa trắng giá trị trong ô nhập URL để tránh gây nhầm lẫn
+      r.fieldImageUrl.value = '';
     });
+
+    // 🆕 Listener khi nhập URL ảnh ngoài
+    r.fieldImageUrl.addEventListener('input', (e) => {
+      // Nếu chưa chọn file upload thì ưu tiên hiển thị preview của URL
+      if (!_selectedImageFile) {
+        _updateImagePreview(e.target.value.trim() || null);
+      }
+    });    
   }
 
   // 🆕 Xử lý kéo dữ liệu từ server về
@@ -533,6 +602,10 @@ export const TuVungModule = (() => {
       r.fieldExample.value     = e.example        || '';
       r.fieldExMeaning.value   = e.exampleMeaning || '';
       r.fieldNote.value        = e.note           || '';
+      
+      // 🆕 Gán URL vào input
+      r.fieldImageUrl.value    = e.imageUrl       || '';
+      
       // Hiện ảnh hiện tại nếu có
       _updateImagePreview(e.imageUrl || null);
     }
@@ -558,8 +631,7 @@ export const TuVungModule = (() => {
       example:       r.fieldExample.value,
       exampleMeaning:r.fieldExMeaning.value,
       note:          r.fieldNote.value,
-      // imageUrl giữ nguyên từ local; sẽ được cập nhật sau khi server trả về nếu có ảnh mới
-      imageUrl:      idx === -1 ? '' : (_allWords[idx].imageUrl || ''),
+      imageUrl:      r.fieldImageUrl.value.trim(),
     };
 
     LoadingModule.show();

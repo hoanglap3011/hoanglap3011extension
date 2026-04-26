@@ -96,6 +96,15 @@ const DEFAULT_SETTINGS = {
 };
 // =======================================================
 
+// ── Cài đặt Popup Từ Vựng ──
+// Thời gian tự động đóng popup (ms)
+const TV_POPUP_AUTO_CLOSE_MS = 10000; // 10 giây
+
+// Khoảng thời gian giữa 2 lần hiện popup (giây)
+// Popup sẽ xuất hiện sau một khoảng ngẫu nhiên trong [TV_TIMER_MIN_SEC, TV_TIMER_MAX_SEC]
+const TV_TIMER_MIN_SEC = 30;  // tối thiểu 30 giây
+const TV_TIMER_MAX_SEC = 60;  // tối đa 60 giây
+
 
 // quick link hoanglap3011
 const TODOLIST_ALL = "https://docs.google.com/spreadsheets/d/1ODqzKCpG_uZ_3YckZMiXNvhE6xGGulUEy7nICsdAQHo/edit";

@@ -197,6 +197,65 @@
             top: auto;
             bottom: calc(100% + 6px);
         }
+
+        /* === TỪ VỰNG — number inputs === */
+        .tv-number-input {
+            width: 70px;
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            text-align: center;
+            color: #333;
+            background: #fafafa;
+            transition: border-color 0.15s;
+            flex-shrink: 0;
+        }
+        .tv-number-input:focus {
+            outline: none;
+            border-color: #1877f2;
+            background: #fff;
+        }
+        .tv-timer-range-row {
+            align-items: flex-start;
+            padding-top: 16px;
+            gap: 12px;
+        }
+        .tv-range-inputs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .tv-range-field {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .tv-range-label {
+            font-size: 11px;
+            color: #888;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .tv-range-unit {
+            font-size: 11px;
+            color: #aaa;
+        }
+        .tv-range-sep {
+            font-size: 18px;
+            color: #ccc;
+            margin-top: 18px;
+        }
+        .tv-range-hint {
+            font-size: 11.5px;
+            color: #999;
+            padding: 0 0 14px 0;
+            line-height: 1.6;
+            margin: 0;
+        }
     </style>
 </head>
 <body>
@@ -405,6 +464,33 @@ bên cạnh video đang xem.">
                 <span class="slider"></span>
             </label>
         </div>
+        <div class="setting-row">
+            <label for="tvAutoCloseMs" class="switchLabel" data-tooltip="Popup sẽ tự đóng sau bao nhiêu giây nếu không có thao tác nào.">
+                <strong>Thời gian tự đóng popup</strong>
+                <span class="description">Đơn vị: giây. Mặc định: 10</span>
+            </label>
+            <input type="number" id="tvAutoCloseMs" class="tv-number-input" min="3" max="120" value="10" />
+        </div>
+        <div class="setting-row tv-timer-range-row">
+            <div class="switchLabel" style="cursor:default">
+                <strong>Khoảng cách giữa 2 lần hiện popup</strong>
+                <span class="description">Popup sẽ xuất hiện sau một khoảng thời gian <em>ngẫu nhiên</em> nằm trong giới hạn dưới đây.</span>
+            </div>
+            <div class="tv-range-inputs">
+                <div class="tv-range-field">
+                    <span class="tv-range-label">Tối thiểu</span>
+                    <input type="number" id="tvTimerMinSec" class="tv-number-input" min="10" max="3600" value="30" />
+                    <span class="tv-range-unit">giây</span>
+                </div>
+                <div class="tv-range-sep">—</div>
+                <div class="tv-range-field">
+                    <span class="tv-range-label">Tối đa</span>
+                    <input type="number" id="tvTimerMaxSec" class="tv-number-input" min="10" max="3600" value="60" />
+                    <span class="tv-range-unit">giây</span>
+                </div>
+            </div>
+        </div>
+        <p class="tv-range-hint">Ví dụ: tối thiểu 30 — tối đa 300 → popup xuất hiện ngẫu nhiên từ 30 giây đến 5 phút một lần.</p>
     </div>
 </div>        
 
