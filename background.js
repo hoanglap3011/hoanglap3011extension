@@ -44,9 +44,6 @@ let cachedTokens = {
 let vietgidoTabId = null;
 let shouldAutoRunAll = false; 
 
-chrome.runtime.onInstalled.addListener(() => {
-  // TuVungUtil.startRandomTimer(); // random 30s–60s
-});
 
 chrome.commands.onCommand.addListener((command) => {
   if (command === "open_command_hub") {

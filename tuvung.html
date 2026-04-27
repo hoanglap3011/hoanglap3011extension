@@ -153,6 +153,83 @@
   </div><!-- /sectionManager -->
 
   <!-- ═══════════════════════════════════════════
+       SECTION C — ADD FORM POPUP (?mode=add-form)
+       ═══════════════════════════════════════════ -->
+  <div id="sectionAddForm" style="display:none">
+    <div class="add-form-card">
+
+      <div class="add-form-header">
+        <div class="add-form-logo">
+          <span class="add-form-logo-icon">辞</span>
+          <div>
+            <h1 class="add-form-title">Thêm từ mới</h1>
+            <p class="add-form-subtitle">Vocabulary Manager</p>
+          </div>
+        </div>
+        <button class="add-form-close" id="btnAddFormClose" aria-label="Đóng">✕</button>
+      </div>
+
+      <form class="add-form-body" id="addFormPopup" autocomplete="off">
+
+        <div class="form-group">
+          <label class="form-label" for="afWord">Từ mới <span class="required">*</span></label>
+          <input type="text" id="afWord" class="form-input" placeholder="e.g. ephemeral" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="afMeaning">Nghĩa tiếng Việt <span class="required">*</span></label>
+          <input type="text" id="afMeaning" class="form-input" placeholder="e.g. phù du, thoáng qua" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="afIpa">Phát âm IPA</label>
+          <input type="text" id="afIpa" class="form-input form-input--ipa" placeholder="e.g. /ɪˈfem.ər.əl/" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="afExample">Câu ví dụ</label>
+          <textarea id="afExample" class="form-input form-textarea" placeholder="e.g. Beauty is ephemeral, but art endures."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="afExampleMeaning">Nghĩa câu ví dụ</label>
+          <textarea id="afExampleMeaning" class="form-input form-textarea" placeholder="e.g. Vẻ đẹp thì phù du, nhưng nghệ thuật trường tồn."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Ảnh câu ví dụ</label>
+          <div style="display:flex;gap:8px;margin-bottom:10px;">
+            <input type="text" id="afImageUrl" class="form-input" placeholder="Nhập link ảnh (URL)..." style="flex:1;" />
+            <label class="btn-primary" style="cursor:pointer;padding:0 12px;display:flex;align-items:center;white-space:nowrap;border-radius:6px;">
+              Tải lên
+              <input type="file" id="afImageFile" accept="image/*" style="display:none" />
+            </label>
+          </div>
+          <div id="afImagePreviewWrap" style="display:none;margin-bottom:10px;">
+            <img id="afImagePreview" src="" alt="Preview" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,.1);" />
+          </div>
+          <p class="form-hint">Ưu tiên ảnh tải lên từ máy.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="afNote">Ghi chú thêm</label>
+          <textarea id="afNote" class="form-input form-textarea" placeholder="Từ loại, gốc từ, cách dùng…"></textarea>
+        </div>
+
+        <div class="add-form-actions">
+          <button type="button" class="btn-cancel" id="btnAddFormCancel">Hủy</button>
+          <button type="submit" class="btn-primary" id="btnAddFormSubmit">
+            <span id="addFormBtnLabel">Lưu từ</span>
+          </button>
+        </div>
+
+        <p class="add-form-status" id="addFormStatus"></p>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
        SECTION B — POPUP WINDOW (?mode=popup)
        ═══════════════════════════════════════════ -->
   <div id="sectionPopup" style="display:none">

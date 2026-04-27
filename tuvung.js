@@ -33,6 +33,13 @@ export const TuVungModule = (() => {
     ? chrome.runtime.getURL('tuvung.html') + '?mode=popup'
     : 'tuvung.html?mode=popup';
 
+  const ADD_FORM_URL = (typeof chrome !== 'undefined' && chrome.runtime?.getURL)
+    ? chrome.runtime.getURL('tuvung.html') + '?mode=add-form'
+    : 'tuvung.html?mode=add-form';
+
+  const ADD_FORM_WIDTH  = 500;
+  const ADD_FORM_HEIGHT = 680;
+
 
   // ─────────────────────────────────────────────────────────────
   // STORAGE HELPERS (private)
@@ -321,6 +328,122 @@ export const TuVungModule = (() => {
     } catch (_) { /* dùng fallback */ }
 
     chrome.windows.create({ url: POPUP_URL, type: 'popup', width: POPUP_WIDTH, height: POPUP_HEIGHT_INITIAL, left, top, focused: true });
+  }
+
+
+  // ─────────────────────────────────────────────────────────────
+  // PUBLIC — OPEN ADD-FORM POPUP WINDOW
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Mở cửa sổ popup Chrome chứa form thêm từ mới.
+   * Gọi được từ bất kỳ đâu: background.js, content script, popup, v.v.
+   *   TuVungModule.openAddForm()
+   */
+  async function openAddForm() {
+    let left = 200, top = 100;
+    try {
+      if (typeof chrome !== 'undefined' && chrome.system?.display) {
+        const displays = await new Promise(r => chrome.system.display.getInfo(r));
+        const primary  = displays.find(d => d.isPrimary) || displays[0];
+        if (primary) {
+          left = Math.round((primary.workArea.width  - ADD_FORM_WIDTH)  / 2) + primary.workArea.left;
+          top  = Math.round((primary.workArea.height - ADD_FORM_HEIGHT) / 2) + primary.workArea.top;
+        }
+      } else if (typeof window !== 'undefined' && window.screen) {
+        left = Math.round((window.screen.width  - ADD_FORM_WIDTH)  / 2);
+        top  = Math.round((window.screen.height - ADD_FORM_HEIGHT) / 2);
+      }
+    } catch (_) { /* dùng fallback */ }
+
+    chrome.windows.create({
+      url:     ADD_FORM_URL,
+      type:    'popup',
+      width:   ADD_FORM_WIDTH,
+      height:  ADD_FORM_HEIGHT,
+      left,
+      top,
+      focused: true,
+    });
+  }
+
+
+  // ─────────────────────────────────────────────────────────────
+  // ADD-FORM POPUP RENDERER  (chạy khi mode=add-form)
+  // ─────────────────────────────────────────────────────────────
+
+  let _afImageFile = null;
+
+  async function _initAddForm() {
+    const $ = id => document.getElementById(id);
+
+    const form           = $('addFormPopup');
+    const btnClose       = $('btnAddFormClose');
+    const btnCancel      = $('btnAddFormCancel');
+    const btnSubmit      = $('btnAddFormSubmit');
+    const btnLabel       = $('addFormBtnLabel');
+    const statusEl       = $('addFormStatus');
+    const fieldImageFile = $('afImageFile');
+    const fieldImageUrl  = $('afImageUrl');
+    const previewWrap    = $('afImagePreviewWrap');
+    const previewImg     = $('afImagePreview');
+
+    const _setPreview = (src) => {
+      if (src) { previewImg.src = src; previewWrap.style.display = 'block'; }
+      else      { previewImg.src = ''; previewWrap.style.display = 'none';  }
+    };
+
+    const _close = () => window.close();
+    btnClose .addEventListener('click', _close);
+    btnCancel.addEventListener('click', _close);
+
+    fieldImageFile.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) { _afImageFile = null; _setPreview(fieldImageUrl.value.trim() || null); return; }
+      _afImageFile = file;
+      _setPreview(URL.createObjectURL(file));
+      fieldImageUrl.value = '';
+    });
+
+    fieldImageUrl.addEventListener('input', (e) => {
+      if (!_afImageFile) _setPreview(e.target.value.trim() || null);
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const entry = {
+        word:          $('afWord').value,
+        meaning:       $('afMeaning').value,
+        ipa:           $('afIpa').value,
+        example:       $('afExample').value,
+        exampleMeaning:$('afExampleMeaning').value,
+        note:          $('afNote').value,
+        imageUrl:      fieldImageUrl.value.trim(),
+      };
+
+      btnSubmit.disabled = true;
+      btnLabel.textContent = 'Đang lưu…';
+      statusEl.textContent = '';
+      statusEl.className = 'add-form-status';
+
+      LoadingModule.show();
+      try {
+        await add(entry, _afImageFile);
+        statusEl.textContent = '✅ Đã lưu thành công!';
+        statusEl.className = 'add-form-status success';
+        setTimeout(_close, 800);
+      } catch (err) {
+        statusEl.textContent = '❌ Lỗi: ' + err.message;
+        statusEl.className = 'add-form-status error';
+        btnSubmit.disabled = false;
+        btnLabel.textContent = 'Lưu từ';
+      } finally {
+        LoadingModule.hide();
+      }
+    });
+
+    $('afWord').focus();
   }
 
 
@@ -673,6 +796,7 @@ export const TuVungModule = (() => {
 
       const sectionPopup   = document.getElementById('sectionPopup');
       const sectionManager = document.getElementById('sectionManager');
+      const sectionAddForm = document.getElementById('sectionAddForm');
 
       if (mode === 'popup') {
         if (sectionPopup) {
@@ -680,11 +804,30 @@ export const TuVungModule = (() => {
           sectionPopup.style.display = 'flex';
           _renderPopup();
         }
+      } else if (mode === 'add-form') {
+        if (sectionAddForm) {
+          document.body.className = 'add-form-body-bg';
+          sectionAddForm.style.cssText = 'display:flex;align-items:flex-start;justify-content:center;min-height:100vh;padding:20px;';
+          _initAddForm();
+        }
       } else {
         if (sectionManager) {
           document.body.className = 'manager-body';
           sectionManager.style.display = 'block';
           _initManager();
+
+          // Tự refresh list khi add-form popup lưu từ mới vào storage
+          if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
+            chrome.storage.onChanged.addListener((changes, namespace) => {
+              if (namespace === 'local' && changes[STORAGE_KEY]) {
+                getAll().then((list) => {
+                  _allWords = list;
+                  _filtered = [...list];
+                  _renderList(_domRefs());
+                });
+              }
+            });
+          }
         }
       }
     });
@@ -696,7 +839,7 @@ export const TuVungModule = (() => {
   // ─────────────────────────────────────────────────────────────
   return {
     getAll, add, update, remove, getRandom,
-    show, startRandomTimer,
+    show, openAddForm, startRandomTimer,
     pullFromServer,
   };
 

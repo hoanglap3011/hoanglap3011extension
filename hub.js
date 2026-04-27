@@ -1,5 +1,7 @@
 import { TodolistModule } from './TodolistModule.js';
 import { DatePickerModule } from './DatePickerModule.js';
+import { DateModule } from './DateModule.js';
+import { TuVungModule } from './tuvung.js';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -37,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
             keepOpen: true,
             action: () => {
                 DatePickerModule.pickDate(searchInput, (selectedDate) => {
-                    const dateStr = DateUtil.formatDate(selectedDate);
+                    const dateStr = DateModule.formatDate(selectedDate);
                     TodolistModule.openToDoListWeekFromDay(dateStr);
                 });
             }
@@ -54,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             id: 'open_thanhtuu',
             name: 'Mở trang Thành Tựu',
-            keywords: 'biết ơn biet on thành tựu thanh tuu',
+            keywords: 'biết ơn biet on thành tựu thanh',
             action: () => {
                 const danhMuc = 'Thành Tựu';
                 chrome.tabs.create({ url: chrome.runtime.getURL(`vietgido.html?danhMuc=${encodeURIComponent(danhMuc)}`) })
@@ -118,12 +120,20 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         {
             id: 'open_tuvungbatky',
-            name: 'Từ vựng bất kỳ tuvungbatky',
-            keywords: 'từ vựng bất kỳ tu vung bat ky',
+            name: 'Từ vựng bất kỳ',
+            keywords: 'từ vựng bất kỳ tu vung bat ky tubatky',
             action: async () => {
-                await TuVungUtil.show();
+                await TuVungModule.show();
             }
-        }
+        },
+        {
+            id: 'open_themtuvung',
+            name: 'Thêm từ vựng',
+            keywords: 'them tu vung',
+            action: async () => {
+                await TuVungModule.openAddForm();
+            }
+        }        
     ];
 
     // --- 2. CACHE DOM VÀ TRẠNG THÁI ---

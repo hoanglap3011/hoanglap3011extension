@@ -564,6 +564,156 @@ textarea { resize: vertical; }
 .popup-close-btn:hover { background: var(--gold-light); transform: translateY(-1px); }
 .popup-close-btn:active { transform: translateY(0); }
 
+/* ============================================================
+   ADD-FORM POPUP WINDOW  (?mode=add-form)
+   Cùng nền navy với popup hiển thị từ, nhưng có form nhập liệu
+   ============================================================ */
+
+.add-form-body-bg {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--navy);
+  color: var(--white);
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Decorative bg — giống popup hiển thị từ */
+.add-form-body-bg::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 20%, rgba(200,168,75,.12) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 60% at 80% 80%, rgba(200,168,75,.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.add-form-card {
+  background: var(--navy-mid);
+  border: 1px solid rgba(200,168,75,.25);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 24px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.04);
+  position: relative;
+  animation: popupCardIn .35s cubic-bezier(.34,1.56,.64,1);
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.add-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 28px 18px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.add-form-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.add-form-logo-icon {
+  font-size: 28px;
+  color: var(--gold);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.add-form-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: -.3px;
+  line-height: 1.1;
+}
+
+.add-form-subtitle {
+  font-size: 10px;
+  color: var(--text-light);
+  letter-spacing: .8px;
+  text-transform: uppercase;
+}
+
+.add-form-close {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.07);
+  color: var(--text-light);
+  font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+.add-form-close:hover {
+  background: rgba(255,255,255,.14);
+  color: var(--white);
+}
+
+/* ── Form body ── */
+.add-form-body {
+  padding: 20px 28px 24px;
+}
+
+/* Override form-input để phù hợp nền tối */
+.add-form-card .form-label {
+  color: var(--text-light);
+}
+
+.add-form-card .form-input {
+  background: rgba(255,255,255,.06);
+  border-color: rgba(255,255,255,.12);
+  color: var(--white);
+}
+.add-form-card .form-input::placeholder {
+  color: rgba(255,255,255,.3);
+}
+.add-form-card .form-input:focus {
+  border-color: var(--gold);
+  background: rgba(255,255,255,.09);
+  box-shadow: 0 0 0 3px rgba(200,168,75,.18);
+}
+
+.add-form-card .form-hint {
+  color: rgba(255,255,255,.3);
+}
+
+/* ── Actions row ── */
+.add-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.add-form-card .btn-cancel {
+  border-color: rgba(255,255,255,.2);
+  color: var(--text-light);
+}
+.add-form-card .btn-cancel:hover {
+  border-color: rgba(255,255,255,.4);
+  color: var(--white);
+}
+
+/* ── Status / feedback ── */
+.add-form-status {
+  text-align: center;
+  font-size: 13px;
+  min-height: 20px;
+  margin-top: 12px;
+  transition: color .2s;
+}
+.add-form-status.success { color: #5cb85c; }
+.add-form-status.error   { color: #e74c3c; }
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
