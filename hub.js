@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             id: 'open_quanlytuvung',
             name: 'Quản lý từ vựng',
-            keywords: 'quản lý từ vựng quanlytuvung',
+            keywords: 'quan ly',
             action: async () => {
                 chrome.tabs.create({ url: chrome.runtime.getURL('tuvung.html') })
             }
