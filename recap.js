@@ -1,3 +1,6 @@
+import { LoadingModule } from './LoadingModule.js';
+import { StorageModule } from './StorageModule.js';
+
 document.addEventListener('DOMContentLoaded', () => {    
 
     // --- 2. CACHE DOM VÀ TRẠNG THÁI ---
@@ -22,10 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Kiểm tra xem có đang chạy trong môi trường extension hay không.
-     * (Giả định StorageUtil là global và đã được định nghĩa)
+     * (Giả định StorageModule là global và đã được định nghĩa)
      */
     function isExtensionEnv() {
-        // Chúng ta có thể dùng trực tiếp StorageUtil.isExtension 
+        // Chúng ta có thể dùng trực tiếp StorageModule.isExtension 
         // nếu bạn đã định nghĩa nó, hoặc dùng cách kiểm tra chung:
         return typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id;
     }
@@ -56,11 +59,11 @@ document.addEventListener('DOMContentLoaded', () => {
      * Nút Refresh sẽ gọi trực tiếp hàm này.
      */
     async function fetchData() {
-        LoadingOverlayUtil.show(); // Hiển thị loading
+        LoadingModule.show(); // Hiển thị loading
 
-        // Giả định StorageUtil được tải global
+        // Giả định StorageModule được tải global
         const pass = await new Promise(resolve => {
-            StorageUtil.get([CACHE_PASS], (result) => resolve(result[CACHE_PASS] || ''));
+            StorageModule.get([CACHE_PASS], (result) => resolve(result[CACHE_PASS] || ''));
         });
 
         fetch(API, {
@@ -91,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderList(filteredCommands); // Render danh sách
             
             // <<< THÊM MỚI: Lưu vào cache sau khi fetch thành công >>>
-            StorageUtil.set({ [CACHE_DATA_RECAP]: data }, () => {
+            StorageModule.set({ [CACHE_DATA_RECAP]: data }, () => {
                 console.log("Đã lưu dữ liệu API vào cache.");
             });
     
@@ -100,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Lỗi khi gọi API: ' + err);
             commandList.innerHTML = `<li class="error-msg">Lỗi tải dữ liệu.</li>`;
         }).finally(() => {  
-            LoadingOverlayUtil.hide(); 
+            LoadingModule.hide(); 
         });
     }
 
@@ -109,8 +112,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * Hàm này sẽ được gọi trong init()
      */
     function loadDataFromCacheOrApi() {
-        LoadingOverlayUtil.show(); // Hiện loading trong lúc kiểm tra cache
-        StorageUtil.get([CACHE_DATA_RECAP], (result) => {
+        LoadingModule.show(); // Hiện loading trong lúc kiểm tra cache
+        StorageModule.get([CACHE_DATA_RECAP], (result) => {
             const cachedData = result[CACHE_DATA_RECAP];
             
             // Nếu có cache và cache là một mảng
@@ -119,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 allCommands = cachedData;
                 filteredCommands = [...allCommands];
                 renderList(filteredCommands);
-                LoadingOverlayUtil.hide(); // Tắt loading
+                LoadingModule.hide(); // Tắt loading
             } else {
                 // Nếu không có cache, gọi API
                 console.log("Cache rỗng. Đang tải từ API...");
