@@ -16,8 +16,17 @@
         <input type="text" id="task-input" class="form-control fs-4 fw-bold border-primary" style="padding: 12px; border-width: 2px;" placeholder="xin mời nhập tên việc" autocomplete="off">
       </div>
     </div>
-    <!-- Row 2: Pomodoro Controls -->
-    <div class="row align-items-center mb-2 g-2 flex-nowrap" id="pomodoro-controls">
+    <!-- Row 2: Progress Bar -->
+    <div class="row mb-2">
+      <div class="col-12">
+        <div class="progress position-relative" style="height: 32px; background: #f0f0f0;">
+          <div id="progressbar" class="progress-bar" role="progressbar" style="width: 0%;"></div>
+          <div id="progressbar-text" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; pointer-events: none;">00:00</div>
+        </div>
+      </div>
+    </div>
+    <!-- Row 3: Pomodoro Controls -->
+    <div class="row align-items-center mb-3 g-2 flex-nowrap" id="pomodoro-controls">
       <div class="col-auto">
         <select id="preset-select" class="form-select">
           <!-- <option value="0.1,0.1,0.1">0.1</option> -->
@@ -32,15 +41,6 @@
       <div class="col-auto d-flex align-items-center">
         <button id="btn-play" class="btn btn-secondary me-2" title="Bắt đầu"><i class="bi bi-play-fill"></i></button>
         <button id="btn-stop" class="btn btn-secondary" title="Dừng"><i class="bi bi-stop-fill"></i></button>
-      </div>
-    </div>
-    <!-- Row 2b: Progress Bar -->
-    <div class="row mb-3">
-      <div class="col-12">
-        <div class="progress position-relative" style="height: 32px; background: #f0f0f0;">
-          <div id="progressbar" class="progress-bar" role="progressbar" style="width: 0%;"></div>
-          <div id="progressbar-text" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; pointer-events: none;">00:00</div>
-        </div>
       </div>
     </div>
     <!-- Row 3: Motivation -->
