@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Từ Vựng</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy:       #0f1b2d;
+      --navy-mid:   #1a2d47;
+      --navy-light: #243852;
+      --gold:       #c8a84b;
+      --gold-light: #e2c97e;
+      --gold-pale:  #f5ecd5;
+      --text-light: #a8b4c4;
+      --white:      #ffffff;
+      --transition: .2s cubic-bezier(.4,0,.2,1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    button { cursor: pointer; border: none; background: none; font-family: inherit; }
+
+    html, body {
+      height: 100%;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--navy);
+      color: var(--white);
+    }
+
+    body {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* Decorative background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 20% 20%, rgba(200,168,75,.12) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 80% 80%, rgba(200,168,75,.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .popup-card {
+      background: var(--navy-mid);
+      border: 1px solid rgba(200,168,75,.25);
+      border-radius: 20px;
+      padding: 36px 40px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 24px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.04);
+      position: relative;
+      z-index: 1;
+      animation: popupCardIn .4s cubic-bezier(.34,1.56,.64,1);
+    }
+
+    @keyframes popupCardIn {
+      from { opacity: 0; transform: translateY(24px) scale(.95); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    .popup-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--gold);
+      background: rgba(200,168,75,.12);
+      border: 1px solid rgba(200,168,75,.3);
+      padding: 4px 10px;
+      border-radius: 50px;
+      margin-bottom: 20px;
+    }
+
+    .popup-word {
+      font-family: 'Playfair Display', serif;
+      font-size: 40px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: -1px;
+      line-height: 1.1;
+      margin-bottom: 8px;
+    }
+
+    .popup-ipa {
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      color: var(--text-light);
+      letter-spacing: .5px;
+      margin-bottom: 4px;
+      margin-top: -4px;
+    }
+
+    .popup-meaning {
+      font-size: 17px;
+      font-weight: 400;
+      color: var(--gold-light);
+      margin-bottom: 28px;
+      font-style: italic;
+    }
+
+    .popup-section {
+      margin-bottom: 16px;
+      padding: 14px 16px;
+      background: rgba(255,255,255,.04);
+      border-radius: 10px;
+      border-left: 2px solid rgba(200,168,75,.35);
+    }
+    .popup-section:last-of-type { margin-bottom: 0; }
+
+    .popup-section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      color: var(--text-light);
+      margin-bottom: 5px;
+    }
+
+    .popup-section-text {
+      font-size: 14px;
+      color: #cdd5e0;
+      line-height: 1.6;
+    }
+
+    .popup-section--image { padding: 10px 16px; }
+    .popup-example-img {
+      display: block;
+      width: 100%;
+      max-height: 180px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+
+    .popup-note {
+      margin-top: 20px;
+      font-size: 12.5px;
+      color: var(--text-light);
+      font-style: italic;
+      line-height: 1.5;
+    }
+    .popup-note::before { content: '📝 '; }
+
+    .popup-footer {
+      margin-top: 28px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .popup-close-btn {
+      background: var(--gold);
+      color: var(--navy);
+      font-weight: 700;
+      font-size: 13px;
+      padding: 10px 24px;
+      border-radius: 50px;
+      transition: background var(--transition), transform var(--transition);
+      letter-spacing: .3px;
+    }
+    .popup-close-btn:hover { background: var(--gold-light); transform: translateY(-1px); }
+    .popup-close-btn:active { transform: translateY(0); }
+
+    /* Error state */
+    .error-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-light);
+    }
+    .error-state .icon { font-size: 48px; margin-bottom: 16px; }
+    .error-state p { font-size: 14px; line-height: 1.6; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<div class="popup-card" id="card">
+  <div style="color:#a8b4c4;text-align:center;padding:40px">Đang tải…</div>
+</div>
+
+<script>
+  // ─── ĐỌC DATA TỪ URL PARAM ?data=... ───────────────────────────
+  // Shortcuts sẽ encode JSON của 1 entry rồi gắn vào URL:
+  //   file:///...tuvung_popup.html?data=<encodeURIComponent(JSON.stringify(entry))>
+  //
+  // Nếu không có ?data thì cố đọc từ localStorage key "tuvung_pending"
+  // (dùng khi test trên browser thường)
+  // ────────────────────────────────────────────────────────────────
+
+  function esc(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  function render(entry) {
+    if (!entry || !entry.word) {
+      document.getElementById('card').innerHTML = `
+        <div class="error-state">
+          <div class="icon">📭</div>
+          <p>Không tìm thấy từ vựng.<br/>Hãy đồng bộ dữ liệu trước nhé!</p>
+        </div>`;
+      return;
+    }
+
+    let html = `
+      <div class="popup-badge">✦ Từ vựng hôm nay</div>
+      <div class="popup-word">${esc(entry.word)}</div>
+      ${entry.ipa ? `<div class="popup-ipa">${esc(entry.ipa)}</div>` : ''}
+      <div class="popup-meaning">${esc(entry.meaning)}</div>
+    `;
+
+    if (entry.example) {
+      html += `
+        <div class="popup-section">
+          <div class="popup-section-label">Câu ví dụ</div>
+          <div class="popup-section-text">${esc(entry.example)}</div>
+        </div>`;
+    }
+
+    if (entry.imageUrl) {
+      html += `
+        <div class="popup-section popup-section--image">
+          <div class="popup-section-label">Hình ảnh</div>
+          <img class="popup-example-img" src="${esc(entry.imageUrl)}" alt="Hình minh hoạ" />
+        </div>`;
+    }
+
+    if (entry.exampleMeaning) {
+      html += `
+        <div class="popup-section">
+          <div class="popup-section-label">Nghĩa câu ví dụ</div>
+          <div class="popup-section-text">${esc(entry.exampleMeaning)}</div>
+        </div>`;
+    }
+
+    if (entry.note) {
+      const noteHtml = esc(entry.note)
+        .replace(/\\n/g, '<br>')
+        .replace(/\\t/g, '&nbsp;&nbsp;')
+        .replace(/\n/g, '<br>')
+        .replace(/\t/g, '&nbsp;&nbsp;');
+      html += `<div class="popup-note">${noteHtml}</div>`;
+    }
+
+    html += `
+      <div class="popup-footer">
+        <button class="popup-close-btn" onclick="window.close()">Đóng ✕</button>
+      </div>`;
+
+    document.getElementById('card').innerHTML = html;
+  }
+
+  // ── Thử đọc từ URL param trước ──
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const raw    = params.get('data');
+    if (raw) {
+      render(JSON.parse(decodeURIComponent(raw)));
+    } else {
+      // Fallback: đọc từ localStorage (test thủ công trên browser)
+      const pending = localStorage.getItem('tuvung_pending');
+      render(pending ? JSON.parse(pending) : null);
+    }
+  } catch (e) {
+    document.getElementById('card').innerHTML = `
+      <div class="error-state">
+        <div class="icon">⚠️</div>
+        <p>Lỗi đọc dữ liệu:<br/>${esc(e.message)}</p>
+      </div>`;
+  }
+</script>
+</body>
+</html>
