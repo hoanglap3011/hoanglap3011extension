@@ -133,6 +133,13 @@
       white-space: pre-wrap;
     }
     .popup-note::before { content: '📝 '; }
+    .error-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-light);
+    }
+    .error-state .icon { font-size: 48px; margin-bottom: 16px; }
+    .error-state p { font-size: 14px; line-height: 1.6; }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 3px; }
@@ -143,52 +150,70 @@
   <div style="color:#a8b4c4;text-align:center;padding:40px">Đang tải…</div>
 </div>
 <script>
-  const p = new URLSearchParams(window.location.search);
-
-  const word    = p.get('word')    || '';
-  const ipa     = p.get('ipa')     || '';
-  const meaning = p.get('meaning') || '';
-  const example = p.get('example') || '';
-  const exMeaning = p.get('exMeaning') || '';
-  const imageUrl  = p.get('imageUrl')  || '';
-  const note      = p.get('note')      || '';
-
   function esc(s) {
-    return String(s)
+    return String(s || '')
       .replace(/&/g,'&amp;')
       .replace(/</g,'&lt;')
       .replace(/>/g,'&gt;')
       .replace(/"/g,'&quot;');
   }
 
-  if (!word) {
-    document.getElementById('card').innerHTML =
-      '<div style="text-align:center;padding:40px;color:#a8b4c4">📭 Không có dữ liệu</div>';
-  } else {
+  function render(entry) {
+    if (!entry || !entry.word) {
+      document.getElementById('card').innerHTML = `
+        <div class="error-state">
+          <div class="icon">📭</div>
+          <p>Không có dữ liệu.<br/>Kiểm tra lại Shortcut nhé!</p>
+        </div>`;
+      return;
+    }
+
     let html = `
       <div class="popup-badge">✦ Từ vựng hôm nay</div>
-      <div class="popup-word">${esc(word)}</div>
-      ${ipa ? `<div class="popup-ipa">${esc(ipa)}</div>` : ''}
-      <div class="popup-meaning">${esc(meaning)}</div>
+      <div class="popup-word">${esc(entry.word)}</div>
+      ${entry.ipa ? `<div class="popup-ipa">${esc(entry.ipa)}</div>` : ''}
+      <div class="popup-meaning">${esc(entry.meaning)}</div>
     `;
-    if (example) html += `
+
+    if (entry.example) html += `
       <div class="popup-section">
         <div class="popup-section-label">Câu ví dụ</div>
-        <div class="popup-section-text">${esc(example)}</div>
+        <div class="popup-section-text">${esc(entry.example)}</div>
       </div>`;
-    if (imageUrl) html += `
+
+    if (entry.imageUrl) html += `
       <div class="popup-section">
         <div class="popup-section-label">Hình ảnh</div>
-        <img class="popup-example-img" src="${esc(imageUrl)}" />
+        <img class="popup-example-img" src="${esc(entry.imageUrl)}" />
       </div>`;
-    if (exMeaning) html += `
+
+    if (entry.exampleMeaning) html += `
       <div class="popup-section">
         <div class="popup-section-label">Nghĩa câu ví dụ</div>
-        <div class="popup-section-text">${esc(exMeaning)}</div>
+        <div class="popup-section-text">${esc(entry.exampleMeaning)}</div>
       </div>`;
-    if (note) html += `<div class="popup-note">${esc(note)}</div>`;
+
+    if (entry.note) html += `
+      <div class="popup-note">${esc(entry.note)}</div>`;
 
     document.getElementById('card').innerHTML = html;
+  }
+
+  try {
+    // Đọc từ hash: tuvung_popup.html#{"word":"...","meaning":"..."}
+    // Shortcuts chỉ cần ghép: URL_BASE + "#" + «Item from List»
+    const hash = window.location.hash.slice(1); // bỏ dấu #
+    if (hash) {
+      render(JSON.parse(decodeURIComponent(hash)));
+    } else {
+      render(null);
+    }
+  } catch(e) {
+    document.getElementById('card').innerHTML = `
+      <div class="error-state">
+        <div class="icon">⚠️</div>
+        <p>Lỗi: ${esc(e.message)}</p>
+      </div>`;
   }
 </script>
 </body>
