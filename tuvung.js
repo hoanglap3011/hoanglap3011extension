@@ -74,8 +74,9 @@ export const TuVungModule = (() => {
       example:       (raw.example       || '').trim(),
       exampleMeaning:(raw.exampleMeaning|| '').trim(),
       note:          (raw.note          || '').trim(),
-      ipa:           (raw.ipa           || '').trim(),   // 🆕 Phát âm IPA
-      imageUrl:      (raw.imageUrl      || '').trim(),   // 🆕 URL ảnh câu ví dụ
+      ipa:           (raw.ipa           || '').trim(),
+      imageUrl:      (raw.imageUrl      || '').trim(),
+      isActive:      raw.isActive === false ? false : true,  // 🆕 mặc định true
     };
   }
 
@@ -247,8 +248,9 @@ export const TuVungModule = (() => {
 
   async function getRandom() {
     const list = await getAll();
-    if (!list.length) return null;
-    return list[Math.floor(Math.random() * list.length)];
+    const active = list.filter(e => e.isActive !== false);
+    if (!active.length) return null;
+    return active[Math.floor(Math.random() * active.length)];
   }
 
   /**
@@ -581,6 +583,7 @@ export const TuVungModule = (() => {
       fieldImageUrl:   _$('fieldImageUrl'),
       fieldImageFile:  _$('fieldImageFile'),   // 🆕 input[type=file]
       fieldNote:       _$('fieldNote'),
+      fieldIsActive:   _$('fieldIsActive'),   // 🆕
       confirmMsg:      _$('confirmMsg'),
       btnOpenForm:     _$('btnOpenForm'),
       btnCloseModal:   _$('btnCloseModal'),
@@ -715,6 +718,7 @@ export const TuVungModule = (() => {
     if (idx === -1) {
       r.modalTitle.textContent = 'Thêm từ mới';
       r.wordForm.reset();
+      r.fieldIsActive.checked = true; // 🆕 mặc định active
       _updateImagePreview(null);
     } else {
       const e = _allWords[idx];
@@ -728,6 +732,9 @@ export const TuVungModule = (() => {
       
       // 🆕 Gán URL vào input
       r.fieldImageUrl.value    = e.imageUrl       || '';
+
+      // 🆕 Gán is_active
+      r.fieldIsActive.checked  = e.isActive !== false;
       
       // Hiện ảnh hiện tại nếu có
       _updateImagePreview(e.imageUrl || null);
@@ -755,6 +762,7 @@ export const TuVungModule = (() => {
       exampleMeaning:r.fieldExMeaning.value,
       note:          r.fieldNote.value,
       imageUrl:      r.fieldImageUrl.value.trim(),
+      isActive:      r.fieldIsActive.checked,  // 🆕
     };
 
     LoadingModule.show();
