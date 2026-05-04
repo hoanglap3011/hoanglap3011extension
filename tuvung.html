@@ -9,19 +9,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="tuvung.css" />
 </head>
-
-<!--
-  MODE DETECTION (do tuvung.js xử lý tự động):
-    tuvung.html              → trang quản lý từ vựng  (class="manager-body")
-    tuvung.html?mode=popup   → popup hiển thị từ ngẫu nhiên (class="popup-body")
--->
 <body>
 
-  <!-- ═══════════════════════════════════════════
-       SECTION A — MANAGER (mặc định)
-       ═══════════════════════════════════════════ -->
+  <!-- SECTION A — MANAGER (Trang chủ quản lý) -->
   <div id="sectionManager" style="display:none">
-
     <header class="mgr-header">
       <div class="mgr-header-inner">
         <div class="mgr-logo">
@@ -33,15 +24,28 @@
         </div>
         <div class="mgr-header-actions">
           <span class="mgr-count" id="wordCount">0 từ</span>
-          <!-- 🆕 Nút đồng bộ từ server -->
-          <button class="btn-pull-server" id="btnPullServer" title="Ghi đè local bằng dữ liệu từ Google Sheet">
+          
+          <button class="btn-primary" id="btnPullServer" title="Ghi đè local bằng dữ liệu từ Google Sheet">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
               <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
               <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
             </svg>
-            Đồng bộ từ server
+            Đồng bộ
           </button>
-          <button class="btn-primary" id="btnOpenForm">+ Thêm từ mới</button>
+          
+          <button class="btn-primary" id="btnDemo" title="Xem lại từ bất kỳ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+            Xem từ bất kỳ
+          </button>
+
+          <button class="btn-primary" id="btnOpenForm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Thêm từ mới
+          </button>
         </div>
       </div>
     </header>
@@ -52,201 +56,128 @@
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
         <input type="text" id="searchInput" class="search-input" placeholder="Tìm từ vựng…" />
-        <button class="btn-demo" id="btnDemo" title="Xem lại từ bất kỳ">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-          </svg>
-          Xem lại từ bất kỳ
-        </button>
+        
       </div>
 
       <div class="word-list" id="wordList"></div>
-
       <div class="empty-state" id="emptyState" style="display:none">
         <div class="empty-icon">📖</div>
         <p class="empty-text">Chưa có từ vựng nào.<br/>Nhấn <strong>+ Thêm từ mới</strong> để bắt đầu!</p>
       </div>
     </main>
 
-    <!-- Modal thêm/sửa -->
     <div class="modal-overlay" id="modalOverlay">
-      <div class="modal-box">
-        <div class="modal-header">
-          <h2 class="modal-title" id="modalTitle">Thêm từ mới</h2>
-          <button class="modal-close" id="btnCloseModal" aria-label="Đóng">✕</button>
-        </div>
-        <form class="modal-form" id="wordForm" autocomplete="off">
-          <input type="hidden" id="editIndex" value="-1" />
-
-          <div class="form-group">
-            <label class="form-label" for="fieldWord">Từ mới <span class="required">*</span></label>
-            <input type="text" id="fieldWord" class="form-input" placeholder="e.g. ephemeral" required />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="fieldMeaning">Nghĩa tiếng Việt <span class="required">*</span></label>
-            <input type="text" id="fieldMeaning" class="form-input" placeholder="e.g. phù du, thoáng qua" required />
-          </div>
-
-          <!-- 🆕 Phát âm IPA -->
-          <div class="form-group">
-            <label class="form-label" for="fieldIpa">Phát âm IPA</label>
-            <input type="text" id="fieldIpa" class="form-input form-input--ipa" placeholder="e.g. /ɪˈfem.ər.əl/" />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="fieldExample">Câu ví dụ</label>
-            <textarea id="fieldExample" class="form-input form-textarea" placeholder="e.g. Beauty is ephemeral, but art endures."></textarea>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="fieldExampleMeaning">Nghĩa câu ví dụ</label>
-            <textarea id="fieldExampleMeaning" class="form-input form-textarea" placeholder="e.g. Vẻ đẹp thì phù du, nhưng nghệ thuật trường tồn."></textarea>
-          </div>
-
-          <!-- Ảnh câu ví dụ -->
-          <div class="form-group">
-            <label class="form-label">Ảnh câu ví dụ</label>
-            
-            <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-              <input type="text" id="fieldImageUrl" class="form-input" placeholder="Nhập link ảnh (URL)..." style="flex: 1;" />
-              
-              <label class="btn-primary" style="cursor: pointer; padding: 0 12px; display: flex; align-items: center; white-space: nowrap; border-radius: 6px;">
-                Tải lên
-                <input type="file" id="fieldImageFile" accept="image/*" style="display:none" />
-              </label>
-            </div>
-
-            <div id="imagePreviewWrap" style="display:none; margin-bottom:10px;">
-              <img id="imagePreview" src="" alt="Preview" style="width:100%;max-height:180px;object-fit:cover;border-radius:8px;border:1px solid #eaedf2;" />
-            </div>
-            
-            <p class="form-hint">Ưu tiên ảnh tải lên từ máy. Để trống nếu muốn giữ ảnh cũ khi sửa.</p>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="fieldNote">Ghi chú thêm</label>
-            <textarea id="fieldNote" class="form-input form-textarea" placeholder="Từ loại, gốc từ, cách dùng…"></textarea>
-          </div>
-
-          <!-- 🆕 Trạng thái active -->
-          <div class="form-group form-group--checkbox">
-            <label class="form-checkbox-label">
-              <input type="checkbox" id="fieldIsActive" checked />
-              <span>Kích hoạt từ này (hiển thị trong popup ngẫu nhiên)</span>
-            </label>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" class="btn-cancel" id="btnCancelForm">Hủy</button>
-            <button type="submit" class="btn-primary">Lưu từ</button>
-          </div>
-        </form>
-      </div>
+      <div class="comp-card" id="modalContainer"></div>
     </div>
 
     <!-- Modal xác nhận xóa -->
     <div class="modal-overlay" id="confirmOverlay">
-      <div class="modal-box confirm-box">
+      <div class="confirm-box">
         <div class="confirm-icon">🗑️</div>
-        <h3 class="confirm-title">Xóa từ vựng?</h3>
-        <p class="confirm-msg" id="confirmMsg">Bạn có chắc muốn xóa từ này không?</p>
+        <!-- Xóa thẻ <p>, gộp thẳng id="confirmMsg" lên thẻ <h3> để hiển thị 1 câu duy nhất -->
+        <h3 class="confirm-title" id="confirmMsg" style="margin-bottom: 24px;">Xóa từ này?</h3>
         <div class="form-actions">
           <button class="btn-cancel" id="btnCancelDelete">Hủy</button>
           <button class="btn-danger" id="btnConfirmDelete">Xóa</button>
         </div>
       </div>
     </div>
+  </div>
 
-  </div><!-- /sectionManager -->
+  <!-- SECTION B — STANDALONE (Mở cửa sổ Chrome mới) -->
+  <div id="sectionStandalone" style="display:none" class="standalone-bg">
+    <div class="comp-card" id="standaloneContainer"></div>
+  </div>
 
-  <!-- ═══════════════════════════════════════════
-       SECTION C — ADD FORM POPUP (?mode=add-form)
-       ═══════════════════════════════════════════ -->
-  <div id="sectionAddForm" style="display:none">
-    <div class="add-form-card">
-
-      <div class="add-form-header">
-        <div class="add-form-logo">
-          <span class="add-form-logo-icon">辞</span>
-          <div>
-            <h1 class="add-form-title">Thêm từ mới</h1>
-            <p class="add-form-subtitle">Vocabulary Manager</p>
-          </div>
+  <!-- TEMPLATES -->
+  
+  <!-- 1. Form Thêm/Sửa -->
+  <template id="tpl-form">
+    <div class="comp-header">
+      <div class="comp-logo">
+        <span class="comp-logo-icon">辞</span>
+        <div>
+          <h2 class="comp-title">Thêm từ mới</h2>
+          <p class="comp-subtitle">Vocabulary Manager</p>
         </div>
-        <button class="add-form-close" id="btnAddFormClose" aria-label="Đóng">✕</button>
       </div>
-
-      <form class="add-form-body" id="addFormPopup" autocomplete="off">
-
-        <div class="form-group">
-          <label class="form-label" for="afWord">Từ mới <span class="required">*</span></label>
-          <input type="text" id="afWord" class="form-input" placeholder="e.g. ephemeral" required />
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="afMeaning">Nghĩa tiếng Việt <span class="required">*</span></label>
-          <input type="text" id="afMeaning" class="form-input" placeholder="e.g. phù du, thoáng qua" required />
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="afIpa">Phát âm IPA</label>
-          <input type="text" id="afIpa" class="form-input form-input--ipa" placeholder="e.g. /ɪˈfem.ər.əl/" />
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="afExample">Câu ví dụ</label>
-          <textarea id="afExample" class="form-input form-textarea" placeholder="e.g. Beauty is ephemeral, but art endures."></textarea>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="afExampleMeaning">Nghĩa câu ví dụ</label>
-          <textarea id="afExampleMeaning" class="form-input form-textarea" placeholder="e.g. Vẻ đẹp thì phù du, nhưng nghệ thuật trường tồn."></textarea>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Ảnh câu ví dụ</label>
-          <div style="display:flex;gap:8px;margin-bottom:10px;">
-            <input type="text" id="afImageUrl" class="form-input" placeholder="Nhập link ảnh (URL)..." style="flex:1;" />
-            <label class="btn-primary" style="cursor:pointer;padding:0 12px;display:flex;align-items:center;white-space:nowrap;border-radius:6px;">
-              Tải lên
-              <input type="file" id="afImageFile" accept="image/*" style="display:none" />
-            </label>
-          </div>
-          <div id="afImagePreviewWrap" style="display:none;margin-bottom:10px;">
-            <img id="afImagePreview" src="" alt="Preview" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,.1);" />
-          </div>
-          <p class="form-hint">Ưu tiên ảnh tải lên từ máy.</p>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="afNote">Ghi chú thêm</label>
-          <textarea id="afNote" class="form-input form-textarea" placeholder="Từ loại, gốc từ, cách dùng…"></textarea>
-        </div>
-
-        <div class="add-form-actions">
-          <button type="button" class="btn-cancel" id="btnAddFormCancel">Hủy</button>
-          <button type="submit" class="btn-primary" id="btnAddFormSubmit">
-            <span id="addFormBtnLabel">Lưu từ</span>
-          </button>
-        </div>
-
-        <p class="add-form-status" id="addFormStatus"></p>
-      </form>
-
+      <button class="comp-close" aria-label="Đóng">✕</button>
     </div>
-  </div>
+    <form class="comp-body" autocomplete="off">
+      <div class="form-group">
+        <label class="form-label">Từ mới <span class="required">*</span></label>
+        <input type="text" name="word" class="form-input" placeholder="e.g. ephemeral" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nghĩa tiếng Việt <span class="required">*</span></label>
+        <input type="text" name="meaning" class="form-input" placeholder="e.g. phù du, thoáng qua" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phát âm IPA</label>
+        <input type="text" name="ipa" class="form-input form-input--ipa" placeholder="e.g. /ɪˈfem.ər.əl/" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Câu ví dụ</label>
+        <textarea name="example" class="form-input form-textarea" placeholder="e.g. Beauty is ephemeral, but art endures."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nghĩa câu ví dụ</label>
+        <textarea name="exampleMeaning" class="form-input form-textarea" placeholder="e.g. Vẻ đẹp thì phù du..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ảnh câu ví dụ</label>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <input type="text" name="imageUrl" class="form-input" placeholder="Nhập link ảnh (URL)..." style="flex:1;" />
+          <label class="btn-primary" style="cursor:pointer;padding:0 12px;display:flex;align-items:center;white-space:nowrap;border-radius:6px;">
+            Tải lên
+            <input type="file" name="imageFile" accept="image/*" style="display:none" />
+          </label>
+        </div>
+        <div class="image-preview-wrap" style="display:none;margin-bottom:10px;">
+          <img class="image-preview" src="" alt="Preview" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,.1);" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ghi chú thêm</label>
+        <textarea name="note" class="form-input form-textarea" placeholder="Từ loại, gốc từ..."></textarea>
+      </div>
+      <div class="form-group form-group--checkbox">
+        <label class="form-checkbox-label">
+          <input type="checkbox" name="isActive" checked />
+          <span>Kích hoạt từ này (hiển thị popup ngẫu nhiên)</span>
+        </label>
+      </div>
+      <div class="comp-actions">
+        <button type="button" class="btn-cancel">Hủy</button>
+        <button type="submit" class="btn-primary btn-submit">Lưu từ</button>
+      </div>
+      <p class="comp-status"></p>
+    </form>
+  </template>
 
-  <!-- ═══════════════════════════════════════════
-       SECTION B — POPUP WINDOW (?mode=popup)
-       ═══════════════════════════════════════════ -->
-  <div id="sectionPopup" style="display:none">
-    <div class="popup-card" id="popupContent">
-      <div style="color:#aaa;text-align:center;padding:40px">Đang tải…</div>
+  <!-- 2. Hiển thị từ vựng -->
+  <template id="tpl-display">
+    <div class="comp-body comp-display">
+      <div class="display-word"></div>
+      <div class="display-ipa"></div>
+      <div class="display-meaning"></div>
+      
+      <div class="display-section section-example" style="display:none">
+        <div class="display-section-text text-example"></div>
+      </div>
+      <div class="display-section section-image" style="display:none; padding:10px 16px;">
+        <img class="display-example-img" src="" alt="Hình minh hoạ" />
+      </div>
+      <div class="display-section section-example-meaning" style="display:none">
+        <div class="display-section-text text-example-meaning"></div>
+      </div>
+      
+      <div class="display-note" style="display:none"></div>
+      <div class="comp-actions" style="margin-top:28px; justify-content:flex-end;">
+        <button class="btn-primary btn-close-display"></button>
+      </div>
     </div>
-  </div>
-
-
+  </template>
 
   <script src="config.js"></script>
   <script type="module" src="tuvung.js"></script>

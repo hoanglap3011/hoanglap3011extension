@@ -1,10 +1,7 @@
 /* ============================================================
-   TUVUNG.CSS — Vocabulary Manager & Popup
-   Fonts: Playfair Display (display) + DM Sans (body)
-   Theme: Deep navy + warm gold — refined editorial
+   TUVUNG.CSS — Componentized Architecture
    ============================================================ */
 
-/* ── CSS Variables ── */
 :root {
   --navy:       #0f1b2d;
   --navy-mid:   #1a2d47;
@@ -27,824 +24,141 @@
   --transition: .2s cubic-bezier(.4,0,.2,1);
 }
 
-/* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 button { cursor: pointer; border: none; background: none; font-family: inherit; }
 input, textarea { font-family: inherit; }
 textarea { resize: vertical; }
 
-/* ============================================================
-   MANAGER PAGE
-   ============================================================ */
+/* ── MANAGER PAGE (Theme Sáng) ── */
+.manager-body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--text-main); min-height: 100vh; font-size: 14px; }
+.mgr-header { background: var(--navy); padding: 0 24px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 20px rgba(0,0,0,.3); }
+.mgr-header-inner { max-width: 900px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 70px; gap: 16px; }
+.mgr-logo { display: flex; align-items: center; gap: 14px; }
+.mgr-logo-icon { font-size: 32px; color: var(--gold); font-weight: 700; }
+.mgr-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--white); }
+.mgr-subtitle { font-size: 11px; color: var(--text-light); text-transform: uppercase; letter-spacing: .8px; }
+.mgr-header-actions { display: flex; align-items: center; gap: 14px; }
+.mgr-count { font-size: 12px; color: var(--gold-light); font-weight: 500; }
 
-.manager-body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--cream);
-  color: var(--text-main);
-  min-height: 100vh;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-/* ── Header ── */
-.mgr-header {
-  background: var(--navy);
-  padding: 0 24px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 2px 20px rgba(0,0,0,.3);
-}
-
-.mgr-header-inner {
-  max-width: 900px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 70px;
-  gap: 16px;
+.btn-primary { 
+  display: flex;             /* Bổ sung để icon và chữ nằm ngang */
+  align-items: center;       /* Căn giữa theo chiều dọc */
+  gap: 6px;                  /* Khoảng cách giữa icon và chữ */
+  background: var(--gold); 
+  color: var(--navy); 
+  font-weight: 600; 
+  font-size: 13px; 
+  padding: 9px 18px; 
+  border-radius: 50px; 
+  transition: all var(--transition); 
+  white-space: nowrap; 
 }
 
-.mgr-logo {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+.btn-primary:hover { 
+  background: var(--gold-light); 
+  transform: translateY(-1px); 
 }
 
-.mgr-logo-icon {
-  font-size: 32px;
-  line-height: 1;
-  color: var(--gold);
-  font-weight: 700;
-}
 
-.mgr-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--white);
-  letter-spacing: -.3px;
-  line-height: 1.1;
-}
+.mgr-main { max-width: 900px; margin: 0 auto; padding: 28px 24px 60px; }
+.mgr-search-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; background: var(--white); border: 1.5px solid #e4e7ec; border-radius: 50px; padding: 10px 16px; box-shadow: var(--shadow-sm); }
+.mgr-search-bar:focus-within { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(200,168,75,.15); }
+.search-icon { width: 16px; height: 16px; color: var(--text-light); flex-shrink: 0; }
+.search-input { flex: 1; border: none; outline: none; font-size: 14px; background: transparent; color: var(--text-main); }
 
-.mgr-subtitle {
-  font-size: 11px;
-  color: var(--text-light);
-  letter-spacing: .8px;
-  text-transform: uppercase;
+.word-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 16px; }
+.word-card { background: var(--white); border: 1.5px solid #eaedf2; border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow-sm); position: relative; overflow: hidden; transition: all var(--transition); }
+.word-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--gold); }
+.word-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: var(--gold-light); }
+.card-word { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+.card-ipa { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+.card-meaning { font-size: 14px; font-weight: 500; color: var(--gold); margin-bottom: 12px; }
+.card-divider { height: 1px; background: #f0f0f0; margin: 10px 0; }
+.card-field { 
+  font-size: 13px; 
+  color: var(--text-muted); 
+  margin-bottom: 6px; 
+  white-space: pre-wrap; /* THÊM DÒNG NÀY VÀO */
 }
-
-.mgr-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.mgr-count {
-  font-size: 12px;
-  color: var(--gold-light);
-  font-weight: 500;
-  letter-spacing: .3px;
-}
-
-/* ── Buttons ── */
-.btn-primary {
-  background: var(--gold);
-  color: var(--navy);
-  font-weight: 600;
-  font-size: 13px;
-  padding: 9px 18px;
-  border-radius: 50px;
-  transition: background var(--transition), transform var(--transition);
-  white-space: nowrap;
-}
-.btn-primary:hover {
-  background: var(--gold-light);
-  transform: translateY(-1px);
-}
-.btn-primary:active { transform: translateY(0); }
-
-.btn-cancel {
-  background: transparent;
-  border: 1.5px solid #ddd;
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 500;
-  padding: 9px 18px;
-  border-radius: 50px;
-  transition: all var(--transition);
-}
-.btn-cancel:hover { border-color: #bbb; color: var(--text-main); }
-
-.btn-danger {
-  background: var(--danger);
-  color: var(--white);
-  font-size: 13px;
-  font-weight: 600;
-  padding: 9px 18px;
-  border-radius: 50px;
-  transition: opacity var(--transition);
-}
-.btn-danger:hover { opacity: .85; }
-
-.btn-demo {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--navy-mid);
-  background: var(--gold-pale);
-  border: 1.5px solid var(--gold);
-  padding: 8px 14px;
-  border-radius: 50px;
-  transition: all var(--transition);
-  white-space: nowrap;
-}
-.btn-demo:hover { background: var(--gold); color: var(--navy); }
-
-/* ── Main ── */
-.mgr-main {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 28px 24px 60px;
-}
-
-/* ── Search ── */
-.mgr-search-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 24px;
-  background: var(--white);
-  border: 1.5px solid #e4e7ec;
-  border-radius: 50px;
-  padding: 10px 16px;
-  box-shadow: var(--shadow-sm);
-  transition: border-color var(--transition), box-shadow var(--transition);
-}
-.mgr-search-bar:focus-within {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 3px rgba(200,168,75,.15);
-}
-
-.search-icon {
-  width: 16px; height: 16px;
-  color: var(--text-light);
-  flex-shrink: 0;
-}
-
-.search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  font-size: 14px;
-  background: transparent;
-  color: var(--text-main);
-}
-.search-input::placeholder { color: var(--text-light); }
-
-/* ── Word List ── */
-.word-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  gap: 16px;
-}
-
-@media (max-width: 500px) {
-  .word-list { grid-template-columns: 1fr; }
-}
-
-/* ── Word Card ── */
-.word-card {
-  background: var(--white);
-  border: 1.5px solid #eaedf2;
-  border-radius: var(--radius);
-  padding: 20px;
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--transition), transform var(--transition), border-color var(--transition);
-  position: relative;
-  overflow: hidden;
-}
-.word-card::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 3px;
-  background: var(--gold);
-  border-radius: 3px 0 0 3px;
-}
-.word-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-  border-color: var(--gold-light);
-}
-
-.card-word {
-  font-family: 'Playfair Display', serif;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--navy);
-  letter-spacing: -.3px;
-  margin-bottom: 4px;
-}
-
-.card-meaning {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--gold);
-  margin-bottom: 12px;
-}
-
-.card-divider {
-  height: 1px;
-  background: #f0f0f0;
-  margin: 10px 0;
-}
-
-.card-field {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-  line-height: 1.5;
-}
-.card-field strong {
-  font-weight: 600;
-  color: var(--text-main);
-  display: block;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .6px;
-  margin-bottom: 2px;
-}
-.card-field:last-child { margin-bottom: 0; }
-
-.card-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.btn-icon {
-  width: 32px; height: 32px;
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px;
-  transition: all var(--transition);
-}
+.card-field strong { font-weight: 600; color: var(--text-main); display: block; font-size: 11px; text-transform: uppercase; margin-bottom: 2px; }
+.card-example-img { width: 100%; max-height: 160px; object-fit: cover; border-radius: var(--radius-sm); margin-top: 6px; border: 1px solid #eaedf2; }
+.card-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.btn-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: all var(--transition); }
 .btn-icon-edit { background: #f0f7ff; color: #2980b9; }
 .btn-icon-edit:hover { background: #2980b9; color: var(--white); }
 .btn-icon-delete { background: var(--danger-dim); color: var(--danger); }
 .btn-icon-delete:hover { background: var(--danger); color: var(--white); }
+.empty-state { text-align: center; padding: 80px 24px; }
 
-/* ── Empty state ── */
-.empty-state {
-  text-align: center;
-  padding: 80px 24px;
-}
-.empty-icon { font-size: 52px; margin-bottom: 16px; }
-.empty-text {
-  font-size: 15px;
-  color: var(--text-muted);
-  line-height: 1.7;
-}
-
-/* ── Modal ── */
-.modal-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(10,20,40,.55);
-  backdrop-filter: blur(4px);
-  z-index: 9000;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  animation: overlayIn .2s ease;
-}
+/* ── MODALS & STANDALONE CONTAINER ── */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(10,20,40,.6); backdrop-filter: blur(4px); z-index: 9000; align-items: center; justify-content: center; padding: 20px; animation: overlayIn .2s ease; }
 .modal-overlay.active { display: flex; }
+@keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
 
-@keyframes overlayIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
+.standalone-bg { font-family: 'DM Sans', sans-serif; background: var(--navy); min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 20px; position: relative; }
+.standalone-bg::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse 60% 50% at 20% 20%, rgba(200,168,75,.12) 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 80% 80%, rgba(200,168,75,.08) 0%, transparent 60%); pointer-events: none; }
 
-.modal-box {
-  background: var(--white);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
-  width: 100%;
-  max-width: 520px;
-  max-height: 90vh;
-  overflow-y: auto;
-  animation: boxIn .25s cubic-bezier(.34,1.56,.64,1);
-}
+/* ── SHARED COMPONENT CARD (THEME TỐI) ── */
+.comp-card { background: var(--navy-mid); border: 1px solid rgba(200,168,75,.25); border-radius: 20px; width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto; box-shadow: 0 24px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.04); position: relative; animation: popupCardIn .35s cubic-bezier(.34,1.56,.64,1); color: var(--white); }
+.comp-card::-webkit-scrollbar { width: 6px; }
+.comp-card::-webkit-scrollbar-track { background: transparent; }
+.comp-card::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+@keyframes popupCardIn { from { opacity: 0; transform: translateY(24px) scale(.95); } to { opacity: 1; transform: none; } }
 
-@keyframes boxIn {
-  from { opacity: 0; transform: translateY(20px) scale(.97); }
-  to   { opacity: 1; transform: none; }
-}
+/* Header Form */
+.comp-header { display: flex; align-items: center; justify-content: space-between; padding: 24px 28px 18px; border-bottom: 1px solid rgba(255,255,255,.07); }
+.comp-logo { display: flex; align-items: center; gap: 12px; }
+.comp-logo-icon { font-size: 28px; color: var(--gold); font-weight: 700; }
+.comp-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--white); }
+.comp-subtitle { font-size: 10px; color: var(--text-light); text-transform: uppercase; }
+.comp-close { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.07); color: var(--text-light); display: flex; align-items: center; justify-content: center; transition: all var(--transition); }
+.comp-close:hover { background: rgba(255,255,255,.14); color: var(--white); }
+.comp-body { padding: 20px 28px 24px; }
 
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 24px 0;
-  margin-bottom: 20px;
-}
-
-.modal-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--navy);
-}
-
-.modal-close {
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  background: #f5f5f5;
-  color: var(--text-muted);
-  font-size: 14px;
-  display: flex; align-items: center; justify-content: center;
-  transition: all var(--transition);
-}
-.modal-close:hover { background: #eee; color: var(--text-main); }
-
-/* ── Form ── */
-.modal-form { padding: 0 24px 24px; }
-
+/* Inputs trong Dark Theme */
 .form-group { margin-bottom: 16px; }
-
-.form-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .6px;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-}
-
-.required { color: var(--danger); }
-
-.form-input {
-  width: 100%;
-  padding: 10px 14px;
-  border: 1.5px solid #e4e7ec;
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  color: var(--text-main);
-  background: var(--cream);
-  outline: none;
-  transition: border-color var(--transition), box-shadow var(--transition);
-}
-.form-input:focus {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 3px rgba(200,168,75,.15);
-  background: var(--white);
-}
+.form-label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-light); margin-bottom: 6px; }
+.required { color: #e74c3c; }
+.form-input { width: 100%; padding: 10px 14px; border: 1.5px solid rgba(255,255,255,.12); border-radius: var(--radius-sm); font-size: 14px; color: var(--white); background: rgba(255,255,255,.06); outline: none; transition: all var(--transition); }
+.form-input::placeholder { color: rgba(255,255,255,.3); }
+.form-input:focus { border-color: var(--gold); background: rgba(255,255,255,.09); box-shadow: 0 0 0 3px rgba(200,168,75,.18); }
+.form-input--ipa { font-family: 'DM Mono', monospace; }
 .form-textarea { min-height: 70px; }
+.form-group--checkbox { padding: 14px 16px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: var(--radius-sm); }
+.form-checkbox-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13.5px; font-weight: 500; }
+.form-checkbox-label input { width: 18px; height: 18px; accent-color: var(--gold); }
+.comp-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.btn-cancel { background: transparent; border: 1.5px solid rgba(255,255,255,.2); color: var(--text-light); font-size: 13px; font-weight: 500; padding: 9px 18px; border-radius: 50px; transition: all var(--transition); }
+.btn-cancel:hover { border-color: rgba(255,255,255,.4); color: var(--white); }
+.comp-status { text-align: center; font-size: 13px; min-height: 20px; margin-top: 12px; }
 
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 8px;
+/* Display Component (Hiển thị từ) */
+.comp-display { padding: 36px 40px; text-align: left; }
+.display-badge { display: inline-block; font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--gold); background: rgba(200,168,75,.12); border: 1px solid rgba(200,168,75,.3); padding: 4px 10px; border-radius: 50px; margin-bottom: 20px; }
+.display-word { font-family: 'Playfair Display', serif; font-size: 40px; font-weight: 700; color: var(--white); margin-bottom: 8px; line-height: 1.1; }
+.display-ipa { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--text-light); margin-bottom: 4px; margin-top: -4px; }
+.display-meaning { font-size: 17px; color: var(--gold-light); margin-bottom: 28px; font-style: italic; }
+.display-section { margin-bottom: 16px; padding: 14px 16px; background: rgba(255,255,255,.04); border-radius: 10px; border-left: 2px solid rgba(200,168,75,.35); }
+.display-section-label { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-light); margin-bottom: 5px; }
+.display-section-text { 
+  font-size: 14px; 
+  color: #cdd5e0; 
+  line-height: 1.6; 
+  white-space: pre-wrap; /* THÊM DÒNG NÀY VÀO */
 }
+.display-example-img { width: 100%; max-height: 180px; object-fit: cover; border-radius: 8px; margin-top: 8px; }
+.display-note { 
+  margin-top: 20px; 
+  font-size: 12.5px; 
+  color: var(--text-light); 
+  font-style: italic; 
+  white-space: pre-wrap; /* THÊM DÒNG NÀY VÀO */
+}
+.btn-close-display { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 
-/* ── Confirm dialog ── */
-.confirm-box {
-  max-width: 360px;
-  padding: 32px 28px;
-  text-align: center;
-}
+/* Confirm Delete trong Manager */
+.confirm-box { background: var(--white); color: var(--text-main); border-radius: var(--radius); padding: 32px 28px; text-align: center; max-width: 360px; box-shadow: var(--shadow-lg); }
 .confirm-icon { font-size: 40px; margin-bottom: 12px; }
-.confirm-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--navy);
-  margin-bottom: 8px;
-}
+.confirm-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
 .confirm-msg { font-size: 14px; color: var(--text-muted); margin-bottom: 24px; }
-
-/* ============================================================
-   VOCAB POPUP WINDOW  (dùng khi mở chrome window riêng biệt)
-   ============================================================ */
-
-.popup-body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--navy);
-  color: var(--white);
-  min-height: 100vh;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 24px;
-  position: relative;
-  overflow: hidden;
-}
-
-/* Decorative bg */
-.popup-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 60% 50% at 20% 20%, rgba(200,168,75,.12) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 60% at 80% 80%, rgba(200,168,75,.08) 0%, transparent 60%);
-  pointer-events: none;
-}
-
-.popup-card {
-  background: var(--navy-mid);
-  border: 1px solid rgba(200,168,75,.25);
-  border-radius: 20px;
-  padding: 36px 40px;
-  width: 100%;
-  max-width: 440px;
-  box-shadow: 0 24px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.04);
-  position: relative;
-  animation: popupCardIn .4s cubic-bezier(.34,1.56,.64,1);
-}
-
-@keyframes popupCardIn {
-  from { opacity: 0; transform: translateY(24px) scale(.95); }
-  to   { opacity: 1; transform: none; }
-}
-
-.popup-badge {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  color: var(--gold);
-  background: rgba(200,168,75,.12);
-  border: 1px solid rgba(200,168,75,.3);
-  padding: 4px 10px;
-  border-radius: 50px;
-  margin-bottom: 20px;
-}
-
-.popup-word {
-  font-family: 'Playfair Display', serif;
-  font-size: 40px;
-  font-weight: 700;
-  color: var(--white);
-  letter-spacing: -1px;
-  line-height: 1.1;
-  margin-bottom: 8px;
-}
-
-.popup-meaning {
-  font-size: 17px;
-  font-weight: 400;
-  color: var(--gold-light);
-  margin-bottom: 28px;
-  font-style: italic;
-}
-
-.popup-section {
-  margin-bottom: 16px;
-  padding: 14px 16px;
-  background: rgba(255,255,255,.04);
-  border-radius: 10px;
-  border-left: 2px solid rgba(200,168,75,.35);
-}
-.popup-section:last-of-type { margin-bottom: 0; }
-
-.popup-section-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: .8px;
-  text-transform: uppercase;
-  color: var(--text-light);
-  margin-bottom: 5px;
-}
-
-.popup-section-text {
-  font-size: 14px;
-  color: #cdd5e0;
-  line-height: 1.6;
-}
-
-.popup-note {
-  margin-top: 20px;
-  font-size: 12.5px;
-  color: var(--text-light);
-  font-style: italic;
-  line-height: 1.5;
-}
-.popup-note::before { content: '📝 '; }
-
-.popup-footer {
-  margin-top: 28px;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.popup-close-btn {
-  background: var(--gold);
-  color: var(--navy);
-  font-weight: 700;
-  font-size: 13px;
-  padding: 10px 24px;
-  border-radius: 50px;
-  transition: background var(--transition), transform var(--transition);
-  letter-spacing: .3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis; /* Hiện dấu ... nếu quá dài */
-  max-width: 100%;        /* Không cho vượt quá chiều ngang popup */  
-}
-.popup-close-btn:hover { background: var(--gold-light); transform: translateY(-1px); }
-.popup-close-btn:active { transform: translateY(0); }
-
-/* ============================================================
-   ADD-FORM POPUP WINDOW  (?mode=add-form)
-   Cùng nền navy với popup hiển thị từ, nhưng có form nhập liệu
-   ============================================================ */
-
-.add-form-body-bg {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--navy);
-  color: var(--white);
-  min-height: 100vh;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 20px;
-  position: relative;
-  overflow-x: hidden;
-}
-
-/* Decorative bg — giống popup hiển thị từ */
-.add-form-body-bg::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 60% 50% at 20% 20%, rgba(200,168,75,.12) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 60% at 80% 80%, rgba(200,168,75,.08) 0%, transparent 60%);
-  pointer-events: none;
-}
-
-.add-form-card {
-  background: var(--navy-mid);
-  border: 1px solid rgba(200,168,75,.25);
-  border-radius: 20px;
-  width: 100%;
-  max-width: 440px;
-  box-shadow: 0 24px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.04);
-  position: relative;
-  animation: popupCardIn .35s cubic-bezier(.34,1.56,.64,1);
-  overflow: hidden;
-}
-
-/* ── Header ── */
-.add-form-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 24px 28px 18px;
-  border-bottom: 1px solid rgba(255,255,255,.07);
-}
-
-.add-form-logo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.add-form-logo-icon {
-  font-size: 28px;
-  color: var(--gold);
-  font-weight: 700;
-  line-height: 1;
-}
-
-.add-form-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--white);
-  letter-spacing: -.3px;
-  line-height: 1.1;
-}
-
-.add-form-subtitle {
-  font-size: 10px;
-  color: var(--text-light);
-  letter-spacing: .8px;
-  text-transform: uppercase;
-}
-
-.add-form-close {
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.07);
-  color: var(--text-light);
-  font-size: 13px;
-  display: flex; align-items: center; justify-content: center;
-  transition: all var(--transition);
-  flex-shrink: 0;
-}
-.add-form-close:hover {
-  background: rgba(255,255,255,.14);
-  color: var(--white);
-}
-
-/* ── Form body ── */
-.add-form-body {
-  padding: 20px 28px 24px;
-}
-
-/* Override form-input để phù hợp nền tối */
-.add-form-card .form-label {
-  color: var(--text-light);
-}
-
-.add-form-card .form-input {
-  background: rgba(255,255,255,.06);
-  border-color: rgba(255,255,255,.12);
-  color: var(--white);
-}
-.add-form-card .form-input::placeholder {
-  color: rgba(255,255,255,.3);
-}
-.add-form-card .form-input:focus {
-  border-color: var(--gold);
-  background: rgba(255,255,255,.09);
-  box-shadow: 0 0 0 3px rgba(200,168,75,.18);
-}
-
-.add-form-card .form-hint {
-  color: rgba(255,255,255,.3);
-}
-
-/* ── Actions row ── */
-.add-form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.add-form-card .btn-cancel {
-  border-color: rgba(255,255,255,.2);
-  color: var(--text-light);
-}
-.add-form-card .btn-cancel:hover {
-  border-color: rgba(255,255,255,.4);
-  color: var(--white);
-}
-
-/* ── Status / feedback ── */
-.add-form-status {
-  text-align: center;
-  font-size: 13px;
-  min-height: 20px;
-  margin-top: 12px;
-  transition: color .2s;
-}
-.add-form-status.success { color: #5cb85c; }
-.add-form-status.error   { color: #e74c3c; }
-
-/* ── Scrollbar ── */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #bbb; }
-/* ============================================================
-   ADDITIONS — IPA, Image, Pull-server button, Form hint
-   ============================================================ */
-
-/* ── Card: IPA ── */
-.card-ipa {
-  font-family: 'DM Mono', 'Courier New', monospace;
-  font-size: 13px;
-  color: var(--text-muted);
-  letter-spacing: .4px;
-  margin-bottom: 10px;
-}
-
-/* ── Card: ảnh câu ví dụ ── */
-.card-field--image { margin-top: 8px; }
-.card-example-img {
-  display: block;
-  width: 100%;
-  max-height: 160px;
-  object-fit: cover;
-  border-radius: var(--radius-sm);
-  margin-top: 6px;
-  border: 1px solid #eaedf2;
-}
-
-/* ── Form: IPA input ── */
-.form-input--ipa {
-  font-family: 'DM Mono', 'Courier New', monospace;
-  letter-spacing: .4px;
-}
-
-/* ── Form: hint text ── */
-.form-hint {
-  font-size: 11.5px;
-  color: var(--text-light);
-  margin-top: 5px;
-  line-height: 1.5;
-}
-
-/* ── Button: Đồng bộ từ server ── */
-.btn-pull-server {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--gold-light);
-  background: rgba(200,168,75,.1);
-  border: 1.5px solid rgba(200,168,75,.35);
-  padding: 7px 14px;
-  border-radius: 50px;
-  transition: all var(--transition);
-  white-space: nowrap;
-}
-.btn-pull-server:hover {
-  background: rgba(200,168,75,.2);
-  border-color: var(--gold);
-  color: var(--gold);
-}
-
-/* ── Popup: IPA ── */
-.popup-ipa {
-  font-family: 'DM Mono', 'Courier New', monospace;
-  font-size: 14px;
-  color: var(--text-light);
-  letter-spacing: .5px;
-  margin-bottom: 4px;
-  margin-top: -4px;
-}
-
-/* ── Popup: ảnh câu ví dụ ── */
-.popup-section--image { padding: 10px 16px; }
-.popup-example-img {
-  display: block;
-  width: 100%;
-  max-height: 180px;
-  object-fit: cover;
-  border-radius: 8px;
-  margin-top: 8px;
-}
-
-/* ── Form: input file ── */
-.form-input--file {
-  padding: 8px 10px;
-  font-size: 13px;
-  background: var(--cream);
-  cursor: pointer;
-}
-.form-input--file::file-selector-button {
-  background: var(--gold);
-  color: var(--navy);
-  border: none;
-  padding: 5px 12px;
-  border-radius: 50px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-right: 10px;
-  transition: background var(--transition);
-}
-.form-input--file::file-selector-button:hover {
-  background: var(--gold-light);
-}
-/* ── Form: checkbox is_active ── */
-.form-group--checkbox {
-  padding: 14px 16px;
-  background: #f8fafb;
-  border: 1.5px solid #e4e7ec;
-  border-radius: var(--radius-sm);
-}
-
-.form-checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  font-size: 13.5px;
-  color: var(--text-main);
-  font-weight: 500;
-  user-select: none;
-}
-
-.form-checkbox-label input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--gold);
-  cursor: pointer;
-  flex-shrink: 0;
-}
+.btn-danger { background: var(--danger); color: var(--white); font-size: 13px; font-weight: 600; padding: 9px 18px; border-radius: 50px; }
