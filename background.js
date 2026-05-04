@@ -150,36 +150,62 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "getMediaInfo") {
-    // Query all tabs to get media information
     chrome.tabs.query({}, async (tabs) => {
-      const mediaInfoPromises = tabs.map(tab => {
-        return new Promise((resolve) => {
-          // Skip chrome:// and extension pages
-          if (tab.url && (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://'))) {
-            resolve(null);
-            return;
-          }
+      const SKIPPED_PROTOCOLS = ['chrome://', 'chrome-extension://', 'about:', 'data:'];
 
+      async function queryTab(tab) {
+        if (!tab.url || SKIPPED_PROTOCOLS.some(p => tab.url.startsWith(p))) return null;
+
+        // Lần 1: thử query bình thường
+        const firstTry = await new Promise((resolve) => {
           chrome.tabs.sendMessage(tab.id, { action: "getMediaState" }, (response) => {
-            if (chrome.runtime.lastError) {
-              console.log(`Tab ${tab.id} error:`, chrome.runtime.lastError.message);
-              resolve(null);
-            } else if (!response) {
-              resolve(null);
-            } else {
-              resolve({ ...response, tabId: tab.id, tabTitle: tab.title, tabUrl: tab.url, favIconUrl: tab.favIconUrl });
-            }
+            if (chrome.runtime.lastError || !response) resolve(null);
+            else resolve(response);
           });
         });
-      });
 
-      const mediaInfos = await Promise.all(mediaInfoPromises);
+        if (firstTry) {
+          return { ...firstTry, tabId: tab.id, tabTitle: tab.title, tabUrl: tab.url, favIconUrl: tab.favIconUrl };
+        }
+
+        // Lần 1 thất bại -> content script chết (extension vừa reload)
+        // Inject lại media_detector.js (hoặc spotify_detector.js) vào tab đó
+        console.log(`[Media Hub] Tab ${tab.id} not responding, re-injecting script...`);
+        try {
+          const isSpotify = tab.url.includes('open.spotify.com');
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: [isSpotify ? 'spotify_detector.js' : 'media_detector.js']
+          });
+        } catch (e) {
+          console.log(`[Media Hub] Cannot inject into tab ${tab.id}:`, e.message);
+          return null;
+        }
+
+        // Đợi script khởi tạo xong (initialize() có setTimeout 1000ms bên trong)
+        await new Promise(r => setTimeout(r, 1200));
+
+        // Lần 2: query lại sau khi inject
+        const secondTry = await new Promise((resolve) => {
+          chrome.tabs.sendMessage(tab.id, { action: "getMediaState" }, (response) => {
+            if (chrome.runtime.lastError || !response) resolve(null);
+            else resolve(response);
+          });
+        });
+
+        if (secondTry) {
+          return { ...secondTry, tabId: tab.id, tabTitle: tab.title, tabUrl: tab.url, favIconUrl: tab.favIconUrl };
+        }
+        return null;
+      }
+
+      const mediaInfos = await Promise.all(tabs.map(queryTab));
       const validMediaInfos = mediaInfos.filter(info => info !== null && info.hasMedia);
 
       console.log('[Media Hub] Found media:', validMediaInfos.length);
       sendResponse({ mediaInfos: validMediaInfos });
     });
-    return true; // Keep channel open for async response
+    return true;
   }
 
   if (request.action === "controlMedia") {

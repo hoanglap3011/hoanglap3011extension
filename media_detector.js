@@ -319,6 +319,17 @@
       return true;
     }
 
+    // Reset cache và quét lại DOM từ đầu, trả về kết quả mới
+    if (request.action === "rescanMedia") {
+      console.log('[Media Detector] Rescanning media from scratch...');
+      currentMedia = null; // xoá cache cũ
+      currentMedia = findPrimaryMedia();
+      const mediaInfo = currentMedia ? getMediaInfo(currentMedia) : { hasMedia: false };
+      console.log('[Media Detector] Rescan result:', mediaInfo);
+      sendResponse(mediaInfo);
+      return true;
+    }
+
     if (request.action === "mediaControl") {
       const result = controlMedia(request.command, request.value);
       sendResponse(result);

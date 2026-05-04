@@ -419,6 +419,39 @@
     });
   }
 
+  // Force rescan tất cả content scripts, sau đó mới load data
+  function forceRescanAndLoad() {
+    console.log('[Media Hub] Force rescan all tabs...');
+
+    // Hiện loading ngay lập tức
+    const container = document.getElementById('mediaContainer');
+    container.innerHTML = `
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>Đang quét lại media...</p>
+      </div>
+    `;
+
+    // Gửi rescanMedia tới tất cả tab để reset cache
+    chrome.tabs.query({}, (tabs) => {
+      const rescanPromises = tabs
+        .filter(tab => tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://'))
+        .map(tab => new Promise((resolve) => {
+          chrome.tabs.sendMessage(tab.id, { action: 'rescanMedia' }, () => {
+            // Bỏ qua lỗi (tab không có content script)
+            if (chrome.runtime.lastError) { /* silent */ }
+            resolve();
+          });
+        }));
+
+      // Sau khi tất cả tab đã rescan xong, fetch data
+      Promise.all(rescanPromises).then(() => {
+        // Thêm delay nhỏ để đảm bảo DOM được quét xong
+        setTimeout(loadMediaData, 300);
+      });
+    });
+  }
+
   // Auto refresh every 2 seconds (đủ để cập nhật progress bar)
   function startAutoRefresh() {
     if (updateInterval) clearInterval(updateInterval);
@@ -436,16 +469,19 @@
   document.addEventListener('DOMContentLoaded', () => {
     console.log('[Media Hub] Initializing...');
     
-    // Đợi một chút để đảm bảo content scripts đã sẵn sàng
+    // Mỗi lần mở Media Hub: luôn quét lại từ đầu
     setTimeout(() => {
-      loadMediaData();
+      forceRescanAndLoad();
       startAutoRefresh();
-    }, 500);
+    }, 300);
 
-    // Refresh button
+    // Refresh button: quét lại toàn bộ, không dùng cache
     document.getElementById('refreshBtn').addEventListener('click', () => {
-      console.log('[Media Hub] Manual refresh');
-      loadMediaData();
+      console.log('[Media Hub] Manual refresh (force rescan)');
+      stopAutoRefresh();
+      forceRescanAndLoad();
+      // Khởi động lại auto refresh sau khi rescan xong
+      setTimeout(startAutoRefresh, 1000);
     });
 
     // Stop refresh when page is hidden
