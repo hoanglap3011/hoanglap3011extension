@@ -162,3 +162,19 @@ textarea { resize: vertical; }
 .confirm-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
 .confirm-msg { font-size: 14px; color: var(--text-muted); margin-bottom: 24px; }
 .btn-danger { background: var(--danger); color: var(--white); font-size: 13px; font-weight: 600; padding: 9px 18px; border-radius: 50px; }
+.btn-play-audio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 18px;
+  transition: all var(--transition);
+  cursor: pointer;
+}
+.btn-play-audio:hover {
+  background: var(--gold);
+  transform: scale(1.1);
+}

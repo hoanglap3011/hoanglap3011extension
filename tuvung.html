@@ -158,7 +158,15 @@
   <!-- 2. Hiển thị từ vựng -->
   <template id="tpl-display">
     <div class="comp-body comp-display">
-      <div class="display-word"></div>
+      <!-- Thêm class flex để từ vựng và nút loa nằm ngang hàng -->
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+        <div class="display-word" style="margin-bottom: 0;"></div>
+        
+        <!-- Nút Play Audio -->
+        <button class="btn-play-audio" title="Nghe phát âm">
+          🔊
+        </button>
+      </div>
       <div class="display-ipa"></div>
       <div class="display-meaning"></div>
       

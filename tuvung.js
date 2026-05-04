@@ -245,6 +245,25 @@ export const TuVungModule = (() => {
 
     container.querySelector('.display-word').textContent = entry.word;
     container.querySelector('.display-meaning').textContent = entry.meaning;
+
+    const btnPlay = container.querySelector('.btn-play-audio');
+    if (btnPlay) {
+      btnPlay.addEventListener('click', () => {
+        // Kiểm tra xem trình duyệt (hoặc Web View) có hỗ trợ không
+        if ('speechSynthesis' in window) {
+          // Hủy các giọng đọc đang dang dở (nếu có)
+          window.speechSynthesis.cancel(); 
+          
+          const utterance = new SpeechSynthesisUtterance(entry.word);
+          utterance.lang = 'en-US'; // Giọng Anh-Mỹ (Có thể đổi thành 'en-GB' cho Anh-Anh)
+          utterance.rate = 0.9;     // Tốc độ đọc (0.9 là hơi chậm lại một xíu cho dễ nghe)
+          
+          window.speechSynthesis.speak(utterance);
+        } else {
+          alert("Trình duyệt/Web View của bạn không hỗ trợ đọc giọng nói.");
+        }
+      });
+    }    
     
     if (entry.ipa) container.querySelector('.display-ipa').textContent = entry.ipa;
 
