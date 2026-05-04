@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sbEnable:    document.getElementById('sbEnable'),       
         // TỪ VỰNG
         tvEnableAutoPopup: document.getElementById('tvEnableAutoPopup'), 
+        tvEnableReadOnClose: document.getElementById('tvEnableReadOnClose'), // Thêm dòng này        
     };
 
     // === TV TIMER INPUTS ===

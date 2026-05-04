@@ -12,7 +12,7 @@
 <body>
 
   <!-- SECTION A — MANAGER (Trang chủ quản lý) -->
-  <div id="sectionManager" style="display:none">
+  <div id="sectionManager" class="d-none">
     <header class="mgr-header">
       <div class="mgr-header-inner">
         <div class="mgr-logo">
@@ -56,11 +56,11 @@
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
         <input type="text" id="searchInput" class="search-input" placeholder="Tìm từ vựng…" />
-        
       </div>
 
       <div class="word-list" id="wordList"></div>
-      <div class="empty-state" id="emptyState" style="display:none">
+      
+      <div class="empty-state d-none" id="emptyState">
         <div class="empty-icon">📖</div>
         <p class="empty-text">Chưa có từ vựng nào.<br/>Nhấn <strong>+ Thêm từ mới</strong> để bắt đầu!</p>
       </div>
@@ -74,8 +74,7 @@
     <div class="modal-overlay" id="confirmOverlay">
       <div class="confirm-box">
         <div class="confirm-icon">🗑️</div>
-        <!-- Xóa thẻ <p>, gộp thẳng id="confirmMsg" lên thẻ <h3> để hiển thị 1 câu duy nhất -->
-        <h3 class="confirm-title" id="confirmMsg" style="margin-bottom: 24px;">Xóa từ này?</h3>
+        <h3 class="confirm-title" id="confirmMsg">Xóa từ này?</h3>
         <div class="form-actions">
           <button class="btn-cancel" id="btnCancelDelete">Hủy</button>
           <button class="btn-danger" id="btnConfirmDelete">Xóa</button>
@@ -85,7 +84,7 @@
   </div>
 
   <!-- SECTION B — STANDALONE (Mở cửa sổ Chrome mới) -->
-  <div id="sectionStandalone" style="display:none" class="standalone-bg">
+  <div id="sectionStandalone" class="standalone-bg d-none">
     <div class="comp-card" id="standaloneContainer"></div>
   </div>
 
@@ -126,15 +125,15 @@
       </div>
       <div class="form-group">
         <label class="form-label">Ảnh câu ví dụ</label>
-        <div style="display:flex;gap:8px;margin-bottom:10px;">
-          <input type="text" name="imageUrl" class="form-input" placeholder="Nhập link ảnh (URL)..." style="flex:1;" />
-          <label class="btn-primary" style="cursor:pointer;padding:0 12px;display:flex;align-items:center;white-space:nowrap;border-radius:6px;">
+        <div class="form-upload-row">
+          <input type="text" name="imageUrl" class="form-input form-input--upload" placeholder="Nhập link ảnh (URL)..." />
+          <label class="btn-primary btn-upload">
             Tải lên
-            <input type="file" name="imageFile" accept="image/*" style="display:none" />
+            <input type="file" name="imageFile" accept="image/*" class="d-none" />
           </label>
         </div>
-        <div class="image-preview-wrap" style="display:none;margin-bottom:10px;">
-          <img class="image-preview" src="" alt="Preview" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,.1);" />
+        <div class="image-preview-wrap d-none">
+          <img class="image-preview" src="" alt="Preview" />
         </div>
       </div>
       <div class="form-group">
@@ -158,30 +157,25 @@
   <!-- 2. Hiển thị từ vựng -->
   <template id="tpl-display">
     <div class="comp-body comp-display">
-      <!-- Thêm class flex để từ vựng và nút loa nằm ngang hàng -->
-      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-        <div class="display-word" style="margin-bottom: 0;"></div>
-        
-        <!-- Nút Play Audio -->
-        <button class="btn-play-audio" title="Nghe phát âm">
-          🔊
-        </button>
+      <div class="display-title-row">
+        <div class="display-word mb-0"></div>
+        <button class="btn-play-audio" title="Nghe phát âm">🔊</button>
       </div>
       <div class="display-ipa"></div>
       <div class="display-meaning"></div>
       
-      <div class="display-section section-example" style="display:none">
+      <div class="display-section section-example d-none">
         <div class="display-section-text text-example"></div>
       </div>
-      <div class="display-section section-image" style="display:none; padding:10px 16px;">
+      <div class="display-section section-image display-section--padded d-none">
         <img class="display-example-img" src="" alt="Hình minh hoạ" />
       </div>
-      <div class="display-section section-example-meaning" style="display:none">
+      <div class="display-section section-example-meaning d-none">
         <div class="display-section-text text-example-meaning"></div>
       </div>
       
-      <div class="display-note" style="display:none"></div>
-      <div class="comp-actions" style="margin-top:28px; justify-content:flex-end;">
+      <div class="display-note d-none"></div>
+      <div class="comp-actions actions-end">
         <button class="btn-primary btn-close-display"></button>
       </div>
     </div>
