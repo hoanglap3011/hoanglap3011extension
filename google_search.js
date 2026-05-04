@@ -23,15 +23,26 @@
 
     const aliasList = [];
     teams.forEach((team) => {
-      const aliasesRaw = team.name_alias || team["name-alias"] || team.name || "";
+      // Xử lý name_alias như cũ (đã bỏ dấu + lowercase)
+      const aliasesRaw = team.name_alias || team["name-alias"] || "";
       const parts = String(aliasesRaw)
         .split(";")
         .map((s) => removeDiacritics(s).toLowerCase().replace(/\s+/g, " ").trim())
         .filter(Boolean);
       aliasList.push(...parts);
+
+      // Thêm name: cả có dấu lẫn không dấu, đều lowercase
+      if (team.name) {
+        const nameWithAccent = team.name.toLowerCase().replace(/\s+/g, " ").trim();
+        const nameWithout = removeDiacritics(team.name).toLowerCase().replace(/\s+/g, " ").trim();
+        aliasList.push(nameWithAccent);
+        if (nameWithout !== nameWithAccent) {
+          aliasList.push(nameWithout); // tránh push trùng nếu tên không có dấu
+        }
+      }
     });
 
-    const extraKeywords = ["lich thi dau", "bang xep hang", "vleague", "v league"];
+    const extraKeywords = ["lich thi dau", "bang xep hang", "vleague", "v league", "cup fa"];
     extraKeywords.forEach((kw) => aliasList.push(removeDiacritics(kw).toLowerCase()));
 
     const matched = aliasList.some((alias) => q.includes(alias));
