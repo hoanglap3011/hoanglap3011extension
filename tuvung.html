@@ -104,27 +104,39 @@
     </div>
     <form class="comp-body" autocomplete="off">
       <div class="form-group">
-        <label class="form-label">Từ mới <span class="required">*</span></label>
+        <label class="form-label">Từ <span class="required">*</span></label>
         <input type="text" name="word" class="form-input" placeholder="e.g. ephemeral" required />
       </div>
       <div class="form-group">
-        <label class="form-label">Nghĩa tiếng Việt <span class="required">*</span></label>
-        <input type="text" name="meaning" class="form-input" placeholder="e.g. phù du, thoáng qua" required />
+        <label class="form-label">Từ loại</label>
+        <div class="pos-radio-group">
+          <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Noun" /><span>Noun</span></label>
+          <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Verb" /><span>Verb</span></label>
+          <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Adjective" /><span>Adj.</span></label>
+          <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Adverb" /><span>Adv.</span></label>
+          <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Phrase" /><span>Phrase</span></label>
+          <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Preposition" /><span>Prep.</span></label>
+          <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Conjunction" /><span>Conj.</span></label>
+        </div>
       </div>
       <div class="form-group">
-        <label class="form-label">Phát âm IPA</label>
+        <label class="form-label">IPA</label>
         <input type="text" name="ipa" class="form-input form-input--ipa" placeholder="e.g. /ɪˈfem.ər.əl/" />
       </div>
       <div class="form-group">
-        <label class="form-label">Câu ví dụ</label>
+        <label class="form-label">Tiếng Việt <span class="required">*</span></label>
+        <input type="text" name="meaning" class="form-input" placeholder="e.g. phù du, thoáng qua" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ví dụ</label>
         <textarea name="example" class="form-input form-textarea" placeholder="e.g. Beauty is ephemeral, but art endures."></textarea>
       </div>
       <div class="form-group">
-        <label class="form-label">Nghĩa câu ví dụ</label>
+        <label class="form-label">Nghĩa ví dụ</label>
         <textarea name="exampleMeaning" class="form-input form-textarea" placeholder="e.g. Vẻ đẹp thì phù du..."></textarea>
       </div>
       <div class="form-group">
-        <label class="form-label">Ảnh câu ví dụ</label>
+        <label class="form-label">Ảnh ví dụ</label>
         <div class="form-upload-row">
           <input type="text" name="imageUrl" class="form-input form-input--upload" placeholder="Nhập link ảnh (URL)..." />
           <label class="btn-primary btn-upload">
@@ -159,9 +171,18 @@
     <div class="comp-body comp-display">
       <div class="display-title-row">
         <div class="display-word mb-0"></div>
-        <button class="btn-play-audio" title="Nghe phát âm">🔊</button>
+        <div class="display-pos d-none"></div>
       </div>
-      <div class="display-ipa"></div>
+      <div class="display-ipa-row">
+        <button class="btn-play-audio" title="Nghe phát âm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+        </button>
+        <div class="display-ipa"></div>
+      </div>
       <div class="display-meaning"></div>
       
       <div class="display-section section-example d-none">

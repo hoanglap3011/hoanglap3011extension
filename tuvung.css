@@ -233,10 +233,25 @@ textarea { resize: vertical; }
 
 /* Display Component (Hiển thị từ) */
 .comp-display { padding: 36px 40px; text-align: left; }
-.display-title-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
 
-.display-word { font-family: 'Playfair Display', serif; font-size: 40px; font-weight: 700; color: var(--white); margin-bottom: 8px; line-height: 1.1; }
-.display-ipa { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--text-light); margin-bottom: 4px; margin-top: -4px; }
+.display-title-row {
+  display: flex;
+  align-items: baseline; /* Đổi từ center thành baseline để chữ và từ loại nằm cùng hàng chân chữ */
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+/* Hàng 2: Loa + IPA */
+.display-ipa-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.display-word { font-family: 'Playfair Display', serif; font-size: 40px; font-weight: 700; color: var(--white); line-height: 1.1; }
+.display-ipa { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--text-light); }
 .display-meaning { font-size: 17px; color: var(--gold-light); margin-bottom: 28px; font-style: italic; }
 
 .display-section { margin-bottom: 16px; padding: 14px 16px; background: rgba(255,255,255,.04); border-radius: 10px; border-left: 2px solid rgba(200,168,75,.35); }
@@ -258,7 +273,62 @@ textarea { resize: vertical; }
 .btn-play-audio { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: rgba(255, 255, 255, 0.08); font-size: 18px; transition: all var(--transition); cursor: pointer; }
 .btn-play-audio:hover { background: var(--gold); transform: scale(1.1); }
 
-/* ── BROWSE MODE — Prev/Next Navigation ── */
+/* ── PART OF SPEECH — Radio Group (Form) ── */
+.pos-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pos-radio-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.pos-radio-label input[type="radio"] {
+  display: none;
+}
+
+.pos-radio-label span {
+  display: inline-block;
+  padding: 5px 13px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255,255,255,.06);
+  border: 1.5px solid rgba(255,255,255,.15);
+  color: var(--text-light);
+  transition: all var(--transition);
+  user-select: none;
+  letter-spacing: .3px;
+}
+
+.pos-radio-label:hover span {
+  border-color: rgba(200,168,75,.5);
+  color: var(--gold-light);
+}
+
+.pos-radio-label input[type="radio"]:checked + span {
+  background: rgba(200,168,75,.18);
+  border-color: var(--gold);
+  color: var(--gold-light);
+  box-shadow: 0 0 0 2px rgba(200,168,75,.15);
+}
+
+.display-pos {
+  display: inline-block;
+  font-size: 16px;
+  font-weight: 400;
+  font-style: italic;         /* In nghiêng */
+  text-transform: lowercase;  /* Chữ thường toàn bộ */
+  color: var(--text-light);   /* Màu chữ đơn giản */
+  background: transparent;    /* Bỏ nền vàng */
+  padding: 0;                 /* Bỏ padding */
+  border-radius: 0;
+  margin-bottom: 0;
+  letter-spacing: normal;
+}
 .browse-wrapper {
   display: flex;
   align-items: center;

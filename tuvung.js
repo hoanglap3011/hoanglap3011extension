@@ -43,6 +43,7 @@ export const TuVungModule = (() => {
     ipa: (raw.ipa || '').trim(),
     imageUrl: (raw.imageUrl || '').trim(),
     isActive: raw.isActive !== false,
+    partOfSpeech: (raw.partOfSpeech || '').trim(),
   });
 
   const _fileToBase64 = (file) => new Promise((resolve, reject) => {
@@ -188,6 +189,11 @@ export const TuVungModule = (() => {
         els.exampleMeaning.value = e.exampleMeaning || ''; els.note.value = e.note || '';
         els.imageUrl.value = e.imageUrl || ''; els.isActive.checked = e.isActive;
         setPreview(e.imageUrl);
+        // Chọn radio partOfSpeech nếu có
+        if (e.partOfSpeech) {
+          const radio = form.querySelector(`input[name="partOfSpeech"][value="${e.partOfSpeech}"]`);
+          if (radio) radio.checked = true;
+        }
       }
     }
 
@@ -221,10 +227,12 @@ export const TuVungModule = (() => {
       LoadingModule.show();
       
       try {
+        const checkedPos = form.querySelector('input[name="partOfSpeech"]:checked');
         const entry = {
           word: els.word.value, meaning: els.meaning.value, ipa: els.ipa.value,
           example: els.example.value, exampleMeaning: els.exampleMeaning.value,
-          note: els.note.value, imageUrl: els.imageUrl.value.trim(), isActive: els.isActive.checked
+          note: els.note.value, imageUrl: els.imageUrl.value.trim(), isActive: els.isActive.checked,
+          partOfSpeech: checkedPos ? checkedPos.value : '',
         };
         
         editIdx === -1 ? await add(entry, _selectedFile) : await update(editIdx, entry, _selectedFile);
@@ -254,7 +262,14 @@ export const TuVungModule = (() => {
 
     $('.display-word').textContent = entry.word;
     $('.display-meaning').textContent = entry.meaning;
-    if (entry.ipa) $('.display-ipa').textContent = entry.ipa;
+    if (entry.ipa) {
+      const ipaText = entry.ipa.startsWith('/') ? entry.ipa : `/${entry.ipa}/`;
+      $('.display-ipa').textContent = ipaText;
+    }
+    if (entry.partOfSpeech) {
+      const posEl = $('.display-pos');
+      if (posEl) { posEl.textContent = entry.partOfSpeech; posEl.classList.remove('d-none'); }
+    }
 
 // --- BẮT ĐẦU ĐOẠN THAY THẾ ---
     // 1. Tách logic phát âm ra một hàm riêng để dùng chung
@@ -308,7 +323,7 @@ export const TuVungModule = (() => {
       if (settings.tvEnableReadOnClose) {
          // Đổi UI để user biết đang chờ phát âm
          const originalText = btnClose.textContent;
-         btnClose.textContent = "🔊 Đang đọc...";
+         btnClose.textContent = "Đang đọc...";
          btnClose.disabled = true; // Chặn spam click
          btnClose.style.opacity = '0.7';
          
