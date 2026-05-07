@@ -199,8 +199,20 @@ export const TuVungModule = (() => {
     
     els.imageUrl.addEventListener('input', (e) => { if (!_selectedFile) setPreview(e.target.value.trim()); });
 
-    container.querySelector('.comp-close').addEventListener('click', onCancel);
-    container.querySelector('.btn-cancel').addEventListener('click', onCancel);
+    // Phím tắt Cmd+S (macOS) / Ctrl+S → Lưu từ (scoped, tự cleanup khi form đóng)
+    const _onFormKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        if (!btnSubmit.disabled) form.requestSubmit();
+      }
+    };
+    document.addEventListener('keydown', _onFormKey);
+    const _cleanupFormKey = () => document.removeEventListener('keydown', _onFormKey);
+    const _wrappedCancel   = () => { _cleanupFormKey(); onCancel(); };
+    const _wrappedComplete = () => { _cleanupFormKey(); onComplete(); };
+
+    container.querySelector('.comp-close').addEventListener('click', _wrappedCancel);
+    container.querySelector('.btn-cancel').addEventListener('click', _wrappedCancel);
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -218,7 +230,7 @@ export const TuVungModule = (() => {
         editIdx === -1 ? await add(entry, _selectedFile) : await update(editIdx, entry, _selectedFile);
         
         statusEl.textContent = '✅ Thành công!'; statusEl.style.color = '#5cb85c';
-        setTimeout(onComplete, 800);
+        setTimeout(_wrappedComplete, 800);
       } catch (err) {
         statusEl.textContent = '❌ Lỗi: ' + err.message; statusEl.style.color = '#e74c3c';
         btnSubmit.disabled = false; btnSubmit.textContent = 'Lưu từ';
@@ -228,7 +240,7 @@ export const TuVungModule = (() => {
     els.word.focus();
   };
 
-  const mountDisplay = (container, entry, onClose, autoCloseMs = 0) => {
+  const mountDisplay = (container, entry, onClose, autoCloseMs = 0, enableEscClose = false) => {
     const tpl = document.getElementById('tpl-display');
     container.innerHTML = '';
     container.appendChild(tpl.content.cloneNode(true));
@@ -306,6 +318,19 @@ export const TuVungModule = (() => {
       }
     });
 
+    // Esc để đóng popup xem từ đơn (không áp dụng trong browse mode)
+    if (enableEscClose) {
+      const _onDisplayKey = (e) => {
+        if (e.key === 'Escape') { e.preventDefault(); document.removeEventListener('keydown', _onDisplayKey); onClose(); }
+      };
+      document.addEventListener('keydown', _onDisplayKey);
+      // Cleanup nếu onClose được gọi bằng cách khác (click nút đóng)
+      const _origBtnClose = container.querySelector('.btn-close-display');
+      if (_origBtnClose) {
+        _origBtnClose.addEventListener('click', () => document.removeEventListener('keydown', _onDisplayKey), { once: true });
+      }
+    }
+
     // Hàm tự động đóng sẽ không bị ảnh hưởng (gọi thẳng onClose)
     if (autoCloseMs > 0) setTimeout(onClose, autoCloseMs);
     // --- KẾT THÚC ĐOẠN THAY THẾ ---
@@ -354,6 +379,92 @@ export const TuVungModule = (() => {
   };
 
   // ==========================================
+  // BROWSE MODE (Xem từ với nav prev/next)
+  // ==========================================
+
+  const _shuffle = (arr) => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
+  const mountBrowseDisplay = async (container, overlayEl, onClose) => {
+    const list = await getAll();
+    const active = list.filter(e => e.isActive !== false);
+    if (!active.length) { onClose(); return; }
+
+    // Shuffle 1 lần, duyệt tuần tự
+    const queue = _shuffle(active);
+    let cursor = 0;
+
+    // Wrap comp-card trong browse-wrapper để đặt nav buttons bên ngoài
+    overlayEl.innerHTML = `
+      <div class="browse-wrapper">
+        <button class="browse-nav browse-nav--prev" title="Từ trước (←)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <div class="comp-card" id="browseContainer"></div>
+        <button class="browse-nav browse-nav--next" title="Từ tiếp (→)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      </div>
+      <div class="browse-counter" id="browseCounter"></div>
+    `;
+
+    const browseContainer = overlayEl.querySelector('#browseContainer');
+    const counterEl       = overlayEl.querySelector('#browseCounter');
+    const btnPrev         = overlayEl.querySelector('.browse-nav--prev');
+    const btnNext         = overlayEl.querySelector('.browse-nav--next');
+
+    const updateNav = () => {
+      btnPrev.disabled = cursor <= 0;
+      counterEl.textContent = `${cursor + 1} / ${queue.length}`;
+    };
+
+    const renderCurrent = () => {
+      updateNav();
+      mountDisplay(browseContainer, queue[cursor], doClose, 0);
+    };
+
+    const goNext = () => { if (cursor < queue.length - 1) { cursor++; renderCurrent(); } };
+    const goPrev = () => { if (cursor > 0) { cursor--; renderCurrent(); } };
+
+    // Keyboard: ←→ để nav, Esc để đóng
+    const onKey = (e) => {
+      if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev(); }
+      else if (e.key === 'Escape') { e.preventDefault(); doClose(); }
+    };
+    document.addEventListener('keydown', onKey);
+
+    // Click overlay (vùng trống ngoài wrapper) → đóng
+    const onOverlayClick = (e) => {
+      if (!e.target.closest('.browse-wrapper') && !e.target.closest('.browse-counter')) doClose();
+    };
+    overlayEl.addEventListener('click', onOverlayClick);
+
+    btnPrev.addEventListener('click', goPrev);
+    btnNext.addEventListener('click', goNext);
+
+    const doClose = () => {
+      document.removeEventListener('keydown', onKey);
+      overlayEl.removeEventListener('click', onOverlayClick);
+      // Restore overlay về trạng thái ban đầu (chứa comp-card gốc)
+      overlayEl.innerHTML = '<div class="comp-card" id="modalContainer"></div>';
+      onClose();
+    };
+
+    renderCurrent();
+  };
+
+  // ==========================================
   // MANAGER PAGE INIT
   // ==========================================
   
@@ -392,7 +503,7 @@ export const TuVungModule = (() => {
     };
 
     const loadData = async () => { _mgrWords = await getAll(); _mgrFiltered = [..._mgrWords]; renderList(); };
-    const closeModal = () => r.overlay.classList.remove('active');
+    const closeModal = () => { r.overlay.classList.remove('active'); r.container = document.getElementById('modalContainer') || r.container; };
     const openModalForm = (idx) => { r.overlay.classList.add('active'); mountForm(r.container, idx, () => { closeModal(); loadData(); }, closeModal); };
     const closeConfirm = () => { _delIdx = -1; r.confirmOver.classList.remove('active'); };
     const openConfirm = (idx) => { _delIdx = idx; r.msg.textContent = `Xóa từ "${_mgrWords[idx].word}"?`; r.confirmOver.classList.add('active'); };
@@ -400,7 +511,7 @@ export const TuVungModule = (() => {
     await loadData();
 
     $('btnOpenForm').addEventListener('click', () => openModalForm(-1));
-    $('btnDemo').addEventListener('click', async () => { r.overlay.classList.add('active'); mountDisplay(r.container, await getRandom(), closeModal, 0); });
+    $('btnDemo').addEventListener('click', async () => { r.overlay.classList.add('active'); await mountBrowseDisplay(r.container, r.overlay, closeModal); });
     $('btnCancelDelete').addEventListener('click', closeConfirm);
     $('btnPullServer').addEventListener('click', async () => { if(confirm('Ghi đè local bằng dữ liệu từ Server?')) { await pullFromServer(); loadData(); }});
     $('btnConfirmDelete').addEventListener('click', async () => { if(_delIdx >= 0) { await remove(_delIdx); closeConfirm(); loadData(); } });
@@ -426,6 +537,30 @@ export const TuVungModule = (() => {
 
     r.overlay.addEventListener('click', e => { if(e.target === r.overlay) closeModal(); });
     r.confirmOver.addEventListener('click', e => { if(e.target === r.confirmOver) closeConfirm(); });
+
+    // Phím tắt Cmd+F (macOS) / Ctrl+F (Windows) → focus ô tìm kiếm
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        r.search.focus();
+        r.search.select();
+      }
+    });
+
+    // Double-click vào word-card → hiện popup xem từ đó
+    r.list.addEventListener('dblclick', (e) => {
+      const card = e.target.closest('.word-card');
+      if (!card) return;
+      // Nếu click đúp vào button thì bỏ qua
+      if (e.target.closest('.btn-icon')) return;
+      // Tìm id của card qua button edit bên trong
+      const btnEdit = card.querySelector('.btn-icon-edit');
+      if (!btnEdit) return;
+      const idx = _mgrWords.findIndex(x => String(x.id) === btnEdit.dataset.id);
+      if (idx < 0) return;
+      r.overlay.classList.add('active');
+      mountDisplay(r.container, _mgrWords[idx], closeModal, 0, true);
+    });
   };
 
   // ==========================================
