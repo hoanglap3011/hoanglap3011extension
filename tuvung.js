@@ -271,7 +271,17 @@ export const TuVungModule = (() => {
       if (posEl) { posEl.textContent = entry.partOfSpeech; posEl.classList.remove('d-none'); }
     }
 
-// --- BẮT ĐẦU ĐOẠN THAY THẾ ---
+    const btnToggleMeaning = $('.btn-toggle-meaning');
+    const displayMeaningEl = $('.display-meaning');
+    if (btnToggleMeaning && displayMeaningEl) {
+      btnToggleMeaning.addEventListener('click', () => {
+        // Bật/tắt hiển thị nghĩa
+        displayMeaningEl.classList.toggle('d-none');
+        // Bật/tắt trạng thái active của nút (đổi màu)
+        btnToggleMeaning.classList.toggle('active');
+      });
+    }
+
     // 1. Tách logic phát âm ra một hàm riêng để dùng chung
     const playAudio = (word, onEndCallback = null) => {
       if (!('speechSynthesis' in window)) {
@@ -314,7 +324,7 @@ export const TuVungModule = (() => {
 
     // 3. Gắn event cho nút Đóng (btn-close-display)
     const btnClose = $('.btn-close-display');
-    btnClose.textContent = `${entry.word} — /${entry.ipa}/ — ${entry.meaning}`;
+    btnClose.textContent = `${entry.word} — /${entry.ipa}/`;
     
     btnClose.addEventListener('click', async () => {
       // Lấy setting từ storage, key mặc định của Lập's Extension là 'LapsExtensionSettings'
@@ -348,7 +358,6 @@ export const TuVungModule = (() => {
 
     // Hàm tự động đóng sẽ không bị ảnh hưởng (gọi thẳng onClose)
     if (autoCloseMs > 0) setTimeout(onClose, autoCloseMs);
-    // --- KẾT THÚC ĐOẠN THAY THẾ ---
     
 const resizeWindow = () => { 
     const targetH = document.documentElement.scrollHeight + 40; 
@@ -525,9 +534,8 @@ const resizeWindow = () => {
         <div class="word-card">
           <div class="card-word">${_esc(e.word)}</div>
           ${e.ipa ? `<div class="card-ipa">${_esc(e.ipa)}</div>` : ''}
-          <div class="card-meaning">${_esc(e.meaning)}</div>
           ${(e.example || e.imageUrl) ? `<div class="card-divider"></div>` : ''}
-          ${e.example ? `<div class="card-field"><strong>Câu ví dụ</strong>${_esc(e.example)}</div>` : ''}
+          ${e.example ? `<div class="card-field">${_esc(e.example)}</div>` : ''}
           ${e.imageUrl ? `<img class="card-example-img" src="${_esc(e.imageUrl)}" loading="lazy" />` : ''}
           <div class="card-actions">
             <!-- Tối ưu: Dùng data-id để Event Delegation bắt sự kiện -->

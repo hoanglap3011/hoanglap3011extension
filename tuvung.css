@@ -239,7 +239,7 @@ textarea { resize: vertical; }
   align-items: baseline; /* Đổi từ center thành baseline để chữ và từ loại nằm cùng hàng chân chữ */
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
 }
 
 /* Hàng 2: Loa + IPA */
@@ -252,7 +252,6 @@ textarea { resize: vertical; }
 
 .display-word { font-family: 'Playfair Display', serif; font-size: 40px; font-weight: 700; color: var(--white); line-height: 1.1; }
 .display-ipa { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--text-light); }
-.display-meaning { font-size: 17px; color: var(--gold-light); margin-bottom: 28px; font-style: italic; }
 
 .display-section { margin-bottom: 16px; padding: 14px 16px; background: rgba(255,255,255,.04); border-radius: 10px; border-left: 2px solid rgba(200,168,75,.35); }
 .display-section--padded { padding: 10px 16px; }
@@ -550,4 +549,35 @@ textarea { resize: vertical; }
   opacity: 0;
   transition: opacity .3s;
   padding: 0 2px;
+}
+/* --- Khối Ẩn/Hiện nghĩa tiếng Việt --- */
+.display-meaning-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.display-meaning { 
+  font-size: 17px; 
+  color: var(--gold-light); 
+  margin-bottom: 0 !important;
+  font-style: italic; 
+}
+.btn-toggle-meaning {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-light);
+  transition: all var(--transition);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.btn-toggle-meaning:hover,
+.btn-toggle-meaning.active { /* Thêm active để giữ trạng thái màu vàng khi đang hiện nghĩa */
+  background: var(--gold);
+  color: var(--navy);
 }
