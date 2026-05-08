@@ -525,6 +525,59 @@ export const TuVungModule = (() => {
 
     await loadData();
 
+    // ── TV SETTINGS MODAL ──
+    const _TV_TIMER_KEY      = 'tvTimerSettings';
+    const _TV_TIMER_DEFAULTS = { autoCloseMs: 10, timerMinSec: 30, timerMaxSec: 60 };
+
+    const settingsOverlay  = document.getElementById('settingsOverlay');
+    const chkAutoPopup     = document.getElementById('tvEnableAutoPopup');
+    const chkReadOnClose   = document.getElementById('tvEnableReadOnClose');
+    const inpAutoClose     = document.getElementById('tvAutoCloseMs');
+    const inpTimerMin      = document.getElementById('tvTimerMinSec');
+    const inpTimerMax      = document.getElementById('tvTimerMaxSec');
+    const statusEl2        = document.getElementById('tvSettingsStatus');
+
+    const openSettings = () => {
+      chrome.storage.local.get([SETTINGS_KEY, _TV_TIMER_KEY], (data) => {
+        const settings = { ...DEFAULT_SETTINGS, ...(data[SETTINGS_KEY] || {}) };
+        const tv       = { ..._TV_TIMER_DEFAULTS, ...(data[_TV_TIMER_KEY] || {}) };
+        chkAutoPopup.checked   = settings.tvEnableAutoPopup  ?? true;
+        chkReadOnClose.checked = settings.tvEnableReadOnClose ?? false;
+        inpAutoClose.value = tv.autoCloseMs;
+        inpTimerMin.value  = tv.timerMinSec;
+        inpTimerMax.value  = tv.timerMaxSec;
+      });
+      settingsOverlay.classList.add('active');
+    };
+    const closeSettings = () => settingsOverlay.classList.remove('active');
+
+    $('btnSettings').addEventListener('click', openSettings);
+    $('btnCloseSettings').addEventListener('click', closeSettings);
+    settingsOverlay.addEventListener('click', e => { if (e.target === settingsOverlay) closeSettings(); });
+
+    // Save debounced
+    let _settingsDebounce;
+    const saveSettingsPanel = () => {
+      clearTimeout(_settingsDebounce);
+      _settingsDebounce = setTimeout(() => {
+        const autoCloseMs = Math.max(3,  Math.min(120,  parseInt(inpAutoClose.value) || _TV_TIMER_DEFAULTS.autoCloseMs));
+        const timerMinSec = Math.max(10, Math.min(3600, parseInt(inpTimerMin.value)  || _TV_TIMER_DEFAULTS.timerMinSec));
+        const timerMaxSec = Math.max(timerMinSec, Math.min(3600, parseInt(inpTimerMax.value) || _TV_TIMER_DEFAULTS.timerMaxSec));
+        inpAutoClose.value = autoCloseMs; inpTimerMin.value = timerMinSec; inpTimerMax.value = timerMaxSec;
+
+        chrome.storage.local.get([SETTINGS_KEY], (data) => {
+          const settings = { ...(data[SETTINGS_KEY] || {}), tvEnableAutoPopup: chkAutoPopup.checked, tvEnableReadOnClose: chkReadOnClose.checked };
+          chrome.storage.local.set({ [SETTINGS_KEY]: settings, [_TV_TIMER_KEY]: { autoCloseMs, timerMinSec, timerMaxSec } }, () => {
+            statusEl2.textContent = '✓ Đã lưu'; statusEl2.style.opacity = '1';
+            setTimeout(() => { statusEl2.style.opacity = '0'; }, 1800);
+          });
+        });
+      }, 500);
+    };
+
+    [chkAutoPopup, chkReadOnClose].forEach(el => el.addEventListener('change', saveSettingsPanel));
+    [inpAutoClose, inpTimerMin, inpTimerMax].forEach(el => el.addEventListener('input', saveSettingsPanel));
+
     $('btnOpenForm').addEventListener('click', () => openModalForm(-1));
     $('btnDemo').addEventListener('click', async () => { r.overlay.classList.add('active'); await mountBrowseDisplay(r.container, r.overlay, closeModal); });
     $('btnCancelDelete').addEventListener('click', closeConfirm);
