@@ -350,18 +350,38 @@ export const TuVungModule = (() => {
     if (autoCloseMs > 0) setTimeout(onClose, autoCloseMs);
     // --- KẾT THÚC ĐOẠN THAY THẾ ---
     
-    const resizeWindow = () => {
-      const targetH = document.documentElement.scrollHeight + 40; 
-      if (typeof chrome !== 'undefined' && chrome.windows) {
-        chrome.windows.getCurrent((win) => {
-          if (win.type === 'popup' || win.type === 'panel') {
-            const screenH = window.screen.availHeight || window.screen.height;
-            const newTop = Math.max(0, Math.round((screenH - targetH) / 2));
-            chrome.windows.update(win.id, { height: targetH, top: newTop });
-          }
-        });
-      }
-    };
+const resizeWindow = () => { 
+    const targetH = document.documentElement.scrollHeight + 40; 
+    if (typeof chrome !== 'undefined' && chrome.windows) { 
+        chrome.windows.getCurrent((win) => { 
+            if (win.type === 'popup' || win.type === 'panel') { 
+                const screenW = window.screen.availWidth || window.screen.width;
+                const screenH = window.screen.availHeight || window.screen.height; 
+                
+                // Căn giữa theo chiều dọc
+                const newTop = Math.max(0, Math.round((screenH - targetH) / 2)); 
+                
+                // Mảng chứa 3 vị trí theo chiều ngang: [Sát Trái, Chính Giữa, Sát Phải]
+                const winWidth = win.width || 480; // 480 là width mặc định lúc create
+                const positions = [
+                    0,                                      // Sát bên trái
+                    Math.round((screenW - winWidth) / 2),   // Chính giữa màn hình
+                    screenW - winWidth                      // Sát bên phải
+                ];
+                
+                // Chọn ngẫu nhiên 1 trong 3 vị trí
+                const randomLeft = positions[Math.floor(Math.random() * positions.length)];
+
+                // Cập nhật lại vị trí (top, left) và kích thước (height)
+                chrome.windows.update(win.id, { 
+                    height: targetH, 
+                    top: newTop,
+                    left: randomLeft 
+                }); 
+            } 
+        }); 
+    } 
+};
 
     const imgs = container.querySelectorAll('img');
     Promise.all(Array.from(imgs).map(img => img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })))
