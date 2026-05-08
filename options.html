@@ -504,6 +504,44 @@ bên cạnh video đang xem.">
     </div>
 </div>        
 
+        <!-- ============================= -->
+        <!-- SECTION: KIỂM TRA SELFCONTROL -->
+        <!-- ============================= -->
+        <div class="section-card" id="card-sc-checker">
+            <div class="section-header" data-target="body-sc-checker">
+                <div class="section-header-left">
+                    <span class="section-icon">🔒</span>
+                    <span class="section-title">Kiểm Tra SelfControl</span>
+                    <span class="section-badge off" id="badge-sc-checker">Tắt</span>
+                </div>
+                <span class="collapse-arrow">▼</span>
+            </div>
+            <div class="section-body" id="body-sc-checker">
+                <div class="master-switch-row">
+                    <label for="scEnable" class="master-switch-label switchLabel"
+                        data-tooltip="Kiểm tra xem các website trong danh sách có bị SelfControl chặn chưa. Nếu chưa, hiện cảnh báo ở tất cả các tab cho đến khi bật SelfControl bên ngoài.">
+                        <strong>Bật kiểm tra SelfControl</strong>
+                        <span class="description">Hiện overlay cảnh báo ở mọi tab nếu chưa bật SelfControl.</span>
+                    </label>
+                    <label class="switch">
+                        <input type="checkbox" id="scEnable">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-sub-row">
+                    <label for="scSiteList" class="switchLabel" style="margin-right:0;"
+                        data-tooltip="Mỗi dòng một hostname. TẤT CẢ các site phải bị chặn thì mới coi là SelfControl đang bật.">
+                        <strong>Danh sách website cần kiểm tra</strong>
+                        <span class="description" style="font-size:0.85em; color:#888; display:block; margin-top:3px;">Tất cả các site phải bị chặn. Mỗi dòng một hostname.</span>
+                    </label>
+                    <textarea id="scSiteList" rows="5" placeholder="facebook.com&#10;youtube.com&#10;vnexpress.net"></textarea>
+                    <div class="textarea-hint">
+                        Ví dụ: <code>facebook.com</code>, <code>youtube.com</code>, <code>vnexpress.net</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <p id="saveStatus"></p>
     </main>
 

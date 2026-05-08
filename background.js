@@ -1,4 +1,5 @@
 import { TuVungModule } from './tuvung.js';
+import { initSCChecker } from './selfcontrol_bg.js';
 const SETTINGS_KEY = 'LapsExtensionSettings';
 const DEFAULT_SETTINGS = {
   tvEnableAutoPopup: true,
@@ -381,3 +382,5 @@ async function getFreshGoogleTokens() {
         throw e;
     }
 }
+// Khởi động SelfControl Checker
+initSCChecker();
