@@ -403,11 +403,37 @@ const resizeWindow = () => {
 
   const openAddForm = () => chrome.windows.create({ url: chrome.runtime.getURL('tuvung.html?mode=add-form'), type: 'popup', width: 500, height: 680, focused: true });
 
+  let _popupWindowId = null;
+
   const show = async () => {
     const entry = await getRandom();
     if (!entry) return;
     await _storageSet(PENDING_KEY, entry);
-    chrome.windows.create({ url: chrome.runtime.getURL('tuvung.html?mode=popup'), type: 'popup', width: 480, height: 300, focused: true });
+
+    // Nếu đã có popup đang mở → đóng trước, rồi mở cái mới
+    const _createPopup = () => {
+      chrome.windows.create({ url: chrome.runtime.getURL('tuvung.html?mode=popup'), type: 'popup', width: 480, height: 300, focused: true }, (win) => {
+        _popupWindowId = win?.id ?? null;
+      });
+    };
+
+    if (_popupWindowId !== null) {
+      chrome.windows.get(_popupWindowId, (win) => {
+        if (chrome.runtime.lastError || !win) {
+          // Cửa sổ cũ đã tự đóng
+          _popupWindowId = null;
+          _createPopup();
+        } else {
+          // Đóng cửa sổ cũ trước khi mở cái mới
+          chrome.windows.remove(_popupWindowId, () => {
+            _popupWindowId = null;
+            _createPopup();
+          });
+        }
+      });
+    } else {
+      _createPopup();
+    }
   };
 
   const startRandomTimer = () => {
