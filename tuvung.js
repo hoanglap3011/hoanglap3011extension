@@ -160,7 +160,7 @@ export const TuVungModule = (() => {
   // RENDER COMPONENTS
   // ==========================================
 
-  const mountForm = async (container, editIdx = -1, onComplete, onCancel) => {
+  const mountForm = async (container, editId = null, onComplete, onCancel) => {
     const tpl = document.getElementById('tpl-form');
     container.innerHTML = '';
     container.appendChild(tpl.content.cloneNode(true));
@@ -179,10 +179,10 @@ export const TuVungModule = (() => {
       imgWrap.classList.toggle('d-none', !src); // Tối ưu DOM
     };
 
-    if (editIdx >= 0) {
+    if (editId != null) {
       container.querySelector('.comp-title').textContent = 'Sửa từ vựng';
       const allWords = await getAll();
-      const e = allWords[editIdx];
+      const e = allWords.find(x => String(x.id) === String(editId));
       if (e) {
         els.word.value = e.word; els.meaning.value = e.meaning;
         els.ipa.value = e.ipa || ''; els.example.value = e.example || '';
@@ -235,7 +235,13 @@ export const TuVungModule = (() => {
           partOfSpeech: checkedPos ? checkedPos.value : '',
         };
         
-        editIdx === -1 ? await add(entry, _selectedFile) : await update(editIdx, entry, _selectedFile);
+        if (editId == null) {
+          await add(entry, _selectedFile);
+        } else {
+          const currentList = await getAll();
+          const currentIdx = currentList.findIndex(x => String(x.id) === String(editId));
+          await update(currentIdx, entry, _selectedFile);
+        }
         
         statusEl.textContent = '✅ Thành công!'; statusEl.style.color = '#5cb85c';
         setTimeout(_wrappedComplete, 800);
@@ -573,7 +579,7 @@ const resizeWindow = () => {
 
     const loadData = async () => { _mgrWords = await getAll(); _mgrFiltered = [..._mgrWords]; renderList(); };
     const closeModal = () => { r.overlay.classList.remove('active'); r.container = document.getElementById('modalContainer') || r.container; };
-    const openModalForm = (idx) => { r.overlay.classList.add('active'); mountForm(r.container, idx, () => { closeModal(); loadData(); }, closeModal); };
+    const openModalForm = (id) => { r.overlay.classList.add('active'); mountForm(r.container, id, () => { closeModal(); loadData(); }, closeModal); };
     const closeConfirm = () => { _delIdx = -1; r.confirmOver.classList.remove('active'); };
     const openConfirm = (idx) => { _delIdx = idx; r.msg.textContent = `Xóa từ "${_mgrWords[idx].word}"?`; r.confirmOver.classList.add('active'); };
 
@@ -642,7 +648,7 @@ const resizeWindow = () => {
     r.list.addEventListener('click', (e) => {
       const btnEdit = e.target.closest('.btn-icon-edit');
       const btnDel = e.target.closest('.btn-icon-delete');
-      if (btnEdit) openModalForm(_mgrWords.findIndex(x => String(x.id) === btnEdit.dataset.id));
+      if (btnEdit) openModalForm(btnEdit.dataset.id);
       else if (btnDel) openConfirm(_mgrWords.findIndex(x => String(x.id) === btnDel.dataset.id));
     });
 
