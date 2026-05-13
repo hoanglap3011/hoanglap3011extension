@@ -317,7 +317,13 @@ export const TuVungModule = (() => {
     }    
     
     // Tối ưu DOM
-    if (entry.example) { $('.section-example').classList.remove('d-none'); $('.text-example').textContent = entry.example; }
+    if (entry.example) { 
+      const row = $('.display-example-row'); 
+      row.classList.remove('d-none'); 
+      $('.text-example').textContent = entry.example;
+      const btnPlayExample = row.querySelector('.btn-play-example');
+      if (btnPlayExample) btnPlayExample.addEventListener('click', () => playAudio(entry.example));
+    }
     if (entry.imageUrl) { $('.section-image').classList.remove('d-none'); $('.display-example-img').src = entry.imageUrl; }
     if (entry.exampleMeaning) { $('.section-example-meaning').classList.remove('d-none'); $('.text-example-meaning').textContent = entry.exampleMeaning; }
     if (entry.note) { $('.display-note').classList.remove('d-none'); $('.display-note').textContent = entry.note; }
