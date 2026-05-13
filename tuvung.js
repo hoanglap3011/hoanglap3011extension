@@ -10,10 +10,6 @@ export const TuVungModule = (() => {
   const _TV_TIMER_KEY      = 'tvTimerSettings';
   const _TV_TIMER_DEFAULTS = { autoCloseMs: 10, timerMinSec: 30, timerMaxSec: 60 };
 
-  // ==========================================
-  // HELPER FUNCTIONS
-  // ==========================================
-
   const _storageGet = (key) => new Promise((resolve) => {
     if (typeof chrome !== 'undefined' && chrome.storage) {
       chrome.storage.local.get([key], (r) => resolve(r[key] ?? null));
@@ -23,9 +19,9 @@ export const TuVungModule = (() => {
   const _storageSet = (key, value) => new Promise((resolve) => {
     if (typeof chrome !== 'undefined' && chrome.storage) {
       chrome.storage.local.set({ [key]: value }, resolve);
-    } else { 
-      localStorage.setItem(key, JSON.stringify(value)); 
-      resolve(); 
+    } else {
+      localStorage.setItem(key, JSON.stringify(value));
+      resolve();
     }
   });
 
@@ -57,16 +53,12 @@ export const TuVungModule = (() => {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
-  // ==========================================
-  // API & STORAGE CORE
-  // ==========================================
-
   const _callApi = (body) => new Promise((resolve, reject) => {
     StorageModule.get([CACHE_PASS], async (result) => {
       const pass = result[CACHE_PASS] || '';
-      if (!pass) { 
-        if (typeof PasswordUtil !== 'undefined') PasswordUtil.openPasswordPopup(); 
-        return reject(new Error('Chưa có mật khẩu')); 
+      if (!pass) {
+        if (typeof PasswordUtil !== 'undefined') PasswordUtil.openPasswordPopup();
+        return reject(new Error('Chưa có mật khẩu'));
       }
       try {
         const res = await fetch(API, { method: 'POST', body: JSON.stringify({ pass, ...body }) });
@@ -82,19 +74,19 @@ export const TuVungModule = (() => {
       const body = { action: API_ACTION_TUVUNG_SYNC_ONE, op, entry, ...(imageBase64 && { imageBase64 }) };
       const res = await _callApi(body);
       return res.code === 1 ? res.data : null;
-    } catch (err) { 
-      return null; 
+    } catch (err) {
+      return null;
     }
   };
 
   const getAll = async () => (await _storageGet(STORAGE_KEY)) || [];
-  
+
   const add = async (entry, imageFile = null) => {
     const list = await getAll();
     const newEntry = { id: Date.now(), ..._normalizeEntry(entry), createdAt: new Date().toISOString() };
     list.unshift(newEntry);
     await _storageSet(STORAGE_KEY, list);
-    
+
     const b64 = imageFile ? await _fileToBase64(imageFile) : null;
     const serverData = await _syncOneToServer('add', newEntry, b64);
     if (serverData?.imageUrl) { list[0].imageUrl = serverData.imageUrl; await _storageSet(STORAGE_KEY, list); }
@@ -104,10 +96,10 @@ export const TuVungModule = (() => {
   const update = async (index, entry, imageFile = null) => {
     const list = await getAll();
     if (index < 0 || index >= list.length) return list;
-    
+
     list[index] = { ...list[index], ..._normalizeEntry(entry), updatedAt: new Date().toISOString() };
     await _storageSet(STORAGE_KEY, list);
-    
+
     const b64 = imageFile ? await _fileToBase64(imageFile) : null;
     const serverData = await _syncOneToServer('update', list[index], b64);
     if (serverData?.imageUrl) { list[index].imageUrl = serverData.imageUrl; await _storageSet(STORAGE_KEY, list); }
@@ -118,7 +110,7 @@ export const TuVungModule = (() => {
     const list = await getAll();
     const entry = list.splice(index, 1)[0];
     await _storageSet(STORAGE_KEY, list);
-    
+
     if (entry) {
       _syncOneToServer('delete', { id: entry.id, imageUrl: entry.imageUrl })
         .then((res) => {
@@ -143,22 +135,18 @@ export const TuVungModule = (() => {
     StorageModule.get([CACHE_PASS], async (result) => {
       const pass = result[CACHE_PASS] || '';
       if (!pass) return reject(new Error('Chưa có mật khẩu'));
-      
+
       LoadingModule.show();
       try {
         const res = await fetch(API, { method: 'POST', body: JSON.stringify({ pass, action: API_ACTION_TUVUNG_GET_ALL }) });
         const json = await res.json();
         if (json.code !== 1) throw new Error(json.error);
-        
+
         await _storageSet(STORAGE_KEY, json.data || []);
         resolve(json.data || []);
       } catch (err) { reject(err); } finally { LoadingModule.hide(); }
     });
   });
-
-  // ==========================================
-  // RENDER COMPONENTS
-  // ==========================================
 
   const mountForm = async (container, editIdx = -1, onComplete, onCancel) => {
     const tpl = document.getElementById('tpl-form');
@@ -176,7 +164,7 @@ export const TuVungModule = (() => {
 
     const setPreview = (src) => {
       imgPreview.src = src || '';
-      imgWrap.classList.toggle('d-none', !src); // Tối ưu DOM
+      imgWrap.classList.toggle('d-none', !src);
     };
 
     if (editIdx >= 0) {
@@ -189,7 +177,7 @@ export const TuVungModule = (() => {
         els.exampleMeaning.value = e.exampleMeaning || ''; els.note.value = e.note || '';
         els.imageUrl.value = e.imageUrl || ''; els.isActive.checked = e.isActive;
         setPreview(e.imageUrl);
-        // Chọn radio partOfSpeech nếu có
+
         if (e.partOfSpeech) {
           const radio = form.querySelector(`input[name="partOfSpeech"][value="${e.partOfSpeech}"]`);
           if (radio) radio.checked = true;
@@ -202,10 +190,9 @@ export const TuVungModule = (() => {
       setPreview(_selectedFile ? URL.createObjectURL(_selectedFile) : els.imageUrl.value.trim());
       if (_selectedFile) els.imageUrl.value = '';
     });
-    
+
     els.imageUrl.addEventListener('input', (e) => { if (!_selectedFile) setPreview(e.target.value.trim()); });
 
-    // Phím tắt Cmd+S (macOS) / Ctrl+S → Lưu từ (scoped, tự cleanup khi form đóng)
     const _onFormKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault();
@@ -225,7 +212,7 @@ export const TuVungModule = (() => {
       btnSubmit.disabled = true; btnSubmit.textContent = 'Đang lưu...';
       statusEl.textContent = ''; statusEl.style.color = '';
       LoadingModule.show();
-      
+
       try {
         const checkedPos = form.querySelector('input[name="partOfSpeech"]:checked');
         const entry = {
@@ -234,9 +221,9 @@ export const TuVungModule = (() => {
           note: els.note.value, imageUrl: els.imageUrl.value.trim(), isActive: els.isActive.checked,
           partOfSpeech: checkedPos ? checkedPos.value : '',
         };
-        
+
         editIdx === -1 ? await add(entry, _selectedFile) : await update(editIdx, entry, _selectedFile);
-        
+
         statusEl.textContent = '✅ Thành công!'; statusEl.style.color = '#5cb85c';
         setTimeout(_wrappedComplete, 800);
       } catch (err) {
@@ -275,51 +262,47 @@ export const TuVungModule = (() => {
     const displayMeaningEl = $('.display-meaning');
     if (btnToggleMeaning && displayMeaningEl) {
       btnToggleMeaning.addEventListener('click', () => {
-        // Bật/tắt hiển thị nghĩa
+
         displayMeaningEl.classList.toggle('d-none');
-        // Bật/tắt trạng thái active của nút (đổi màu)
+
         btnToggleMeaning.classList.toggle('active');
       });
     }
 
-    // 1. Tách logic phát âm ra một hàm riêng để dùng chung
     const playAudio = (word, onEndCallback = null) => {
       if (!('speechSynthesis' in window)) {
         if (onEndCallback) onEndCallback();
         else alert("Trình duyệt không hỗ trợ đọc giọng nói.");
         return;
       }
-      
-      window.speechSynthesis.cancel(); 
+
+      window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(word);
-      utterance.lang = 'en-US'; 
+      utterance.lang = 'en-US';
       utterance.rate = 0.9;
-      
-      // Nếu có callback (trường hợp bấm đóng), đợi đọc xong mới gọi
+
       if (onEndCallback) {
         let hasCalled = false;
-        const finish = () => { 
-            if (!hasCalled) { hasCalled = true; onEndCallback(); } 
+        const finish = () => {
+            if (!hasCalled) { hasCalled = true; onEndCallback(); }
         };
         utterance.onend = finish;
         utterance.onerror = finish;
-        // Fallback: nếu API kẹt/lỗi không báo onend, tự động đóng sau 3 giây
-        setTimeout(finish, 3000); 
+
+        setTimeout(finish, 3000);
       }
-      
+
       window.speechSynthesis.speak(utterance);
     };
 
-    // 2. Gắn event cho nút Play (hình cái loa)
     const btnPlay = $('.btn-play-audio');
     if (btnPlay) {
       btnPlay.addEventListener('click', () => playAudio(entry.word));
-    }    
-    
-    // Tối ưu DOM
-    if (entry.example) { 
-      const row = $('.display-example-row'); 
-      row.classList.remove('d-none'); 
+    }
+
+    if (entry.example) {
+      const row = $('.display-example-row');
+      row.classList.remove('d-none');
       $('.text-example').textContent = entry.example;
       const btnPlayExample = row.querySelector('.btn-play-example');
       if (btnPlayExample) btnPlayExample.addEventListener('click', () => playAudio(entry.example));
@@ -328,84 +311,73 @@ export const TuVungModule = (() => {
     if (entry.exampleMeaning) { $('.section-example-meaning').classList.remove('d-none'); $('.text-example-meaning').textContent = entry.exampleMeaning; }
     if (entry.note) { $('.display-note').classList.remove('d-none'); $('.display-note').textContent = entry.note; }
 
-    // 3. Gắn event cho nút Đóng (btn-close-display)
     const btnClose = $('.btn-close-display');
     btnClose.textContent = `${entry.word} — /${entry.ipa}/`;
-    
+
     btnClose.addEventListener('click', async () => {
-      // Lấy setting từ storage, key mặc định của Lập's Extension là 'LapsExtensionSettings'
+
       const settings = await _storageGet('LapsExtensionSettings') || {};
-      
+
       if (settings.tvEnableReadOnClose) {
-         // Đổi UI để user biết đang chờ phát âm
+
          const originalText = btnClose.textContent;
          btnClose.textContent = "Đang đọc...";
-         btnClose.disabled = true; // Chặn spam click
+         btnClose.disabled = true;
          btnClose.style.opacity = '0.7';
-         
+
          playAudio(entry.word, onClose);
       } else {
          onClose();
       }
     });
 
-    // Esc để đóng popup xem từ đơn (không áp dụng trong browse mode)
     if (enableEscClose) {
       const _onDisplayKey = (e) => {
         if (e.key === 'Escape') { e.preventDefault(); document.removeEventListener('keydown', _onDisplayKey); onClose(); }
       };
       document.addEventListener('keydown', _onDisplayKey);
-      // Cleanup nếu onClose được gọi bằng cách khác (click nút đóng)
+
       const _origBtnClose = container.querySelector('.btn-close-display');
       if (_origBtnClose) {
         _origBtnClose.addEventListener('click', () => document.removeEventListener('keydown', _onDisplayKey), { once: true });
       }
     }
 
-    // Hàm tự động đóng sẽ không bị ảnh hưởng (gọi thẳng onClose)
     if (autoCloseMs > 0) setTimeout(onClose, autoCloseMs);
-    
-const resizeWindow = () => { 
-    const targetH = document.documentElement.scrollHeight + 40; 
-    if (typeof chrome !== 'undefined' && chrome.windows) { 
-        chrome.windows.getCurrent((win) => { 
-            if (win.type === 'popup' || win.type === 'panel') { 
+
+const resizeWindow = () => {
+    const targetH = document.documentElement.scrollHeight + 40;
+    if (typeof chrome !== 'undefined' && chrome.windows) {
+        chrome.windows.getCurrent((win) => {
+            if (win.type === 'popup' || win.type === 'panel') {
                 const screenW = window.screen.availWidth || window.screen.width;
-                const screenH = window.screen.availHeight || window.screen.height; 
-                
-                // Căn giữa theo chiều dọc
-                const newTop = Math.max(0, Math.round((screenH - targetH) / 2)); 
-                
-                // Mảng chứa 3 vị trí theo chiều ngang: [Sát Trái, Chính Giữa, Sát Phải]
-                const winWidth = win.width || 480; // 480 là width mặc định lúc create
+                const screenH = window.screen.availHeight || window.screen.height;
+
+                const newTop = Math.max(0, Math.round((screenH - targetH) / 2));
+
+                const winWidth = win.width || 480;
                 const positions = [
-                    0,                                      // Sát bên trái
-                    Math.round((screenW - winWidth) / 2),   // Chính giữa màn hình
-                    screenW - winWidth                      // Sát bên phải
+                    0,
+                    Math.round((screenW - winWidth) / 2),
+                    screenW - winWidth
                 ];
-                
-                // Chọn ngẫu nhiên 1 trong 3 vị trí
+
                 const randomLeft = positions[Math.floor(Math.random() * positions.length)];
 
-                // Cập nhật lại vị trí (top, left) và kích thước (height)
-                chrome.windows.update(win.id, { 
-                    height: targetH, 
+                chrome.windows.update(win.id, {
+                    height: targetH,
                     top: newTop,
-                    left: randomLeft 
-                }); 
-            } 
-        }); 
-    } 
+                    left: randomLeft
+                });
+            }
+        });
+    }
 };
 
     const imgs = container.querySelectorAll('img');
     Promise.all(Array.from(imgs).map(img => img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })))
-      .then(() => setTimeout(resizeWindow, 50)); 
+      .then(() => setTimeout(resizeWindow, 50));
   };
-
-  // ==========================================
-  // WINDOW & BACKGROUND CONTROLLERS
-  // ==========================================
 
   const openAddForm = () => chrome.windows.create({ url: chrome.runtime.getURL('tuvung.html?mode=add-form'), type: 'popup', width: 500, height: 680, focused: true });
 
@@ -416,7 +388,6 @@ const resizeWindow = () => {
     if (!entry) return;
     await _storageSet(PENDING_KEY, entry);
 
-    // Nếu đã có popup đang mở → đóng trước, rồi mở cái mới
     const _createPopup = () => {
       chrome.windows.create({ url: chrome.runtime.getURL('tuvung.html?mode=popup'), type: 'popup', width: 480, height: 300, focused: true }, (win) => {
         _popupWindowId = win?.id ?? null;
@@ -426,11 +397,11 @@ const resizeWindow = () => {
     if (_popupWindowId !== null) {
       chrome.windows.get(_popupWindowId, (win) => {
         if (chrome.runtime.lastError || !win) {
-          // Cửa sổ cũ đã tự đóng
+
           _popupWindowId = null;
           _createPopup();
         } else {
-          // Đóng cửa sổ cũ trước khi mở cái mới
+
           chrome.windows.remove(_popupWindowId, () => {
             _popupWindowId = null;
             _createPopup();
@@ -454,10 +425,6 @@ const resizeWindow = () => {
     chrome.alarms.get(ALARM_NAME, (ex) => { if (!ex) chrome.alarms.create(ALARM_NAME, { delayInMinutes: 0.5 }); });
   };
 
-  // ==========================================
-  // BROWSE MODE (Xem từ với nav prev/next)
-  // ==========================================
-
   const _shuffle = (arr) => {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
@@ -472,11 +439,9 @@ const resizeWindow = () => {
     const active = list.filter(e => e.isActive !== false);
     if (!active.length) { onClose(); return; }
 
-    // Shuffle 1 lần, duyệt tuần tự
     const queue = _shuffle(active);
     let cursor = 0;
 
-    // Wrap comp-card trong browse-wrapper để đặt nav buttons bên ngoài
     overlayEl.innerHTML = `
       <div class="browse-wrapper">
         <button class="browse-nav browse-nav--prev" title="Từ trước (←)">
@@ -512,7 +477,6 @@ const resizeWindow = () => {
     const goNext = () => { if (cursor < queue.length - 1) { cursor++; renderCurrent(); } };
     const goPrev = () => { if (cursor > 0) { cursor--; renderCurrent(); } };
 
-    // Keyboard: ←→ để nav, Esc để đóng
     const onKey = (e) => {
       if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); }
       else if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev(); }
@@ -520,7 +484,6 @@ const resizeWindow = () => {
     };
     document.addEventListener('keydown', onKey);
 
-    // Click overlay (vùng trống ngoài wrapper) → đóng
     const onOverlayClick = (e) => {
       if (!e.target.closest('.browse-wrapper') && !e.target.closest('.browse-counter')) doClose();
     };
@@ -532,7 +495,7 @@ const resizeWindow = () => {
     const doClose = () => {
       document.removeEventListener('keydown', onKey);
       overlayEl.removeEventListener('click', onOverlayClick);
-      // Restore overlay về trạng thái ban đầu (chứa comp-card gốc)
+
       overlayEl.innerHTML = '<div class="comp-card" id="modalContainer"></div>';
       onClose();
     };
@@ -540,10 +503,6 @@ const resizeWindow = () => {
     renderCurrent();
   };
 
-  // ==========================================
-  // MANAGER PAGE INIT
-  // ==========================================
-  
   let _mgrWords = [], _mgrFiltered = [], _delIdx = -1;
 
   const _initManager = async () => {
@@ -555,13 +514,13 @@ const resizeWindow = () => {
 
     const renderList = () => {
       r.count.textContent = `${_mgrWords.length} từ`;
-      if (!_mgrFiltered.length) { 
-        r.list.innerHTML = ''; 
-        r.empty.classList.remove('d-none'); // Tối ưu DOM
-        return; 
+      if (!_mgrFiltered.length) {
+        r.list.innerHTML = '';
+        r.empty.classList.remove('d-none');
+        return;
       }
       r.empty.classList.add('d-none');
-      
+
       r.list.innerHTML = _mgrFiltered.map(e => `
         <div class="word-card">
           <div class="card-word">${_esc(e.word)}</div>
@@ -584,10 +543,6 @@ const resizeWindow = () => {
     const openConfirm = (idx) => { _delIdx = idx; r.msg.textContent = `Xóa từ "${_mgrWords[idx].word}"?`; r.confirmOver.classList.add('active'); };
 
     await loadData();
-
-    // ── TV SETTINGS MODAL ──
-    const _TV_TIMER_KEY      = 'tvTimerSettings';
-    const _TV_TIMER_DEFAULTS = { autoCloseMs: 10, timerMinSec: 30, timerMaxSec: 60 };
 
     const settingsOverlay  = document.getElementById('settingsOverlay');
     const chkAutoPopup     = document.getElementById('tvEnableAutoPopup');
@@ -615,7 +570,6 @@ const resizeWindow = () => {
     $('btnCloseSettings').addEventListener('click', closeSettings);
     settingsOverlay.addEventListener('click', e => { if (e.target === settingsOverlay) closeSettings(); });
 
-    // Save debounced
     let _settingsDebounce;
     const saveSettingsPanel = () => {
       clearTimeout(_settingsDebounce);
@@ -643,8 +597,7 @@ const resizeWindow = () => {
     $('btnCancelDelete').addEventListener('click', closeConfirm);
     $('btnPullServer').addEventListener('click', async () => { if(confirm('Ghi đè local bằng dữ liệu từ Server?')) { await pullFromServer(); loadData(); }});
     $('btnConfirmDelete').addEventListener('click', async () => { if(_delIdx >= 0) { await remove(_delIdx); closeConfirm(); loadData(); } });
-    
-    // Tối ưu: EVENT DELEGATION cho List - Gắn đúng 1 Listener duy nhất thay vì n Listener
+
     r.list.addEventListener('click', (e) => {
       const btnEdit = e.target.closest('.btn-icon-edit');
       const btnDel = e.target.closest('.btn-icon-delete');
@@ -652,21 +605,19 @@ const resizeWindow = () => {
       else if (btnDel) openConfirm(_mgrWords.findIndex(x => String(x.id) === btnDel.dataset.id));
     });
 
-    // Tối ưu: DEBOUNCE Search (Độ trễ 250ms)
     let searchTimeout;
-    r.search.addEventListener('input', (e) => { 
+    r.search.addEventListener('input', (e) => {
       clearTimeout(searchTimeout);
       searchTimeout = setTimeout(() => {
-        const q = e.target.value.trim().toLowerCase(); 
-        _mgrFiltered = q ? _mgrWords.filter(w => w.word.toLowerCase().includes(q) || w.meaning.toLowerCase().includes(q)) : [..._mgrWords]; 
-        renderList(); 
+        const q = e.target.value.trim().toLowerCase();
+        _mgrFiltered = q ? _mgrWords.filter(w => w.word.toLowerCase().includes(q) || w.meaning.toLowerCase().includes(q)) : [..._mgrWords];
+        renderList();
       }, 250);
     });
 
     r.overlay.addEventListener('click', e => { if(e.target === r.overlay) closeModal(); });
     r.confirmOver.addEventListener('click', e => { if(e.target === r.confirmOver) closeConfirm(); });
 
-    // Phím tắt Cmd+F (macOS) / Ctrl+F (Windows) → focus ô tìm kiếm
     document.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
         e.preventDefault();
@@ -675,13 +626,12 @@ const resizeWindow = () => {
       }
     });
 
-    // Double-click vào word-card → hiện popup xem từ đó
     r.list.addEventListener('dblclick', (e) => {
       const card = e.target.closest('.word-card');
       if (!card) return;
-      // Nếu click đúp vào button thì bỏ qua
+
       if (e.target.closest('.btn-icon')) return;
-      // Tìm id của card qua button edit bên trong
+
       const btnEdit = card.querySelector('.btn-icon-edit');
       if (!btnEdit) return;
       const idx = _mgrWords.findIndex(x => String(x.id) === btnEdit.dataset.id);
@@ -691,27 +641,23 @@ const resizeWindow = () => {
     });
   };
 
-  // ==========================================
-  // BOOTSTRAP
-  // ==========================================
-  
   if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', async () => {
       const sectionStandalone = document.getElementById('sectionStandalone');
       const sectionManager = document.getElementById('sectionManager');
 
-      if (!sectionStandalone && !sectionManager) return; 
+      if (!sectionStandalone && !sectionManager) return;
 
       const mode = new URLSearchParams(window.location.search).get('mode');
-      
+
       if (mode) {
-        if (sectionStandalone) sectionStandalone.classList.remove('d-none'); // Tối ưu DOM
-        
+        if (sectionStandalone) sectionStandalone.classList.remove('d-none');
+
         const container = document.getElementById('standaloneContainer');
         if (container) container.style.maxHeight = 'none';
-        
+
         const closeWin = () => window.close();
-        
+
         if (mode === 'add-form') mountForm(container, -1, closeWin, closeWin);
         else if (mode === 'popup') {
             const tv = await _getTvTimerSettings();
@@ -719,7 +665,7 @@ const resizeWindow = () => {
         }
       } else {
         if (sectionManager) {
-          sectionManager.classList.remove('d-none'); // Tối ưu DOM
+          sectionManager.classList.remove('d-none');
           _initManager();
         }
       }
