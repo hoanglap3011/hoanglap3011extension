@@ -260,12 +260,14 @@ export const TuVungModule = (() => {
 
     const btnToggleMeaning = $('.btn-toggle-meaning');
     const displayMeaningEl = $('.display-meaning');
+    const meaningLabel = btnToggleMeaning ? btnToggleMeaning.nextElementSibling : null;
     if (btnToggleMeaning && displayMeaningEl) {
       btnToggleMeaning.addEventListener('click', () => {
-
-        displayMeaningEl.classList.toggle('d-none');
-
-        btnToggleMeaning.classList.toggle('active');
+        const hidden = displayMeaningEl.classList.toggle('d-none');
+        btnToggleMeaning.classList.toggle('active', !hidden);
+        if (meaningLabel && meaningLabel.classList.contains('toggle-label')) {
+          meaningLabel.classList.toggle('d-none', !hidden);
+        }
       });
     }
 
@@ -305,11 +307,66 @@ export const TuVungModule = (() => {
       row.classList.remove('d-none');
       $('.text-example').textContent = entry.example;
       const btnPlayExample = row.querySelector('.btn-play-example');
+      const btnToggleExample = row.querySelector('.btn-toggle-example');
+      const textExample = row.querySelector('.text-example');
+      const exampleLabel = row.querySelector('.toggle-label');
+      if (btnToggleExample) {
+        btnToggleExample.addEventListener('click', () => {
+          const hidden = textExample.classList.toggle('d-none');
+          btnToggleExample.classList.toggle('active', !hidden);
+          if (btnPlayExample) btnPlayExample.classList.toggle('d-none', hidden);
+          if (exampleLabel) exampleLabel.classList.toggle('d-none', !hidden);
+        });
+      }
       if (btnPlayExample) btnPlayExample.addEventListener('click', () => playAudio(entry.example));
     }
-    if (entry.imageUrl) { $('.section-image').classList.remove('d-none'); $('.display-example-img').src = entry.imageUrl; }
-    if (entry.exampleMeaning) { $('.section-example-meaning').classList.remove('d-none'); $('.text-example-meaning').textContent = entry.exampleMeaning; }
-    if (entry.note) { $('.display-note').classList.remove('d-none'); $('.display-note').textContent = entry.note; }
+    if (entry.imageUrl) {
+      const sectionImage = $('.section-image');
+      sectionImage.classList.remove('d-none');
+      const imgWrap = sectionImage.querySelector('.image-reveal-wrap');
+      const img = sectionImage.querySelector('.display-example-img');
+      img.src = entry.imageUrl;
+      const btnToggleImage = sectionImage.querySelector('.btn-toggle-image');
+      const imageLabel = sectionImage.querySelector('.toggle-label');
+      if (btnToggleImage) {
+        btnToggleImage.addEventListener('click', () => {
+          const hidden = imgWrap.classList.toggle('d-none');
+          sectionImage.classList.toggle('img-revealed', !hidden);
+          btnToggleImage.classList.toggle('active', !hidden);
+          if (imageLabel) imageLabel.classList.toggle('d-none', !hidden);
+        });
+      }
+    }
+    if (entry.exampleMeaning) {
+      const sectionMeaning = $('.section-example-meaning');
+      sectionMeaning.classList.remove('d-none');
+      const textMeaning = sectionMeaning.querySelector('.text-example-meaning');
+      textMeaning.textContent = entry.exampleMeaning;
+      const btnToggleExMeaning = sectionMeaning.querySelector('.btn-toggle-example-meaning');
+      const exMeaningLabel = sectionMeaning.querySelector('.toggle-label');
+      if (btnToggleExMeaning) {
+        btnToggleExMeaning.addEventListener('click', () => {
+          const hidden = textMeaning.classList.toggle('d-none');
+          btnToggleExMeaning.classList.toggle('active', !hidden);
+          if (exMeaningLabel) exMeaningLabel.classList.toggle('d-none', !hidden);
+        });
+      }
+    }
+    if (entry.note) {
+      const sectionNote = $('.section-note');
+      sectionNote.classList.remove('d-none');
+      const noteEl = sectionNote.querySelector('.display-note');
+      noteEl.textContent = entry.note;
+      const btnToggleNote = sectionNote.querySelector('.btn-toggle-note');
+      const noteLabel = sectionNote.querySelector('.toggle-label');
+      if (btnToggleNote) {
+        btnToggleNote.addEventListener('click', () => {
+          const hidden = noteEl.classList.toggle('d-none');
+          btnToggleNote.classList.toggle('active', !hidden);
+          if (noteLabel) noteLabel.classList.toggle('d-none', !hidden);
+        });
+      }
+    }
 
     const btnClose = $('.btn-close-display');
     btnClose.textContent = `${entry.word} — /${entry.ipa}/`;

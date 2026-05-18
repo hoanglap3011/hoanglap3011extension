@@ -252,33 +252,68 @@
       </div>
 
       <div class="display-meaning-row">
-        <button class="btn-toggle-meaning" title="Ẩn/Hiện nghĩa">
+        <button class="btn-toggle-meaning">
           <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
             <circle cx="12" cy="12" r="3"></circle>
           </svg>
         </button>
+        <span class="toggle-label">Nghĩa tiếng Việt</span>
         <div class="display-meaning d-none"></div>
       </div>
 
       <div class="display-example-row d-none">
-        <button class="btn-play-audio btn-play-example" title="Nghe câu ví dụ">
+        <button class="btn-toggle-example">
+          <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+        <span class="toggle-label">Câu ví dụ</span>
+        <button class="btn-play-audio btn-play-example d-none">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
             <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
             <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
           </svg>
         </button>
-        <div class="display-section-text text-example"></div>
+        <div class="display-section-text text-example d-none"></div>
       </div>
-      <div class="display-section section-image display-section--padded d-none">
-        <img class="display-example-img" src="" alt="Hình minh hoạ" />
+
+      <div class="display-toggle-row section-image d-none">
+        <button class="btn-toggle-image">
+          <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+        <span class="toggle-label">Ảnh minh hoạ</span>
+        <div class="image-reveal-wrap d-none">
+          <img class="display-example-img" src="" alt="Hình minh hoạ" />
+        </div>
       </div>
-      <div class="display-section section-example-meaning d-none">
-        <div class="display-section-text text-example-meaning"></div>
+
+      <div class="display-toggle-row section-example-meaning d-none">
+        <button class="btn-toggle-example-meaning">
+          <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+        <span class="toggle-label">Nghĩa câu ví dụ</span>
+        <div class="display-section-text text-example-meaning d-none"></div>
       </div>
-      
-      <div class="display-note d-none"></div>
+
+      <div class="display-toggle-row section-note d-none">
+        <button class="btn-toggle-note">
+          <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+        <span class="toggle-label">Chú thích</span>
+        <div class="display-note d-none"></div>
+      </div>
       <div class="comp-actions actions-end">
         <button class="btn-primary btn-close-display"></button>
       </div>
