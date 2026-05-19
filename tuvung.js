@@ -6,9 +6,19 @@ export const TuVungModule = (() => {
   const STORAGE_KEY  = 'tuvung_list';
   const PENDING_KEY  = 'tuvung_pending';
   const ALARM_NAME   = 'tuvung_random_popup';
+  const SETTINGS_KEY = 'LapsExtensionSettings'; // Bổ sung key để tránh lỗi ReferenceError
 
   const _TV_TIMER_KEY      = 'tvTimerSettings';
-  const _TV_TIMER_DEFAULTS = { autoCloseMs: 10, timerMinSec: 30, timerMaxSec: 60 };
+  const _TV_TIMER_DEFAULTS = { 
+    autoCloseMs: 10, 
+    timerMinSec: 30, 
+    timerMaxSec: 60,
+    tvShowMeaning: false, 
+    tvShowExample: false, 
+    tvShowExampleMeaning: false, 
+    tvShowImage: false, 
+    tvShowNote: false 
+  };
 
   const _storageGet = (key) => new Promise((resolve) => {
     if (typeof chrome !== 'undefined' && chrome.storage) {
@@ -268,6 +278,7 @@ export const TuVungModule = (() => {
         if (meaningLabel && meaningLabel.classList.contains('toggle-label')) {
           meaningLabel.classList.toggle('d-none', !hidden);
         }
+        if (!hidden) btnToggleMeaning.classList.add('d-none');
       });
     }
 
@@ -316,6 +327,7 @@ export const TuVungModule = (() => {
           btnToggleExample.classList.toggle('active', !hidden);
           if (btnPlayExample) btnPlayExample.classList.toggle('d-none', hidden);
           if (exampleLabel) exampleLabel.classList.toggle('d-none', !hidden);
+          if (!hidden) btnToggleExample.classList.add('d-none');
         });
       }
       if (btnPlayExample) btnPlayExample.addEventListener('click', () => playAudio(entry.example));
@@ -334,6 +346,7 @@ export const TuVungModule = (() => {
           sectionImage.classList.toggle('img-revealed', !hidden);
           btnToggleImage.classList.toggle('active', !hidden);
           if (imageLabel) imageLabel.classList.toggle('d-none', !hidden);
+          if (!hidden) btnToggleImage.classList.add('d-none');
         });
       }
     }
@@ -349,6 +362,7 @@ export const TuVungModule = (() => {
           const hidden = textMeaning.classList.toggle('d-none');
           btnToggleExMeaning.classList.toggle('active', !hidden);
           if (exMeaningLabel) exMeaningLabel.classList.toggle('d-none', !hidden);
+          if (!hidden) btnToggleExMeaning.classList.add('d-none');
         });
       }
     }
@@ -364,6 +378,7 @@ export const TuVungModule = (() => {
           const hidden = noteEl.classList.toggle('d-none');
           btnToggleNote.classList.toggle('active', !hidden);
           if (noteLabel) noteLabel.classList.toggle('d-none', !hidden);
+          if (!hidden) btnToggleNote.classList.add('d-none');
         });
       }
     }
@@ -402,38 +417,62 @@ export const TuVungModule = (() => {
 
     if (autoCloseMs > 0) setTimeout(onClose, autoCloseMs);
 
-const resizeWindow = () => {
-    const targetH = document.documentElement.scrollHeight + 40;
-    if (typeof chrome !== 'undefined' && chrome.windows) {
-        chrome.windows.getCurrent((win) => {
-            if (win.type === 'popup' || win.type === 'panel') {
-                const screenW = window.screen.availWidth || window.screen.width;
-                const screenH = window.screen.availHeight || window.screen.height;
+    const resizeWindow = () => {
+        const targetH = document.documentElement.scrollHeight + 40;
+        if (typeof chrome !== 'undefined' && chrome.windows) {
+            chrome.windows.getCurrent((win) => {
+                if (win.type === 'popup' || win.type === 'panel') {
+                    const screenW = window.screen.availWidth || window.screen.width;
+                    const screenH = window.screen.availHeight || window.screen.height;
 
-                const newTop = Math.max(0, Math.round((screenH - targetH) / 2));
+                    const newTop = Math.max(0, Math.round((screenH - targetH) / 2));
 
-                const winWidth = win.width || 480;
-                const positions = [
-                    0,
-                    Math.round((screenW - winWidth) / 2),
-                    screenW - winWidth
-                ];
+                    const winWidth = win.width || 480;
+                    const positions = [
+                        0,
+                        Math.round((screenW - winWidth) / 2),
+                        screenW - winWidth
+                    ];
 
-                const randomLeft = positions[Math.floor(Math.random() * positions.length)];
+                    const randomLeft = positions[Math.floor(Math.random() * positions.length)];
 
-                chrome.windows.update(win.id, {
-                    height: targetH,
-                    top: newTop,
-                    left: randomLeft
-                });
-            }
-        });
-    }
-};
+                    chrome.windows.update(win.id, {
+                        height: targetH,
+                        top: newTop,
+                        left: randomLeft
+                    });
+                }
+            });
+        }
+    };
 
     const imgs = container.querySelectorAll('img');
     Promise.all(Array.from(imgs).map(img => img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })))
       .then(() => setTimeout(resizeWindow, 50));
+      
+    // ---- Logic hiển thị mặc định theo Settings ----
+    _getTvTimerSettings().then(settings => {
+      if (settings.tvShowMeaning) {
+        const btn = container.querySelector('.btn-toggle-meaning');
+        if (btn && !btn.classList.contains('d-none')) btn.click();
+      }
+      if (settings.tvShowExample) {
+        const btn = container.querySelector('.btn-toggle-example');
+        if (btn && !btn.classList.contains('d-none')) btn.click();
+      }
+      if (settings.tvShowExampleMeaning) {
+        const btn = container.querySelector('.btn-toggle-example-meaning');
+        if (btn && !btn.classList.contains('d-none')) btn.click();
+      }
+      if (settings.tvShowImage) {
+        const btn = container.querySelector('.btn-toggle-image');
+        if (btn && !btn.classList.contains('d-none')) btn.click();
+      }
+      if (settings.tvShowNote) {
+        const btn = container.querySelector('.btn-toggle-note');
+        if (btn && !btn.classList.contains('d-none')) btn.click();
+      }
+    });
   };
 
   const openAddForm = () => chrome.windows.create({ url: chrome.runtime.getURL('tuvung.html?mode=add-form'), type: 'popup', width: 500, height: 680, focused: true });
@@ -586,7 +625,6 @@ const resizeWindow = () => {
           ${e.example ? `<div class="card-field">${_esc(e.example)}</div>` : ''}
           ${e.imageUrl ? `<img class="card-example-img" src="${_esc(e.imageUrl)}" loading="lazy" />` : ''}
           <div class="card-actions">
-            <!-- Tối ưu: Dùng data-id để Event Delegation bắt sự kiện -->
             <button class="btn-icon btn-icon-edit" data-id="${e.id}">✏️</button>
             <button class="btn-icon btn-icon-delete" data-id="${e.id}">🗑️</button>
           </div>
@@ -601,6 +639,7 @@ const resizeWindow = () => {
 
     await loadData();
 
+    // ---- DOM Màn hình Cài đặt ----
     const settingsOverlay  = document.getElementById('settingsOverlay');
     const chkAutoPopup     = document.getElementById('tvEnableAutoPopup');
     const chkReadOnClose   = document.getElementById('tvEnableReadOnClose');
@@ -609,18 +648,60 @@ const resizeWindow = () => {
     const inpTimerMax      = document.getElementById('tvTimerMaxSec');
     const statusEl2        = document.getElementById('tvSettingsStatus');
 
+    const autoCloseBadge  = document.getElementById('tvAutoCloseMsDisplay');
+    const timerRangeBadge = document.getElementById('tvTimerRangeDisplay');
+    
+    const randomPopupSettingsArea = document.getElementById('randomPopupSettingsArea');
+    const chkShowMeaning = document.getElementById('tvShowMeaning');
+    const chkShowExample = document.getElementById('tvShowExample');
+    const chkShowExampleMeaning = document.getElementById('tvShowExampleMeaning');
+    const chkShowImage = document.getElementById('tvShowImage');
+    const chkShowNote = document.getElementById('tvShowNote');
+
+    // Xử lý enable/disable 2 dải trượt khi toggle bật/tắt
+    if (chkAutoPopup && randomPopupSettingsArea) {
+      chkAutoPopup.addEventListener('change', (e) => {
+          const isEnabled = e.target.checked;
+          const ranges = randomPopupSettingsArea.querySelectorAll('input[type="range"]');
+          ranges.forEach(range => range.disabled = !isEnabled);
+          randomPopupSettingsArea.style.opacity = isEnabled ? '1' : '0.5';
+          randomPopupSettingsArea.style.pointerEvents = isEnabled ? 'auto' : 'none';
+      });
+    }
+
+    const _fmtSec = (s) => s >= 60 ? `${Math.floor(s/60)}p${s%60?` ${s%60}s`:''}` : `${s} giây`;
+    const _updateBadges = () => {
+      if (autoCloseBadge)  autoCloseBadge.textContent  = _fmtSec(parseInt(inpAutoClose.value));
+      if (timerRangeBadge) timerRangeBadge.textContent = `${_fmtSec(parseInt(inpTimerMin.value))} – ${_fmtSec(parseInt(inpTimerMax.value))}`;
+    };
+
     const openSettings = () => {
+      const DEFAULT_SETTINGS = { tvEnableAutoPopup: true, tvEnableReadOnClose: false };
       chrome.storage.local.get([SETTINGS_KEY, _TV_TIMER_KEY], (data) => {
         const settings = { ...DEFAULT_SETTINGS, ...(data[SETTINGS_KEY] || {}) };
         const tv       = { ..._TV_TIMER_DEFAULTS, ...(data[_TV_TIMER_KEY] || {}) };
-        chkAutoPopup.checked   = settings.tvEnableAutoPopup  ?? true;
-        chkReadOnClose.checked = settings.tvEnableReadOnClose ?? false;
-        inpAutoClose.value = tv.autoCloseMs;
-        inpTimerMin.value  = tv.timerMinSec;
-        inpTimerMax.value  = tv.timerMaxSec;
+        
+        if (chkAutoPopup) chkAutoPopup.checked   = settings.tvEnableAutoPopup  ?? true;
+        if (chkReadOnClose) chkReadOnClose.checked = settings.tvEnableReadOnClose ?? false;
+        if (inpAutoClose) inpAutoClose.value = tv.autoCloseMs;
+        if (inpTimerMin) inpTimerMin.value  = tv.timerMinSec;
+        if (inpTimerMax) inpTimerMax.value  = tv.timerMaxSec;
+
+        // Load các cấu hình hiển thị mặc định
+        if (chkShowMeaning) chkShowMeaning.checked = tv.tvShowMeaning || false;
+        if (chkShowExample) chkShowExample.checked = tv.tvShowExample || false;
+        if (chkShowExampleMeaning) chkShowExampleMeaning.checked = tv.tvShowExampleMeaning || false;
+        if (chkShowImage) chkShowImage.checked = tv.tvShowImage || false;
+        if (chkShowNote) chkShowNote.checked = tv.tvShowNote || false;
+
+        _updateBadges();
+
+        // Kích hoạt sự kiện change để disable/enable UI dựa theo trạng thái
+        if (chkAutoPopup) chkAutoPopup.dispatchEvent(new Event('change'));
       });
       settingsOverlay.classList.add('active');
     };
+    
     const closeSettings = () => settingsOverlay.classList.remove('active');
 
     $('btnSettings').addEventListener('click', openSettings);
@@ -631,23 +712,45 @@ const resizeWindow = () => {
     const saveSettingsPanel = () => {
       clearTimeout(_settingsDebounce);
       _settingsDebounce = setTimeout(() => {
-        const autoCloseMs = Math.max(3,  Math.min(120,  parseInt(inpAutoClose.value) || _TV_TIMER_DEFAULTS.autoCloseMs));
-        const timerMinSec = Math.max(10, Math.min(3600, parseInt(inpTimerMin.value)  || _TV_TIMER_DEFAULTS.timerMinSec));
-        const timerMaxSec = Math.max(timerMinSec, Math.min(3600, parseInt(inpTimerMax.value) || _TV_TIMER_DEFAULTS.timerMaxSec));
-        inpAutoClose.value = autoCloseMs; inpTimerMin.value = timerMinSec; inpTimerMax.value = timerMaxSec;
+        const autoCloseMs = Math.max(10, Math.min(60,  parseInt(inpAutoClose.value) || _TV_TIMER_DEFAULTS.autoCloseMs));
+        const timerMinSec = Math.max(10, Math.min(180, parseInt(inpTimerMin.value)  || _TV_TIMER_DEFAULTS.timerMinSec));
+        const timerMaxSec = Math.max(timerMinSec, Math.min(180, parseInt(inpTimerMax.value) || _TV_TIMER_DEFAULTS.timerMaxSec));
+        if (inpAutoClose) inpAutoClose.value = autoCloseMs; 
+        if (inpTimerMin) inpTimerMin.value = timerMinSec; 
+        if (inpTimerMax) inpTimerMax.value = timerMaxSec;
+
+        // Đọc giá trị từ Checkbox cấu hình
+        const tvShowMeaning = chkShowMeaning ? chkShowMeaning.checked : false;
+        const tvShowExample = chkShowExample ? chkShowExample.checked : false;
+        const tvShowExampleMeaning = chkShowExampleMeaning ? chkShowExampleMeaning.checked : false;
+        const tvShowImage = chkShowImage ? chkShowImage.checked : false;
+        const tvShowNote = chkShowNote ? chkShowNote.checked : false;
 
         chrome.storage.local.get([SETTINGS_KEY], (data) => {
-          const settings = { ...(data[SETTINGS_KEY] || {}), tvEnableAutoPopup: chkAutoPopup.checked, tvEnableReadOnClose: chkReadOnClose.checked };
-          chrome.storage.local.set({ [SETTINGS_KEY]: settings, [_TV_TIMER_KEY]: { autoCloseMs, timerMinSec, timerMaxSec } }, () => {
-            statusEl2.textContent = '✓ Đã lưu'; statusEl2.style.opacity = '1';
-            setTimeout(() => { statusEl2.style.opacity = '0'; }, 1800);
+          const settings = { ...(data[SETTINGS_KEY] || {}), tvEnableAutoPopup: chkAutoPopup?.checked ?? true, tvEnableReadOnClose: chkReadOnClose?.checked ?? false };
+          
+          chrome.storage.local.set({ 
+            [SETTINGS_KEY]: settings, 
+            [_TV_TIMER_KEY]: { 
+                autoCloseMs, timerMinSec, timerMaxSec,
+                tvShowMeaning, tvShowExample, tvShowExampleMeaning, tvShowImage, tvShowNote
+            } 
+          }, () => {
+            if (statusEl2) {
+                statusEl2.textContent = '✓ Đã lưu'; statusEl2.style.opacity = '1';
+                setTimeout(() => { statusEl2.style.opacity = '0'; }, 1800);
+            }
           });
         });
       }, 500);
     };
 
-    [chkAutoPopup, chkReadOnClose].forEach(el => el.addEventListener('change', saveSettingsPanel));
-    [inpAutoClose, inpTimerMin, inpTimerMax].forEach(el => el.addEventListener('input', saveSettingsPanel));
+    [chkAutoPopup, chkReadOnClose, chkShowMeaning, chkShowExample, chkShowExampleMeaning, chkShowImage, chkShowNote].forEach(el => {
+        if (el) el.addEventListener('change', saveSettingsPanel);
+    });
+    [inpAutoClose, inpTimerMin, inpTimerMax].forEach(el => {
+        if (el) el.addEventListener('input', () => { _updateBadges(); saveSettingsPanel(); });
+    });
 
     $('btnOpenForm').addEventListener('click', () => openModalForm(-1));
     $('btnDemo').addEventListener('click', async () => { r.overlay.classList.add('active'); await mountBrowseDisplay(r.container, r.overlay, closeModal); });

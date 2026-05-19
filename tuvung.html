@@ -92,50 +92,87 @@
         </div>
         <div class="comp-body">
 
-          <div class="form-group">
-            <label class="form-label">Hiển thị popup</label>
-            <div class="tv-setting-row">
-              <div class="tv-setting-info">
-                <span class="tv-setting-label-modal">Popup tự động</span>
-                <span class="tv-setting-desc-modal">Hiện từ vựng ngẫu nhiên theo timer</span>
-              </div>
-              <label class="tv-switch">
-                <input type="checkbox" id="tvEnableAutoPopup" />
-                <span class="tv-slider"></span>
-              </label>
-            </div>
-            <div class="tv-setting-row">
-              <div class="tv-setting-info">
-                <span class="tv-setting-label-modal">Đọc khi đóng popup</span>
-                <span class="tv-setting-desc-modal">Phát âm từ khi bấm nút đóng</span>
-              </div>
-              <label class="tv-switch">
-                <input type="checkbox" id="tvEnableReadOnClose" />
-                <span class="tv-slider"></span>
-              </label>
-            </div>
-          </div>
+  <div class="form-group">
+    <label class="form-label">Popup ngẫu nhiên</label>
+    
+    <div class="tv-setting-row">
+      <div class="tv-setting-info">
+        <span class="tv-setting-label-modal">Bật/ Tắt</span>
+        <span class="tv-setting-desc-modal">Hiện popup từ vựng lên trình duyệt 1 cách ngẫu nhiên</span>
+      </div>
+      <label class="tv-switch">
+        <input type="checkbox" id="tvEnableAutoPopup" />
+        <span class="tv-slider"></span>
+      </label>
+    </div>
+    
+    <div id="randomPopupSettingsArea">
+      <div class="tv-slider-label-row mt-3">
+        <label class="form-label" style="margin-bottom:0; text-transform: none; color: var(--text-main);">Thời gian tự đóng popup</label>
+        <span class="tv-slider-value-badge" id="tvAutoCloseMsDisplay">10 giây</span>
+      </div>
+      <div class="tv-range-wrap mb-3">
+        <span class="tv-range-min">10s</span>
+        <input type="range" id="tvAutoCloseMs" class="tv-range" min="10" max="60" value="10" step="1" />
+        <span class="tv-range-max">60s</span>
+      </div>
 
-          <div class="form-group">
-            <label class="form-label">Thời gian tự đóng popup</label>
-            <div class="tv-modal-input-row">
-              <input type="number" id="tvAutoCloseMs" class="form-input tv-modal-number" min="3" max="120" placeholder="10" />
-              <span class="tv-modal-unit">giây</span>
-            </div>
-          </div>
+      <div class="tv-slider-label-row">
+        <label class="form-label" style="margin-bottom:0; text-transform: none; color: var(--text-main);">Khoảng cách giữa các popup</label>
+        <span class="tv-slider-value-badge" id="tvTimerRangeDisplay">30 – 60 giây</span>
+      </div>
+      <div class="tv-range-wrap" style="margin-bottom:8px">
+        <span class="tv-range-min">10s</span>
+        <input type="range" id="tvTimerMinSec" class="tv-range" min="10" max="180" value="30" step="10" />
+        <span class="tv-range-max">3p</span>
+      </div>
+      <div class="tv-range-wrap">
+        <span class="tv-range-min">10s</span>
+        <input type="range" id="tvTimerMaxSec" class="tv-range" min="10" max="180" value="60" step="10" />
+        <span class="tv-range-max">3p</span>
+      </div>
+    </div>
+  </div>
 
-          <div class="form-group">
-            <label class="form-label">Khoảng cách giữa các popup</label>
-            <div class="tv-modal-input-row">
-              <input type="number" id="tvTimerMinSec" class="form-input tv-modal-number" min="10" max="3600" placeholder="30" />
-              <span class="tv-modal-sep">–</span>
-              <input type="number" id="tvTimerMaxSec" class="form-input tv-modal-number" min="10" max="3600" placeholder="60" />
-              <span class="tv-modal-unit">giây</span>
-            </div>
-          </div>
+  <div class="form-group">
+    <label class="form-label">Khác</label>
+    <div class="tv-setting-row">
+      <div class="tv-setting-info">
+        <span class="tv-setting-label-modal">Đọc khi đóng popup</span>
+        <span class="tv-setting-desc-modal">Phát âm từ khi bấm nút đóng</span>
+      </div>
+      <label class="tv-switch">
+        <input type="checkbox" id="tvEnableReadOnClose" />
+        <span class="tv-slider"></span>
+      </label>
+    </div>
+  </div>
 
-          <p class="comp-status" id="tvSettingsStatus"></p>
-        </div>
+  <div class="form-group">
+    <label class="form-label">Hiển thị mặc định</label>
+    <div class="tv-setting-row">
+      <div class="tv-setting-info"><span class="tv-setting-label-modal">Nghĩa tiếng Việt</span></div>
+      <label class="tv-switch"><input type="checkbox" id="tvShowMeaning" /><span class="tv-slider"></span></label>
+    </div>
+    <div class="tv-setting-row">
+      <div class="tv-setting-info"><span class="tv-setting-label-modal">Câu ví dụ</span></div>
+      <label class="tv-switch"><input type="checkbox" id="tvShowExample" /><span class="tv-slider"></span></label>
+    </div>
+    <div class="tv-setting-row">
+      <div class="tv-setting-info"><span class="tv-setting-label-modal">Nghĩa câu ví dụ</span></div>
+      <label class="tv-switch"><input type="checkbox" id="tvShowExampleMeaning" /><span class="tv-slider"></span></label>
+    </div>
+    <div class="tv-setting-row">
+      <div class="tv-setting-info"><span class="tv-setting-label-modal">Ảnh ví dụ</span></div>
+      <label class="tv-switch"><input type="checkbox" id="tvShowImage" /><span class="tv-slider"></span></label>
+    </div>
+    <div class="tv-setting-row">
+      <div class="tv-setting-info"><span class="tv-setting-label-modal">Ghi chú</span></div>
+      <label class="tv-switch"><input type="checkbox" id="tvShowNote" /><span class="tv-slider"></span></label>
+    </div>
+  </div>
+
+</div>
       </div>
     </div>
     <div class="modal-overlay" id="confirmOverlay">
