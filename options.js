@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // Defaults từ config.js
-    const FB_KEYWORDS_DEFAULT      = DEFAULT_FB_KEYWORDS.join('\n');
+    const FB_KEYWORDS_DEFAULT       = DEFAULT_FB_KEYWORDS.join('\n');
     const WEBSITE_BLOCKLIST_DEFAULT = DEFAULT_WEBSITE_BLOCKLIST;
 
     // Storage keys cho SelfControl Checker
@@ -13,8 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === SWITCHES ===
     const switches = {
-        // Website blocker
-        enableWebsiteBlocker:      document.getElementById('enableWebsiteBlocker'),
         // Facebook
         fbEnableSummarize:         document.getElementById('fbEnableSummarize'),
         fbEnableBlockByKeyword:    document.getElementById('fbEnableBlockByKeyword'),
@@ -26,14 +24,12 @@ document.addEventListener('DOMContentLoaded', () => {
         ytEnableAutoCloseNotebook: document.getElementById('ytEnableAutoCloseNotebook'),
         ytEnableHideRelated:       document.getElementById('ytEnableHideRelated'),
         // Box tóm tắt toàn cầu
-        sbEnable:    document.getElementById('sbEnable'),       
-        // SELFCONTROL CHECKER
+        sbEnable: document.getElementById('sbEnable'),
+        // SelfControl Checker
         scEnable: document.getElementById('scEnable'),
     };
 
-    // === SC CHECKER INPUT ===
-    const scSiteListTextarea = document.getElementById('scSiteList');
-
+    const scSiteListTextarea       = document.getElementById('scSiteList');
     const fbKeywordsTextarea       = document.getElementById('fbBlockKeywords');
     const fbKeywordSection         = document.getElementById('blockKeywordSection');
     const websiteBlocklistTextarea = document.getElementById('websiteBlocklist');
@@ -66,11 +62,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.section-header').forEach(header => {
         header.addEventListener('click', (e) => {
             if (e.target.closest('.switch')) return;
-
             const targetId = header.getAttribute('data-target');
             const body = document.getElementById(targetId);
             const isOpen = body.classList.contains('open');
-
             body.classList.toggle('open', !isOpen);
             header.classList.toggle('open', !isOpen);
             saveCollapseState();
@@ -88,8 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function refreshBadges(settings, scSettings) {
-        // Website blocker badge
-        updateBadge('badge-blocker', settings.enableWebsiteBlocker ?? true);
+        // Website blocker: luôn bật
+        updateBadge('badge-blocker', true);
         // Facebook: bật nếu ít nhất 1 tính năng FB đang bật
         const fbOn = settings.fbEnableSummarize || settings.fbEnableBlockByKeyword || settings.fbEnableHideStories;
         updateBadge('badge-facebook', fbOn);
@@ -118,12 +112,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveSettings() {
         const currentSettings = {};
         for (const key in switches) {
-            // scEnable lưu riêng, không nhét vào SETTINGS_KEY
             if (key === 'scEnable') continue;
             if (switches[key]) currentSettings[key] = switches[key].checked;
         }
 
-        // SC Checker settings (lưu riêng)
         const scSettings = {
             scEnable: switches.scEnable ? switches.scEnable.checked : false,
             scSiteList: scSiteListTextarea.value,
@@ -145,10 +137,10 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.storage.local.get(
             [SETTINGS_KEY, FB_KEYWORDS_KEY, WEBSITE_BLOCKLIST_KEY, SC_SETTINGS_KEY],
             (data) => {
-                const settings = { ...DEFAULT_SETTINGS, enableWebsiteBlocker: true, ...(data[SETTINGS_KEY] || {}) };
+                const settings = { ...DEFAULT_SETTINGS, ...(data[SETTINGS_KEY] || {}) };
 
                 for (const key in switches) {
-                    if (key === 'scEnable') continue; // load riêng bên dưới
+                    if (key === 'scEnable') continue;
                     if (switches[key] && settings[key] !== undefined) {
                         switches[key].checked = settings[key];
                     }
@@ -157,7 +149,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 fbKeywordsTextarea.value       = data[FB_KEYWORDS_KEY]       ?? FB_KEYWORDS_DEFAULT;
                 websiteBlocklistTextarea.value = data[WEBSITE_BLOCKLIST_KEY] ?? WEBSITE_BLOCKLIST_DEFAULT;
 
-                // Load SC Checker settings
                 const sc = { ...SC_DEFAULTS, ...(data[SC_SETTINGS_KEY] || {}) };
                 if (switches.scEnable) switches.scEnable.checked = sc.scEnable;
                 scSiteListTextarea.value = sc.scSiteList;
@@ -175,10 +166,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (el) el.addEventListener('change', saveSettings);
     });
 
-    // Toggle visibility keyword section
     switches.fbEnableBlockByKeyword.addEventListener('change', updateKeywordSectionVisibility);
 
-    // Textareas — debounce 600ms
     let debounceTimer;
     const onTextareaInput = () => {
         clearTimeout(debounceTimer);

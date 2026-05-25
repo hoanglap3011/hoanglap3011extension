@@ -59,14 +59,10 @@ const DEFAULT_FB_KEYWORDS = [
 // Danh sách chặn website mặc định
 // Cú pháp mỗi dòng: url | duration(HH:MM) | allowed_frames(HH:MM-HH:MM,...)
 // Chỉ url là bắt buộc. Dòng bắt đầu bằng # là comment.
-const DEFAULT_WEBSITE_BLOCKLIST = `# Chặn vĩnh viễn
+const DEFAULT_WEBSITE_BLOCKLIST = `# Mỗi dòng một domain cần chặn
 tiktok.com
-
-# Giới hạn thời gian + khung giờ
-vnexpress.net | 00:10 | 12:00-14:00
-
-# Chỉ giới hạn thời gian
-voz.vn | 00:10`;
+voz.vn
+vnexpress.net`;
 
 // Storage keys
 const SETTINGS_KEY = 'LapsExtensionSettings';

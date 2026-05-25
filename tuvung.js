@@ -8,6 +8,10 @@ export const TuVungModule = (() => {
   const ALARM_NAME   = 'tuvung_random_popup';
   const SETTINGS_KEY = 'LapsExtensionSettings'; // Bổ sung key để tránh lỗi ReferenceError
 
+  // Thời gian delay (ms) trước khi đóng popup sau khi reveal tất cả các trường
+  const REVEAL_THEN_CLOSE_DELAY_MS = 5000; // 5 giây — dùng khi nhấn nút đóng popup
+  const REVEAL_THEN_NEXT_DELAY_MS  = 2000; // 2 giây — dùng khi chuyển từ trong chế độ browse
+
   const _TV_TIMER_KEY      = 'tvTimerSettings';
   const _TV_TIMER_DEFAULTS = { 
     autoCloseMs: 10, 
@@ -62,6 +66,24 @@ export const TuVungModule = (() => {
   const _esc = (str) => String(str || '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  // Reveal tất cả các trường đang bị ẩn bởi toggle button trong một display container
+  const _revealAllFields = (container) => {
+    const toggleSelectors = [
+      '.btn-toggle-meaning',
+      '.btn-toggle-example',
+      '.btn-toggle-example-meaning',
+      '.btn-toggle-image',
+      '.btn-toggle-note',
+    ];
+    toggleSelectors.forEach(sel => {
+      const btn = container.querySelector(sel);
+      // Chỉ click nếu button còn hiển thị (chưa được reveal) và chưa ở trạng thái active
+      if (btn && !btn.classList.contains('d-none') && !btn.classList.contains('active')) {
+        btn.click();
+      }
+    });
+  };
 
   const _callApi = (body) => new Promise((resolve, reject) => {
     StorageModule.get([CACHE_PASS], async (result) => {
@@ -387,19 +409,22 @@ export const TuVungModule = (() => {
     btnClose.textContent = `${entry.word} — /${entry.ipa}/`;
 
     btnClose.addEventListener('click', async () => {
+      // Disable button ngay để tránh nhấn nhiều lần
+      btnClose.disabled = true;
+      btnClose.style.opacity = '0.7';
+
+      // Reveal tất cả các trường bị ẩn trước khi đóng
+      _revealAllFields(container);
 
       const settings = await _storageGet('LapsExtensionSettings') || {};
 
       if (settings.tvEnableReadOnClose) {
-
-         const originalText = btnClose.textContent;
-         btnClose.textContent = "Đang đọc...";
-         btnClose.disabled = true;
-         btnClose.style.opacity = '0.7';
-
-         playAudio(entry.word, onClose);
+        btnClose.textContent = "Đang đọc...";
+        // Đọc audio xong thì delay thêm rồi đóng
+        playAudio(entry.word, () => setTimeout(onClose, REVEAL_THEN_CLOSE_DELAY_MS));
       } else {
-         onClose();
+        btnClose.textContent = "Đóng sau 5 giây...";
+        setTimeout(onClose, REVEAL_THEN_CLOSE_DELAY_MS);
       }
     });
 
@@ -570,8 +595,28 @@ export const TuVungModule = (() => {
       mountDisplay(browseContainer, queue[cursor], doClose, 0);
     };
 
-    const goNext = () => { if (cursor < queue.length - 1) { cursor++; renderCurrent(); } };
-    const goPrev = () => { if (cursor > 0) { cursor--; renderCurrent(); } };
+    let _isTransitioning = false; // Chặn nhấn liên tục trong thời gian delay
+
+    const _doNavigate = (nextCursor) => {
+      if (_isTransitioning) return;
+      _isTransitioning = true;
+
+      // Disable nav buttons trong thời gian delay
+      btnPrev.disabled = true;
+      btnNext.disabled = true;
+
+      // Reveal tất cả các trường của từ hiện tại
+      _revealAllFields(browseContainer);
+
+      setTimeout(() => {
+        cursor = nextCursor;
+        _isTransitioning = false;
+        renderCurrent();
+      }, REVEAL_THEN_NEXT_DELAY_MS);
+    };
+
+    const goNext = () => { if (cursor < queue.length - 1) _doNavigate(cursor + 1); };
+    const goPrev = () => { if (cursor > 0) _doNavigate(cursor - 1); };
 
     const onKey = (e) => {
       if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); }

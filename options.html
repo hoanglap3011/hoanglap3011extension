@@ -275,26 +275,14 @@
                 <span class="collapse-arrow">▼</span>
             </div>
             <div class="section-body" id="body-blocker">
-                <div class="master-switch-row">
-                    <label for="enableWebsiteBlocker" class="master-switch-label switchLabel" data-tooltip="Bật/tắt toàn bộ tính năng chặn
-và giới hạn thời gian website.">
-                        <strong>Bật tính năng chặn website</strong>
+                <div class="setting-sub-row">
+                    <label for="websiteBlocklist" class="switchLabel" style="margin-right:0;" data-tooltip="Mỗi dòng một domain. Dòng bắt đầu bằng # là ghi chú.">
+                        <strong>Danh sách website</strong>
+                        <span class="description">Các trang này sẽ bị chặn hoàn toàn. Dùng Safari nếu cần vào.</span>
                     </label>
-                    <label class="switch">
-                        <input type="checkbox" id="enableWebsiteBlocker">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div class="setting-sub-row" id="websiteBlocklistSection">
-                    <label for="websiteBlocklist" class="switchLabel" style="margin-right:0;" data-tooltip="Mỗi dòng một website. Dòng bắt đầu bằng # là ghi chú.">
-                        <strong>Danh sách website</strong>
-                    </label>
-                    <textarea id="websiteBlocklist" rows="8" placeholder="tiktok.com&#10;voz.vn | 00:10&#10;vnexpress.net | 00:10 | 12:00-14:00"></textarea>
+                    <textarea id="websiteBlocklist" rows="8" placeholder="tiktok.com&#10;voz.vn&#10;vnexpress.net"></textarea>
                     <div class="textarea-hint">
-                        <strong>Cú pháp:</strong> <code>url</code> &nbsp;|&nbsp; <code>url | HH:MM</code> &nbsp;|&nbsp; <code>url | HH:MM | HH:MM-HH:MM</code><br>
-                         <code>tiktok.com</code> → chặn vĩnh viễn &nbsp;&nbsp;
-                         <code>voz.vn | 00:10</code> → tối đa 10 phút/ngày &nbsp;&nbsp;
-                         <code>vnexpress.net | 00:10 | 12:00-14:00</code> → 10 phút, chỉ trong 12h–14h
+                        Mỗi dòng một domain. Dòng bắt đầu bằng <code>#</code> là ghi chú và sẽ bị bỏ qua.
                     </div>
                 </div>
             </div>
