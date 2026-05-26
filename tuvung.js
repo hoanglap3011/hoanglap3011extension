@@ -8,15 +8,13 @@ export const TuVungModule = (() => {
   const ALARM_NAME   = 'tuvung_random_popup';
   const SETTINGS_KEY = 'LapsExtensionSettings'; // Bổ sung key để tránh lỗi ReferenceError
 
-  // Thời gian delay (ms) trước khi đóng popup sau khi reveal tất cả các trường
-  const REVEAL_THEN_CLOSE_DELAY_MS = 5000; // 5 giây — dùng khi nhấn nút đóng popup
-  const REVEAL_THEN_NEXT_DELAY_MS  = 2000; // 2 giây — dùng khi chuyển từ trong chế độ browse
-
   const _TV_TIMER_KEY      = 'tvTimerSettings';
   const _TV_TIMER_DEFAULTS = { 
-    autoCloseMs: 10, 
-    timerMinSec: 30, 
-    timerMaxSec: 60,
+    autoCloseMs: 10,        // giây — thời gian tự đóng popup
+    timerMinSec: 30,        // giây — khoảng cách tối thiểu giữa các popup
+    timerMaxSec: 60,        // giây — khoảng cách tối đa giữa các popup
+    revealThenCloseSec: 5,  // giây — đếm ngược sau khi click btn-close trước khi đóng
+    revealThenNextSec: 2,   // giây — delay trước khi chuyển từ trong slideshow
     tvShowMeaning: false, 
     tvShowExample: false, 
     tvShowExampleMeaning: false, 
@@ -267,7 +265,7 @@ export const TuVungModule = (() => {
     els.word.focus();
   };
 
-  const mountDisplay = (container, entry, onClose, autoCloseMs = 0, enableEscClose = false) => {
+  const mountDisplay = (container, entry, onClose, autoCloseMs = 0, enableEscClose = false, isPopupMode = false) => {
     const tpl = document.getElementById('tpl-display');
     container.innerHTML = '';
     container.appendChild(tpl.content.cloneNode(true));
@@ -406,7 +404,9 @@ export const TuVungModule = (() => {
     }
 
     const btnClose = $('.btn-close-display');
-    btnClose.textContent = `${entry.word} — /${entry.ipa}/`;
+    const ipaStr = entry.ipa ? (entry.ipa.startsWith('/') ? entry.ipa : `/${entry.ipa}/`) : '';
+    const _baseLabel = ipaStr ? `${entry.word} — ${ipaStr}` : entry.word;
+    btnClose.textContent = _baseLabel;
 
     const resizeWindow = () => {
         const targetH = document.documentElement.scrollHeight + 40;
@@ -426,26 +426,54 @@ export const TuVungModule = (() => {
         }
     };
 
+    // --- Countdown helper: đếm ngược trên btnClose rồi gọi callback ---
+    let _countdownInterval = null;
+    const _startCountdown = (seconds, onDone) => {
+      if (_countdownInterval) clearInterval(_countdownInterval);
+      let remaining = seconds;
+      btnClose.textContent = `${_baseLabel} - ${remaining}`;
+      _countdownInterval = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(_countdownInterval);
+          _countdownInterval = null;
+          onDone();
+        } else {
+          btnClose.textContent = `${_baseLabel} - ${remaining}`;
+        }
+      }, 1000);
+    };
+
+    // --- autoClose countdown (chỉ chế độ popup) ---
+    let _autoCloseTimer = null;
+    if (isPopupMode && autoCloseMs > 0) {
+      const autoCloseSec = Math.round(autoCloseMs / 1000);
+      _startCountdown(autoCloseSec, onClose);
+    }
+
     btnClose.addEventListener('click', async () => {
-      // Disable button ngay để tránh nhấn nhiều lần
+      // Hủy autoClose countdown nếu đang chạy
+      if (_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
+      if (_autoCloseTimer)    { clearTimeout(_autoCloseTimer);     _autoCloseTimer = null; }
+
       btnClose.disabled = true;
       btnClose.style.opacity = '0.7';
 
-      // Reveal tất cả các trường bị ẩn trước khi đóng
+      // Reveal tất cả các trường bị ẩn
       _revealAllFields(container);
-
-      // Đợi DOM cập nhật xong rồi resize popup để hiển thị hết nội dung, giữ nguyên vị trí left
       setTimeout(resizeWindow, 50);
 
-      const settings = await _storageGet('LapsExtensionSettings') || {};
+      const [appSettings, tvSettings] = await Promise.all([
+        _storageGet('LapsExtensionSettings'),
+        _getTvTimerSettings(),
+      ]);
+      const revealDelaySec = tvSettings.revealThenCloseSec ?? 5;
 
-      if (settings.tvEnableReadOnClose) {
+      if ((appSettings || {}).tvEnableReadOnClose) {
         btnClose.textContent = "Đang đọc...";
-        // Đọc audio xong thì delay thêm rồi đóng
-        playAudio(entry.word, () => setTimeout(onClose, REVEAL_THEN_CLOSE_DELAY_MS));
+        playAudio(entry.word, () => _startCountdown(revealDelaySec, onClose));
       } else {
-        btnClose.textContent = "Đóng sau 5 giây...";
-        setTimeout(onClose, REVEAL_THEN_CLOSE_DELAY_MS);
+        _startCountdown(revealDelaySec, onClose);
       }
     });
 
@@ -461,7 +489,8 @@ export const TuVungModule = (() => {
       }
     }
 
-    if (autoCloseMs > 0) setTimeout(onClose, autoCloseMs);
+    // autoCloseMs vẫn dùng như fallback hard-timeout (không phải popup mode)
+    if (!isPopupMode && autoCloseMs > 0) setTimeout(onClose, autoCloseMs);
 
     const imgs = container.querySelectorAll('img');
     Promise.all(Array.from(imgs).map(img => img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })))
@@ -613,17 +642,24 @@ export const TuVungModule = (() => {
 
     const updateNav = () => {
       btnPrev.disabled = cursor <= 0;
+      btnNext.disabled = cursor >= queue.length - 1;
       counterEl.textContent = `${cursor + 1} / ${queue.length}`;
+    };
+
+    const _hideBtnClose = () => {
+      const btn = browseContainer.querySelector('.btn-close-display');
+      if (btn) btn.style.display = 'none';
     };
 
     const renderCurrent = () => {
       updateNav();
       mountDisplay(browseContainer, queue[cursor], doClose, 0);
+      _hideBtnClose();
     };
 
     let _isTransitioning = false; // Chặn nhấn liên tục trong thời gian delay
 
-    const _doNavigate = (nextCursor) => {
+    const _doNavigate = async (nextCursor) => {
       if (_isTransitioning) return;
       _isTransitioning = true;
 
@@ -634,11 +670,15 @@ export const TuVungModule = (() => {
       // Reveal tất cả các trường của từ hiện tại
       _revealAllFields(browseContainer);
 
+      // Lấy delay từ settings
+      const tv = await _getTvTimerSettings();
+      const delayMs = (tv.revealThenNextSec ?? 2) * 1000;
+
       setTimeout(() => {
         cursor = nextCursor;
         _isTransitioning = false;
         renderCurrent();
-      }, REVEAL_THEN_NEXT_DELAY_MS);
+      }, delayMs);
     };
 
     const goNext = () => { if (cursor < queue.length - 1) _doNavigate(cursor + 1); };
@@ -711,13 +751,15 @@ export const TuVungModule = (() => {
     await loadData();
 
     // ---- DOM Màn hình Cài đặt ----
-    const settingsOverlay  = document.getElementById('settingsOverlay');
-    const chkAutoPopup     = document.getElementById('tvEnableAutoPopup');
-    const chkReadOnClose   = document.getElementById('tvEnableReadOnClose');
-    const inpAutoClose     = document.getElementById('tvAutoCloseMs');
-    const inpTimerMin      = document.getElementById('tvTimerMinSec');
-    const inpTimerMax      = document.getElementById('tvTimerMaxSec');
-    const statusEl2        = document.getElementById('tvSettingsStatus');
+    const settingsOverlay      = document.getElementById('settingsOverlay');
+    const chkAutoPopup         = document.getElementById('tvEnableAutoPopup');
+    const chkReadOnClose       = document.getElementById('tvEnableReadOnClose');
+    const inpAutoClose         = document.getElementById('tvAutoCloseMs');
+    const inpTimerMin          = document.getElementById('tvTimerMinSec');
+    const inpTimerMax          = document.getElementById('tvTimerMaxSec');
+    const inpRevealThenClose   = document.getElementById('tvRevealThenCloseSec');
+    const inpRevealThenNext    = document.getElementById('tvRevealThenNextSec');
+    const statusEl2            = document.getElementById('tvSettingsStatus');
 
     const autoCloseBadge  = document.getElementById('tvAutoCloseMsDisplay');
     const timerRangeBadge = document.getElementById('tvTimerRangeDisplay');
@@ -744,6 +786,10 @@ export const TuVungModule = (() => {
     const _updateBadges = () => {
       if (autoCloseBadge)  autoCloseBadge.textContent  = _fmtSec(parseInt(inpAutoClose.value));
       if (timerRangeBadge) timerRangeBadge.textContent = `${_fmtSec(parseInt(inpTimerMin.value))} – ${_fmtSec(parseInt(inpTimerMax.value))}`;
+      const revealCloseBadge = document.getElementById('tvRevealThenCloseSecDisplay');
+      const revealNextBadge  = document.getElementById('tvRevealThenNextSecDisplay');
+      if (revealCloseBadge && inpRevealThenClose) revealCloseBadge.textContent = _fmtSec(parseInt(inpRevealThenClose.value));
+      if (revealNextBadge  && inpRevealThenNext)  revealNextBadge.textContent  = _fmtSec(parseInt(inpRevealThenNext.value));
     };
 
     const openSettings = () => {
@@ -754,9 +800,11 @@ export const TuVungModule = (() => {
         
         if (chkAutoPopup) chkAutoPopup.checked   = settings.tvEnableAutoPopup  ?? true;
         if (chkReadOnClose) chkReadOnClose.checked = settings.tvEnableReadOnClose ?? false;
-        if (inpAutoClose) inpAutoClose.value = tv.autoCloseMs;
-        if (inpTimerMin) inpTimerMin.value  = tv.timerMinSec;
-        if (inpTimerMax) inpTimerMax.value  = tv.timerMaxSec;
+        if (inpAutoClose)       inpAutoClose.value       = tv.autoCloseMs;
+        if (inpTimerMin)        inpTimerMin.value        = tv.timerMinSec;
+        if (inpTimerMax)        inpTimerMax.value        = tv.timerMaxSec;
+        if (inpRevealThenClose) inpRevealThenClose.value = tv.revealThenCloseSec;
+        if (inpRevealThenNext)  inpRevealThenNext.value  = tv.revealThenNextSec;
 
         // Load các cấu hình hiển thị mặc định
         if (chkShowMeaning) chkShowMeaning.checked = tv.tvShowMeaning || false;
@@ -783,12 +831,16 @@ export const TuVungModule = (() => {
     const saveSettingsPanel = () => {
       clearTimeout(_settingsDebounce);
       _settingsDebounce = setTimeout(() => {
-        const autoCloseMs = Math.max(10, Math.min(60,  parseInt(inpAutoClose.value) || _TV_TIMER_DEFAULTS.autoCloseMs));
-        const timerMinSec = Math.max(10, Math.min(180, parseInt(inpTimerMin.value)  || _TV_TIMER_DEFAULTS.timerMinSec));
-        const timerMaxSec = Math.max(timerMinSec, Math.min(180, parseInt(inpTimerMax.value) || _TV_TIMER_DEFAULTS.timerMaxSec));
-        if (inpAutoClose) inpAutoClose.value = autoCloseMs; 
-        if (inpTimerMin) inpTimerMin.value = timerMinSec; 
-        if (inpTimerMax) inpTimerMax.value = timerMaxSec;
+        const autoCloseMs       = Math.max(10,  Math.min(300, parseInt(inpAutoClose.value)       || _TV_TIMER_DEFAULTS.autoCloseMs));
+        const timerMinSec       = Math.max(10,  Math.min(180, parseInt(inpTimerMin.value)        || _TV_TIMER_DEFAULTS.timerMinSec));
+        const timerMaxSec       = Math.max(timerMinSec, Math.min(180, parseInt(inpTimerMax.value) || _TV_TIMER_DEFAULTS.timerMaxSec));
+        const revealThenCloseSec = Math.max(1, Math.min(30,  parseInt(inpRevealThenClose?.value) || _TV_TIMER_DEFAULTS.revealThenCloseSec));
+        const revealThenNextSec  = Math.max(1, Math.min(10,  parseInt(inpRevealThenNext?.value)  || _TV_TIMER_DEFAULTS.revealThenNextSec));
+        if (inpAutoClose)       inpAutoClose.value       = autoCloseMs;
+        if (inpTimerMin)        inpTimerMin.value        = timerMinSec;
+        if (inpTimerMax)        inpTimerMax.value        = timerMaxSec;
+        if (inpRevealThenClose) inpRevealThenClose.value = revealThenCloseSec;
+        if (inpRevealThenNext)  inpRevealThenNext.value  = revealThenNextSec;
 
         // Đọc giá trị từ Checkbox cấu hình
         const tvShowMeaning = chkShowMeaning ? chkShowMeaning.checked : false;
@@ -804,6 +856,7 @@ export const TuVungModule = (() => {
             [SETTINGS_KEY]: settings, 
             [_TV_TIMER_KEY]: { 
                 autoCloseMs, timerMinSec, timerMaxSec,
+                revealThenCloseSec, revealThenNextSec,
                 tvShowMeaning, tvShowExample, tvShowExampleMeaning, tvShowImage, tvShowNote
             } 
           }, () => {
@@ -819,7 +872,7 @@ export const TuVungModule = (() => {
     [chkAutoPopup, chkReadOnClose, chkShowMeaning, chkShowExample, chkShowExampleMeaning, chkShowImage, chkShowNote].forEach(el => {
         if (el) el.addEventListener('change', saveSettingsPanel);
     });
-    [inpAutoClose, inpTimerMin, inpTimerMax].forEach(el => {
+    [inpAutoClose, inpTimerMin, inpTimerMax, inpRevealThenClose, inpRevealThenNext].forEach(el => {
         if (el) el.addEventListener('input', () => { _updateBadges(); saveSettingsPanel(); });
     });
 
@@ -892,7 +945,7 @@ export const TuVungModule = (() => {
         if (mode === 'add-form') mountForm(container, -1, closeWin, closeWin);
         else if (mode === 'popup') {
             const tv = await _getTvTimerSettings();
-            mountDisplay(container, await _storageGet(PENDING_KEY), closeWin, tv.autoCloseMs * 1000);
+            mountDisplay(container, await _storageGet(PENDING_KEY), closeWin, tv.autoCloseMs * 1000, false, true);
         }
       } else {
         if (sectionManager) {

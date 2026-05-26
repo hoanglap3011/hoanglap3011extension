@@ -15,7 +15,7 @@ chrome.storage.local.get(SETTINGS_KEY, (data) => {
     }
 });
 
-// Lắng nghe thay đổi từ màn hình Options
+// Lắng nghe thay đổi
 chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local' && changes[SETTINGS_KEY]) {
         const newSettings = changes[SETTINGS_KEY].newValue;
@@ -29,7 +29,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
             }
             // Nếu người dùng vừa TẮT
             else if (!newSettings.tvEnableAutoPopup && oldSettings.tvEnableAutoPopup) {
-                chrome.alarms.clear('tuvung_random_popup'); // Tên alarm lấy từ tuvung.js
+                TuVungModule.stopRandomTimer();
                 console.log("🛑 [Background] Đã dừng timer từ vựng.");
             }
         }

@@ -149,6 +149,30 @@
   </div>
 
   <div class="form-group">
+    <label class="form-label">Thời gian chờ khi đóng</label>
+
+    <div class="tv-slider-label-row mt-2">
+      <label class="form-label" style="margin-bottom:0; text-transform:none; color:var(--text-main);">Đếm ngược sau khi bấm đóng popup</label>
+      <span class="tv-slider-value-badge" id="tvRevealThenCloseSecDisplay">5 giây</span>
+    </div>
+    <div class="tv-range-wrap mb-3">
+      <span class="tv-range-min">1s</span>
+      <input type="range" id="tvRevealThenCloseSec" class="tv-range" min="1" max="30" value="5" step="1" />
+      <span class="tv-range-max">30s</span>
+    </div>
+
+    <div class="tv-slider-label-row">
+      <label class="form-label" style="margin-bottom:0; text-transform:none; color:var(--text-main);">Delay chuyển từ trong Slideshow</label>
+      <span class="tv-slider-value-badge" id="tvRevealThenNextSecDisplay">2 giây</span>
+    </div>
+    <div class="tv-range-wrap">
+      <span class="tv-range-min">1s</span>
+      <input type="range" id="tvRevealThenNextSec" class="tv-range" min="1" max="10" value="2" step="1" />
+      <span class="tv-range-max">10s</span>
+    </div>
+  </div>
+
+  <div class="form-group">
     <label class="form-label">Hiển thị mặc định</label>
     <div class="tv-setting-row">
       <div class="tv-setting-info"><span class="tv-setting-label-modal">Nghĩa tiếng Việt</span></div>
