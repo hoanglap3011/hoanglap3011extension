@@ -11,7 +11,8 @@
     "tabs",
     "alarms",
     "windows",
-    "notifications"
+    "notifications",
+    "system.display"
   ],
   "host_permissions": [
     "*://script.google.com/*",

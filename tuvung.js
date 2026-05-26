@@ -408,6 +408,24 @@ export const TuVungModule = (() => {
     const btnClose = $('.btn-close-display');
     btnClose.textContent = `${entry.word} — /${entry.ipa}/`;
 
+    const resizeWindow = () => {
+        const targetH = document.documentElement.scrollHeight + 40;
+        if (typeof chrome !== 'undefined' && chrome.windows) {
+            chrome.windows.getCurrent((win) => {
+                if (win.type === 'popup' || win.type === 'panel') {
+                    const screenH = window.screen.availHeight || window.screen.height;
+                    const newTop  = Math.max(0, Math.round((screenH - targetH) / 2));
+
+                    chrome.windows.update(win.id, {
+                        height: targetH,
+                        top: newTop,
+                        left: win.left ?? 0,
+                    });
+                }
+            });
+        }
+    };
+
     btnClose.addEventListener('click', async () => {
       // Disable button ngay để tránh nhấn nhiều lần
       btnClose.disabled = true;
@@ -415,6 +433,9 @@ export const TuVungModule = (() => {
 
       // Reveal tất cả các trường bị ẩn trước khi đóng
       _revealAllFields(container);
+
+      // Đợi DOM cập nhật xong rồi resize popup để hiển thị hết nội dung, giữ nguyên vị trí left
+      setTimeout(resizeWindow, 50);
 
       const settings = await _storageGet('LapsExtensionSettings') || {};
 
@@ -441,35 +462,6 @@ export const TuVungModule = (() => {
     }
 
     if (autoCloseMs > 0) setTimeout(onClose, autoCloseMs);
-
-    const resizeWindow = () => {
-        const targetH = document.documentElement.scrollHeight + 40;
-        if (typeof chrome !== 'undefined' && chrome.windows) {
-            chrome.windows.getCurrent((win) => {
-                if (win.type === 'popup' || win.type === 'panel') {
-                    const screenW = window.screen.availWidth || window.screen.width;
-                    const screenH = window.screen.availHeight || window.screen.height;
-
-                    const newTop = Math.max(0, Math.round((screenH - targetH) / 2));
-
-                    const winWidth = win.width || 480;
-                    const positions = [
-                        0,
-                        Math.round((screenW - winWidth) / 2),
-                        screenW - winWidth
-                    ];
-
-                    const randomLeft = positions[Math.floor(Math.random() * positions.length)];
-
-                    chrome.windows.update(win.id, {
-                        height: targetH,
-                        top: newTop,
-                        left: randomLeft
-                    });
-                }
-            });
-        }
-    };
 
     const imgs = container.querySelectorAll('img');
     Promise.all(Array.from(imgs).map(img => img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })))
@@ -510,9 +502,43 @@ export const TuVungModule = (() => {
     await _storageSet(PENDING_KEY, entry);
 
     const _createPopup = () => {
-      chrome.windows.create({ url: chrome.runtime.getURL('tuvung.html?mode=popup'), type: 'popup', width: 480, height: 300, focused: true }, (win) => {
-        _popupWindowId = win?.id ?? null;
-      });
+      const winWidth  = 480;
+      const winHeight = 300;
+
+      const _doCreate = (left, top) => {
+        chrome.windows.create({
+          url: chrome.runtime.getURL('tuvung.html?mode=popup'),
+          type: 'popup',
+          width: winWidth,
+          height: winHeight,
+          left,
+          top,
+          focused: true,
+        }, (win) => {
+          _popupWindowId = win?.id ?? null;
+        });
+      };
+
+      // chrome.system.display khả dụng trong background service worker
+      if (typeof chrome !== 'undefined' && chrome.system?.display) {
+        chrome.system.display.getInfo((displays) => {
+          const primary = displays.find(d => d.isPrimary) || displays[0];
+          const bounds  = primary?.workArea || primary?.bounds || { left: 0, top: 0, width: 1920, height: 1080 };
+
+          const positions = [
+            bounds.left,
+            bounds.left + Math.round((bounds.width - winWidth) / 2),
+            bounds.left + bounds.width - winWidth,
+          ];
+          const initLeft = positions[Math.floor(Math.random() * positions.length)];
+          const initTop  = bounds.top + Math.max(0, Math.round((bounds.height - winHeight) / 2));
+
+          _doCreate(initLeft, initTop);
+        });
+      } else {
+        // Fallback nếu không có chrome.system.display
+        _doCreate(0, 0);
+      }
     };
 
     if (_popupWindowId !== null) {
