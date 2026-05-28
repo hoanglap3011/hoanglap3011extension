@@ -177,6 +177,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
+    if (request.action === "showToeicPopupEntry") {
+        // Pending đã được set từ toeic.js; chỉ cần mở cửa sổ
+        _openPopupWindow(chrome.runtime.getURL('toeic.html?mode=popup&source=entry'), { fullHeight: true })
+            .then(() => sendResponse({ ok: true }));
+        return true;
+    }
+
     if (request.action === "create_notebook_from_youtube") {
         console.log("[Background] Nhận yêu cầu tạo NotebookLM cho:", request.url);
         handleNotebookFlow(request.url)

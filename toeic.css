@@ -848,3 +848,21 @@ body.popup-mode .detail-actions:has(.btn-prev-random) {
   font-weight: 500;
   color: var(--white);
 }
+/* ── Countdown + header-right trong popup ── */
+.detail-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.detail-countdown {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8a9bb5;
+  background: rgba(255,255,255,.07);
+  border-radius: 50px;
+  padding: 3px 10px;
+  min-width: 32px;
+  text-align: center;
+}

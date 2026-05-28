@@ -342,9 +342,15 @@ export const ToeicModule = (() => {
       mountDetail(modalCont, q, closeDetail);
     };
 
+    // ── Click câu → mở popup window (giống manual) ──
     listEl.addEventListener('click', (e) => {
       const row = e.target.closest('.question-row');
-      if (row && _filtered[+row.dataset.idx]) openDetail(_filtered[+row.dataset.idx]);
+      if (!row) return;
+      const q = _filtered[+row.dataset.idx];
+      if (!q) return;
+      _set(PENDING_KEY, q).then(() =>
+        chrome.runtime.sendMessage({ action: 'showToeicPopupEntry' })
+      );
     });
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDetail(); });
 
@@ -466,6 +472,7 @@ export const ToeicModule = (() => {
     const params   = new URLSearchParams(window.location.search);
     const isPopup  = params.get('mode') === 'popup';
     const isManual = params.get('source') === 'manual';
+    const isEntry  = params.get('source') === 'entry';
 
     if (!isPopup) { _initManager(); return; }
 
@@ -507,10 +514,18 @@ export const ToeicModule = (() => {
 
     renderCurrent();
 
-    if (!isManual) {
+    if (!isManual && !isEntry) {
       const tv = await _get(TIMER_KEY).then(r => ({ ...TIMER_DEFAULTS, ...(r || {}) }));
       let t = tv.autoCloseSec;
-      const timer = setInterval(() => { if (--t <= 0) { clearInterval(timer); window.close(); } }, 1000);
+      const countdownEl = card.querySelector('#detailCountdown');
+      if (countdownEl) { countdownEl.textContent = t; countdownEl.classList.remove('d-none'); }
+      const timer = setInterval(() => {
+        t--;
+        if (countdownEl) countdownEl.textContent = t;
+        if (t <= 0) { clearInterval(timer); window.close(); }
+      }, 1000);
+      // Nút X cũng clear countdown
+      card.querySelector('#btnCloseDetail')?.addEventListener('click', () => clearInterval(timer), { once: true });
     }
   });
 
