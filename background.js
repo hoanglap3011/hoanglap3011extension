@@ -1,4 +1,3 @@
-import { TuVungModule } from './tuvung.js';
 import { initSCChecker } from './selfcontrol_bg.js';
 
 const SETTINGS_KEY = 'LapsExtensionSettings';
@@ -7,64 +6,92 @@ const DEFAULT_SETTINGS = {
   toeicEnableAutoPopup: false,
 };
 
-// ── TOEIC: tự xử lý trong background, không import toeic.js (UI module) ──
-const TOEIC_STORAGE_KEY = 'toeic_questions';
-const TOEIC_PENDING_KEY = 'toeic_pending_question';
-const TOEIC_TIMER_KEY   = 'toeicTimerSettings';
-const TOEIC_ALARM_NAME  = 'toeic_random_popup';
+// ── Helper dùng chung ────────────────────────────────────────────
 
-// Trả về Promise resolve(windowId) khi popup đã được tạo
-function showToeicPopup(source = 'auto') {
-    return new Promise(async (resolve) => {
-        const data = await chrome.storage.local.get([TOEIC_STORAGE_KEY]);
-        const list = data[TOEIC_STORAGE_KEY] || [];
-        if (!list.length) { console.log('⚠️ [TOEIC] Chưa có dữ liệu câu hỏi.'); return resolve(null); }
-
-        // Lọc theo parts nếu có cài đặt
-        const partsData = await chrome.storage.local.get(['toeicPopupParts']);
-        const selectedParts = Array.isArray(partsData.toeicPopupParts) && partsData.toeicPopupParts.length
-            ? partsData.toeicPopupParts : null;
-        const pool = selectedParts
-            ? list.filter(q => selectedParts.includes(String(q.part || '').trim()))
-            : list;
-        const finalPool = pool.length ? pool : list;
-        const q = finalPool[Math.floor(Math.random() * finalPool.length)];
-        await chrome.storage.local.set({ [TOEIC_PENDING_KEY]: q });
-
-        const url = chrome.runtime.getURL(`toeic.html?mode=popup&source=${source}`);
-
-        // Lấy tất cả cửa sổ type "normal" để tránh lấy nhầm cửa sổ popup nhỏ
+// Mở popup window căn giữa màn hình tham chiếu
+function _openPopupWindow(url, opts = {}) {
+    return new Promise((resolve) => {
         chrome.windows.getAll({ windowTypes: ['normal'] }, (windows) => {
-            // Ưu tiên cửa sổ đang focused, fallback về cửa sổ lớn nhất
             const focused = windows.find(w => w.focused);
             const largest = windows.reduce((a, b) => (b.width > a.width ? b : a), windows[0] || {});
-            const ref = focused || largest || { width: 1440, height: 900, left: 0, top: 0 };
-
+            const ref     = focused || largest || { width: 1440, height: 900, left: 0, top: 0 };
             const screenW = ref.width  || 1440;
             const screenH = ref.height || 900;
-            const w    = Math.round(screenW * 2 / 3);
-            const h    = screenH;
+            const w    = opts.w ?? Math.round(screenW * 2 / 3);
+            const h    = opts.fullHeight ? screenH : (opts.h ?? Math.round(screenH / 2));
             const left = (ref.left || 0) + Math.round((screenW - w) / 2);
-            const top  = ref.top || 0;
-            chrome.windows.create({ url, type: 'popup', width: w, height: h, left, top }, (win) => {
-                resolve(win?.id ?? null);
-            });
+            const top  = opts.fullHeight ? (ref.top || 0) : ((ref.top || 0) + Math.round((screenH - h) / 2));
+            chrome.windows.create({ url, type: 'popup', width: w, height: h, left, top },
+                (win) => resolve(win?.id ?? null));
         });
     });
 }
 
-async function scheduleToeicAlarm() {
-    const data = await chrome.storage.local.get([TOEIC_TIMER_KEY]);
-    const tv   = { timerMinSec: 10, timerMaxSec: 60, ...(data[TOEIC_TIMER_KEY] || {}) };
-    const delaySec = tv.timerMinSec + Math.random() * (tv.timerMaxSec - tv.timerMinSec);
-    chrome.alarms.create(TOEIC_ALARM_NAME, { delayInMinutes: delaySec / 60 });
-    console.log(`⏱ [TOEIC] Alarm tiếp theo sau ${Math.round(delaySec)}s`);
+// Kiểm tra setting bật/tắt
+async function _isEnabled(key) {
+    const data = await chrome.storage.local.get([SETTINGS_KEY]);
+    return !!(data[SETTINGS_KEY]?.[key]);
 }
+
+// Schedule alarm với delay ngẫu nhiên trong khoảng [min, max]
+async function _scheduleAlarm(alarmName, timerKey, defaults) {
+    const data = await chrome.storage.local.get([timerKey]);
+    const tv   = { ...defaults, ...(data[timerKey] || {}) };
+    const delaySec = tv.timerMinSec + Math.random() * (tv.timerMaxSec - tv.timerMinSec);
+    chrome.alarms.create(alarmName, { delayInMinutes: delaySec / 60 });
+    console.log(`⏱ [${alarmName}] Alarm tiếp theo sau ${Math.round(delaySec)}s`);
+}
+
+// ── TỪ VỰNG ──────────────────────────────────────────────────────
+const TV_STORAGE_KEY = 'tuvung_list';
+const TV_PENDING_KEY = 'tuvung_pending';
+const TV_TIMER_KEY   = 'tvTimerSettings';
+const TV_ALARM_NAME  = 'tuvung_random_popup';
+const TV_TIMER_DEFS  = { timerMinSec: 300, timerMaxSec: 600 };
+
+async function showTuvungPopup(source = 'auto') {
+    const data = await chrome.storage.local.get([TV_STORAGE_KEY]);
+    const list = (data[TV_STORAGE_KEY] || []).filter(e => e.isActive !== false);
+    if (!list.length) { console.log('⚠️ [TV] Chưa có từ vựng.'); return null; }
+    const entry = list[Math.floor(Math.random() * list.length)];
+    await chrome.storage.local.set({ [TV_PENDING_KEY]: entry });
+    return _openPopupWindow(chrome.runtime.getURL(`tuvung.html?mode=popup&source=${source}`));
+}
+
+const scheduleTvAlarm    = () => _scheduleAlarm(TV_ALARM_NAME, TV_TIMER_KEY, TV_TIMER_DEFS);
+const _isTvEnabled       = () => _isEnabled('tvEnableAutoPopup');
+
+// ── TOEIC ─────────────────────────────────────────────────────────
+const TOEIC_STORAGE_KEY = 'toeic_questions';
+const TOEIC_PENDING_KEY = 'toeic_pending_question';
+const TOEIC_TIMER_KEY   = 'toeicTimerSettings';
+const TOEIC_ALARM_NAME  = 'toeic_random_popup';
+const TOEIC_TIMER_DEFS  = { timerMinSec: 10, timerMaxSec: 60 };
+
+async function showToeicPopup(source = 'auto') {
+    const data = await chrome.storage.local.get([TOEIC_STORAGE_KEY]);
+    const list = data[TOEIC_STORAGE_KEY] || [];
+    if (!list.length) { console.log('⚠️ [TOEIC] Chưa có dữ liệu câu hỏi.'); return null; }
+
+    const partsData = await chrome.storage.local.get(['toeicPopupParts']);
+    const parts = partsData.toeicPopupParts;
+    const pool  = (Array.isArray(parts) && parts.length)
+        ? (list.filter(q => parts.includes(String(q.part || '').trim())) || list)
+        : list;
+    const q = pool[Math.floor(Math.random() * pool.length)];
+    await chrome.storage.local.set({ [TOEIC_PENDING_KEY]: q });
+
+    return _openPopupWindow(chrome.runtime.getURL(`toeic.html?mode=popup&source=${source}`),
+        { fullHeight: true }); // TOEIC dùng full height
+}
+
+const scheduleToeicAlarm = () => _scheduleAlarm(TOEIC_ALARM_NAME, TOEIC_TIMER_KEY, TOEIC_TIMER_DEFS);
+const _isToeicEnabled    = () => _isEnabled('toeicEnableAutoPopup');
 
 // ── Khởi động ─────────────────────────────────────────────────────
 chrome.storage.local.get(SETTINGS_KEY, (data) => {
     const settings = { ...DEFAULT_SETTINGS, ...(data[SETTINGS_KEY] || {}) };
-    if (settings.tvEnableAutoPopup)    TuVungModule.startRandomTimer();
+    if (settings.tvEnableAutoPopup)    { scheduleTvAlarm();    console.log('🚀 [Background] Đã bật timer Từ Vựng.'); }
     if (settings.toeicEnableAutoPopup) { scheduleToeicAlarm(); console.log('🚀 [Background] Đã bật timer TOEIC.'); }
 });
 
@@ -75,8 +102,8 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         const oldS = changes[SETTINGS_KEY].oldValue;
         if (!newS || !oldS) return;
 
-        if (newS.tvEnableAutoPopup && !oldS.tvEnableAutoPopup)    { TuVungModule.startRandomTimer(); console.log('🚀 [Background] Bật timer từ vựng.'); }
-        else if (!newS.tvEnableAutoPopup && oldS.tvEnableAutoPopup) { TuVungModule.stopRandomTimer();  console.log('🛑 [Background] Tắt timer từ vựng.'); }
+        if (newS.tvEnableAutoPopup && !oldS.tvEnableAutoPopup)    { scheduleTvAlarm();                         console.log('🚀 [Background] Bật timer từ vựng.'); }
+        else if (!newS.tvEnableAutoPopup && oldS.tvEnableAutoPopup) { chrome.alarms.clear(TV_ALARM_NAME);        console.log('🛑 [Background] Tắt timer từ vựng.'); }
 
         if (newS.toeicEnableAutoPopup && !oldS.toeicEnableAutoPopup)    { scheduleToeicAlarm(); console.log('🚀 [Background] Bật timer TOEIC.'); }
         else if (!newS.toeicEnableAutoPopup && oldS.toeicEnableAutoPopup) { chrome.alarms.clear(TOEIC_ALARM_NAME); console.log('🛑 [Background] Tắt timer TOEIC.'); }
@@ -84,43 +111,25 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 });
 
 // ── Alarm listener ────────────────────────────────────────────────
-// Helper: kiểm tra setting có còn bật không trước khi schedule
-async function _isToeicEnabled() {
-    const data = await chrome.storage.local.get([SETTINGS_KEY]);
-    return !!(data[SETTINGS_KEY]?.toeicEnableAutoPopup);
+// Xử lý alarm chung: show popup → chờ đóng → schedule tiếp
+async function _handleAlarm(isEnabledFn, showFn, scheduleFn, tag) {
+    if (!(await isEnabledFn())) return;
+    const winId = await showFn();
+    if (winId) {
+        const onRemoved = async (id) => {
+            if (id !== winId) return;
+            chrome.windows.onRemoved.removeListener(onRemoved);
+            if (await isEnabledFn()) scheduleFn();
+        };
+        chrome.windows.onRemoved.addListener(onRemoved);
+    } else {
+        if (await isEnabledFn()) scheduleFn();
+    }
 }
 
-chrome.alarms.onAlarm.addListener(async (alarm) => {
-    if (alarm.name === TOEIC_ALARM_NAME) {
-        console.log('⏰ [Background] TOEIC alarm fired');
-
-        // Kiểm tra setting ngay tại thời điểm alarm fire
-        if (!(await _isToeicEnabled())) {
-            console.log('🛑 [TOEIC] Setting đã tắt, bỏ qua alarm.');
-            return;
-        }
-
-        const winId = await showToeicPopup();
-
-        if (winId) {
-            // Chờ popup đóng rồi mới lên lịch — nhưng kiểm tra setting lại lần nữa
-            const onRemoved = async (removedId) => {
-                if (removedId === winId) {
-                    chrome.windows.onRemoved.removeListener(onRemoved);
-                    if (await _isToeicEnabled()) {
-                        console.log('🚪 [TOEIC] Popup đã đóng, lên lịch alarm tiếp theo...');
-                        scheduleToeicAlarm();
-                    } else {
-                        console.log('🛑 [TOEIC] Setting đã tắt khi popup đóng, không schedule tiếp.');
-                    }
-                }
-            };
-            chrome.windows.onRemoved.addListener(onRemoved);
-        } else {
-            // Không có data / lỗi tạo window — kiểm tra setting trước khi schedule
-            if (await _isToeicEnabled()) await scheduleToeicAlarm();
-        }
-    }
+chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === TV_ALARM_NAME)    _handleAlarm(_isTvEnabled,    showTuvungPopup, scheduleTvAlarm,    'TV');
+    if (alarm.name === TOEIC_ALARM_NAME) _handleAlarm(_isToeicEnabled, showToeicPopup,  scheduleToeicAlarm, 'TOEIC');
 });
 
 let cachedTokens = { at: null, bl: null, timestamp: 0 };
@@ -148,9 +157,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     // ── Popup bất kỳ từ Hub (tránh gọi chrome.windows từ hub context) ──
     if (request.action === "showTuvungPopup") {
-        TuVungModule.show()
+        showTuvungPopup('manual')
             .then(() => sendResponse({ ok: true }))
             .catch(err => sendResponse({ ok: false, error: err.message }));
+        return true;
+    }
+
+    if (request.action === "showTuvungPopupEntry") {
+        // Pending đã được set từ tuvung.js; chỉ cần mở cửa sổ
+        _openPopupWindow(chrome.runtime.getURL('tuvung.html?mode=popup&source=manual'))
+            .then(() => sendResponse({ ok: true }));
         return true;
     }
 
@@ -236,11 +252,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
+    if (request.action === "tvTimerUpdated") {
+        request.enabled ? scheduleTvAlarm() : chrome.alarms.clear(TV_ALARM_NAME);
+        sendResponse({ ok: true }); return true;
+    }
+
     if (request.action === "toeicTimerUpdated") {
-        if (request.enabled) { scheduleToeicAlarm(); console.log('🚀 [Background] Bật timer TOEIC.'); }
-        else { chrome.alarms.clear(TOEIC_ALARM_NAME); console.log('🛑 [Background] Tắt timer TOEIC.'); }
-        sendResponse({ ok: true });
-        return true;
+        request.enabled ? scheduleToeicAlarm() : chrome.alarms.clear(TOEIC_ALARM_NAME);
+        sendResponse({ ok: true }); return true;
     }
 
     return false;

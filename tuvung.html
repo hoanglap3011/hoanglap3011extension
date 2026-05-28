@@ -84,119 +84,52 @@
           <div class="comp-logo">
             <span class="comp-logo-icon">⚙️</span>
             <div>
-              <h2 class="comp-title">Cài đặt từ vựng</h2>
-              <p class="comp-subtitle">Vocabulary Manager</p>
+              <h2 class="comp-title">Cài đặt</h2>
+              <p class="comp-subtitle">Từ Vựng</p>
             </div>
           </div>
-          <button class="comp-close" id="btnCloseSettings" aria-label="Đóng">✕</button>
+          <button class="comp-close" id="btnCloseSettings">✕</button>
         </div>
         <div class="comp-body">
 
-  <div class="form-group">
-    <label class="form-label">Popup ngẫu nhiên</label>
-    
-    <div class="tv-setting-row">
-      <div class="tv-setting-info">
-        <span class="tv-setting-label-modal">Bật/ Tắt</span>
-        <span class="tv-setting-desc-modal">Hiện popup từ vựng lên trình duyệt 1 cách ngẫu nhiên</span>
-      </div>
-      <label class="tv-switch">
-        <input type="checkbox" id="tvEnableAutoPopup" />
-        <span class="tv-slider"></span>
-      </label>
-    </div>
-    
-    <div id="randomPopupSettingsArea">
-      <div class="tv-slider-label-row mt-3">
-        <label class="form-label" style="margin-bottom:0; text-transform: none; color: var(--text-main);">Thời gian tự đóng popup</label>
-        <span class="tv-slider-value-badge" id="tvAutoCloseMsDisplay">10 giây</span>
-      </div>
-      <div class="tv-range-wrap mb-3">
-        <span class="tv-range-min">10s</span>
-        <input type="range" id="tvAutoCloseMs" class="tv-range" min="10" max="60" value="10" step="1" />
-        <span class="tv-range-max">60s</span>
-      </div>
+          <div class="form-group">
+            <label class="form-label">Popup tự động</label>
+            <div class="tv-setting-row">
+              <span class="tv-setting-label-modal">Bật / Tắt</span>
+              <label class="tv-switch">
+                <input type="checkbox" id="tvEnableAutoPopup" />
+                <span class="tv-slider"></span>
+              </label>
+            </div>
+            <div id="popupSettingsArea">
+              <div class="tv-slider-label-row mt-3">
+                <label class="form-label" style="margin-bottom:0;text-transform:none;color:var(--white);">Thời gian tự đóng popup</label>
+                <span class="tv-slider-value-badge" id="tvAutoCloseDisplay">30 giây</span>
+              </div>
+              <div class="tv-range-wrap mb-3">
+                <span class="tv-range-min">10s</span>
+                <input type="range" id="tvAutoCloseSec" class="tv-range" min="10" max="120" value="30" step="5" />
+                <span class="tv-range-max">2p</span>
+              </div>
+              <div class="tv-slider-label-row">
+                <label class="form-label" style="margin-bottom:0;text-transform:none;color:var(--white);">Khoảng cách giữa các popup</label>
+                <span class="tv-slider-value-badge" id="tvTimerRangeDisplay">5 – 10 phút</span>
+              </div>
+              <div class="tv-range-wrap" style="margin-bottom:8px">
+                <span class="tv-range-min">10s</span>
+                <input type="range" id="tvTimerMinSec" class="tv-range" min="10" max="1800" value="300" step="10" />
+                <span class="tv-range-max">30p</span>
+              </div>
+              <div class="tv-range-wrap">
+                <span class="tv-range-min">10s</span>
+                <input type="range" id="tvTimerMaxSec" class="tv-range" min="10" max="1800" value="600" step="10" />
+                <span class="tv-range-max">30p</span>
+              </div>
+            </div>
+          </div>
 
-      <div class="tv-slider-label-row">
-        <label class="form-label" style="margin-bottom:0; text-transform: none; color: var(--text-main);">Khoảng cách giữa các popup</label>
-        <span class="tv-slider-value-badge" id="tvTimerRangeDisplay">30 – 60 giây</span>
-      </div>
-      <div class="tv-range-wrap" style="margin-bottom:8px">
-        <span class="tv-range-min">10s</span>
-        <input type="range" id="tvTimerMinSec" class="tv-range" min="10" max="180" value="30" step="10" />
-        <span class="tv-range-max">3p</span>
-      </div>
-      <div class="tv-range-wrap">
-        <span class="tv-range-min">10s</span>
-        <input type="range" id="tvTimerMaxSec" class="tv-range" min="10" max="180" value="60" step="10" />
-        <span class="tv-range-max">3p</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="form-group">
-    <label class="form-label">Khác</label>
-    <div class="tv-setting-row">
-      <div class="tv-setting-info">
-        <span class="tv-setting-label-modal">Đọc khi đóng popup</span>
-        <span class="tv-setting-desc-modal">Phát âm từ khi bấm nút đóng</span>
-      </div>
-      <label class="tv-switch">
-        <input type="checkbox" id="tvEnableReadOnClose" />
-        <span class="tv-slider"></span>
-      </label>
-    </div>
-  </div>
-
-  <div class="form-group">
-    <label class="form-label">Thời gian chờ khi đóng</label>
-
-    <div class="tv-slider-label-row mt-2">
-      <label class="form-label" style="margin-bottom:0; text-transform:none; color:var(--text-main);">Đếm ngược sau khi bấm đóng popup</label>
-      <span class="tv-slider-value-badge" id="tvRevealThenCloseSecDisplay">5 giây</span>
-    </div>
-    <div class="tv-range-wrap mb-3">
-      <span class="tv-range-min">1s</span>
-      <input type="range" id="tvRevealThenCloseSec" class="tv-range" min="1" max="30" value="5" step="1" />
-      <span class="tv-range-max">30s</span>
-    </div>
-
-    <div class="tv-slider-label-row">
-      <label class="form-label" style="margin-bottom:0; text-transform:none; color:var(--text-main);">Delay chuyển từ trong Slideshow</label>
-      <span class="tv-slider-value-badge" id="tvRevealThenNextSecDisplay">2 giây</span>
-    </div>
-    <div class="tv-range-wrap">
-      <span class="tv-range-min">1s</span>
-      <input type="range" id="tvRevealThenNextSec" class="tv-range" min="1" max="10" value="2" step="1" />
-      <span class="tv-range-max">10s</span>
-    </div>
-  </div>
-
-  <div class="form-group">
-    <label class="form-label">Hiển thị mặc định</label>
-    <div class="tv-setting-row">
-      <div class="tv-setting-info"><span class="tv-setting-label-modal">Nghĩa tiếng Việt</span></div>
-      <label class="tv-switch"><input type="checkbox" id="tvShowMeaning" /><span class="tv-slider"></span></label>
-    </div>
-    <div class="tv-setting-row">
-      <div class="tv-setting-info"><span class="tv-setting-label-modal">Câu ví dụ</span></div>
-      <label class="tv-switch"><input type="checkbox" id="tvShowExample" /><span class="tv-slider"></span></label>
-    </div>
-    <div class="tv-setting-row">
-      <div class="tv-setting-info"><span class="tv-setting-label-modal">Nghĩa câu ví dụ</span></div>
-      <label class="tv-switch"><input type="checkbox" id="tvShowExampleMeaning" /><span class="tv-slider"></span></label>
-    </div>
-    <div class="tv-setting-row">
-      <div class="tv-setting-info"><span class="tv-setting-label-modal">Ảnh ví dụ</span></div>
-      <label class="tv-switch"><input type="checkbox" id="tvShowImage" /><span class="tv-slider"></span></label>
-    </div>
-    <div class="tv-setting-row">
-      <div class="tv-setting-info"><span class="tv-setting-label-modal">Ghi chú</span></div>
-      <label class="tv-switch"><input type="checkbox" id="tvShowNote" /><span class="tv-slider"></span></label>
-    </div>
-  </div>
-
-</div>
+          <p class="comp-status" id="tvSettingsStatus"></p>
+        </div>
       </div>
     </div>
     <div class="modal-overlay" id="confirmOverlay">
@@ -212,8 +145,8 @@
   </div>
 
   
-  <div id="sectionStandalone" class="standalone-bg d-none">
-    <div class="comp-card" id="standaloneContainer"></div>
+  <div id="sectionStandalone" class="d-none">
+    <div id="standaloneContainer"></div>
   </div>
 
   
@@ -296,87 +229,105 @@
 
   
   <template id="tpl-display">
-    <div class="comp-body comp-display">
-      <div class="display-title-row">
-        <div class="display-word mb-0"></div>
-        <div class="display-pos d-none"></div>
-      </div>
-      <div class="display-ipa-row">
-        <button class="btn-play-audio" title="Nghe phát âm">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-          </svg>
-        </button>
-        <div class="display-ipa"></div>
-      </div>
-
-      <div class="display-meaning-row">
-        <button class="btn-toggle-meaning">
-          <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-            <circle cx="12" cy="12" r="3"></circle>
-          </svg>
-        </button>
-        <span class="toggle-label">Nghĩa tiếng Việt</span>
-        <div class="display-meaning d-none"></div>
-      </div>
-
-      <div class="display-example-row d-none">
-        <button class="btn-toggle-example">
-          <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-            <circle cx="12" cy="12" r="3"></circle>
-          </svg>
-        </button>
-        <span class="toggle-label">Câu ví dụ</span>
-        <button class="btn-play-audio btn-play-example d-none">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-          </svg>
-        </button>
-        <div class="display-section-text text-example d-none"></div>
-      </div>
-
-      <div class="display-toggle-row section-image d-none">
-        <button class="btn-toggle-image">
-          <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-            <circle cx="12" cy="12" r="3"></circle>
-          </svg>
-        </button>
-        <span class="toggle-label">Ảnh minh hoạ</span>
-        <div class="image-reveal-wrap d-none">
-          <img class="display-example-img" src="" alt="Hình minh hoạ" />
+    <div class="display-wrap">
+      <div class="display-header">
+        <div class="display-header-left">
+          <span class="display-word-title"></span>
+          <span class="display-pos-badge d-none"></span>
+        </div>
+        <div class="display-header-right">
+          <span class="display-countdown d-none"></span>
+          <button class="comp-close btn-close-display">✕</button>
         </div>
       </div>
 
-      <div class="display-toggle-row section-example-meaning d-none">
-        <button class="btn-toggle-example-meaning">
-          <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-            <circle cx="12" cy="12" r="3"></circle>
-          </svg>
-        </button>
-        <span class="toggle-label">Nghĩa câu ví dụ</span>
-        <div class="display-section-text text-example-meaning d-none"></div>
-      </div>
+      <div class="display-body">
 
-      <div class="display-toggle-row section-note d-none">
-        <button class="btn-toggle-note">
-          <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-            <circle cx="12" cy="12" r="3"></circle>
-          </svg>
-        </button>
-        <span class="toggle-label">Chú thích</span>
-        <div class="display-note d-none"></div>
-      </div>
-      <div class="comp-actions actions-end">
-        <button class="btn-primary btn-close-display"></button>
+        <!-- Cột trái: IPA + các toggle nội dung -->
+        <div class="display-col-left">
+
+          <div class="display-ipa-row">
+            <button class="btn-play-audio" title="Nghe phát âm">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+              </svg>
+            </button>
+            <div class="display-ipa"></div>
+          </div>
+
+          <div class="display-toggle-row display-meaning-row">
+            <button class="btn-toggle btn-toggle-meaning">
+              <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <span class="toggle-label">Nghĩa tiếng Việt</span>
+            </button>
+            <div class="display-meaning d-none"></div>
+          </div>
+
+          <div class="display-toggle-row display-example-row d-none">
+            <button class="btn-toggle btn-toggle-example">
+              <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <span class="toggle-label">Câu ví dụ</span>
+            </button>
+            <div class="display-example-content d-none">
+              <button class="btn-play-audio btn-play-example">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                </svg>
+              </button>
+              <span class="display-section-text text-example"></span>
+            </div>
+          </div>
+
+          <div class="display-toggle-row section-example-meaning d-none">
+            <button class="btn-toggle btn-toggle-example-meaning">
+              <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <span class="toggle-label">Nghĩa câu ví dụ</span>
+            </button>
+            <div class="display-section-text text-example-meaning d-none"></div>
+          </div>
+
+          <div class="display-toggle-row section-note d-none">
+            <button class="btn-toggle btn-toggle-note">
+              <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <span class="toggle-label">Chú thích</span>
+            </button>
+            <div class="display-note d-none"></div>
+          </div>
+
+        </div>
+
+        <!-- Cột phải: toggle ảnh + ảnh (ẩn cả cột nếu không có ảnh) -->
+        <div class="display-col-right d-none">
+          <div class="display-toggle-row section-image">
+            <button class="btn-toggle btn-toggle-image">
+              <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <span class="toggle-label">Ảnh minh hoạ</span>
+            </button>
+            <div class="display-image-wrap d-none">
+              <img class="display-example-img" src="" alt="Hình minh hoạ" />
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </template>
