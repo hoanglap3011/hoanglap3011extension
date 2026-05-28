@@ -758,7 +758,39 @@ body.popup-mode .detail-wrap--wide .popup-right {
 body.popup-mode .detail-wrap--wide .popup-right::-webkit-scrollbar { width: 5px; }
 body.popup-mode .detail-wrap--wide .popup-right::-webkit-scrollbar-thumb { background: #d0d5df; border-radius: 3px; }
 
-/* ── Lazy sentinel ── */
+/* ── Navigation buttons (popup manual mode) ── */
+.btn-next-random {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-prev-random {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 16px;
+  border-radius: 50px;
+  border: 1.5px solid #e0e4ea;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 13px;
+  transition: all var(--transition);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn-prev-random:hover {
+  border-color: var(--navy);
+  color: var(--navy);
+  background: rgba(15,27,45,.05);
+}
+
+/* Popup mode: footer có cả 2 nút thì space-between */
+body.popup-mode .detail-actions:has(.btn-prev-random) {
+  justify-content: space-between;
+}
 .lazy-sentinel {
   height: 1px;
   width: 100%;

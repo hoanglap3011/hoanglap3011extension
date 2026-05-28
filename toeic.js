@@ -7,48 +7,25 @@ import { StorageModule } from './StorageModule.js';
 export const ToeicModule = (() => {
 
   // ── Constants ──────────────────────────────────────────────────
-  const STORAGE_KEY = 'toeic_questions';
-  const SETTINGS_KEY = 'LapsExtensionSettings';
-  const TIMER_KEY   = 'toeicTimerSettings';
-  const PENDING_KEY = 'toeic_pending_question';
-  const PARTS_KEY   = 'toeicPopupParts';
-  const PAGE_SIZE   = 40;
-
+  const STORAGE_KEY    = 'toeic_questions';
+  const SETTINGS_KEY   = 'LapsExtensionSettings';
+  const TIMER_KEY      = 'toeicTimerSettings';
+  const PENDING_KEY    = 'toeic_pending_question';
+  const PARTS_KEY      = 'toeicPopupParts';
+  const PAGE_SIZE      = 40;
   const TIMER_DEFAULTS = { autoCloseSec: 30, timerMinSec: 10, timerMaxSec: 60 };
 
-  // ── Storage ────────────────────────────────────────────────────
-  const _get = (key) => new Promise((resolve) => {
-    chrome.storage.local.get([key], (r) => resolve(r[key] ?? null));
-  });
-
-  const _set = (key, value) => new Promise((resolve) => {
-    chrome.storage.local.set({ [key]: value }, resolve);
-  });
+  // ── Storage helpers ────────────────────────────────────────────
+  const _get = (key) => new Promise(res => chrome.storage.local.get([key], r => res(r[key] ?? null)));
+  const _set = (key, val) => new Promise(res => chrome.storage.local.set({ [key]: val }, res));
 
   // ── Data ───────────────────────────────────────────────────────
   const getAll = async () => (await _get(STORAGE_KEY)) || [];
 
-  const getRandom = async () => {
-    const list = await getAll();
-    return list.length ? list[Math.floor(Math.random() * list.length)] : null;
-  };
-
-  // Lấy câu ngẫu nhiên theo parts đã lọc trong settings
-  const getRandomFiltered = async () => {
-    const all = await getAll();
-    if (!all.length) return null;
-    const saved = await _get(PARTS_KEY);
-    const parts = Array.isArray(saved) && saved.length ? saved : null;
-    const pool  = parts ? all.filter(q => parts.includes(String(q.part || '').trim())) : all;
-    const src   = pool.length ? pool : all;
-    return src[Math.floor(Math.random() * src.length)];
-  };
-
   const pullFromServer = () => new Promise((resolve, reject) => {
-    StorageModule.get([CACHE_PASS], async (result) => {
-      const pass = result[CACHE_PASS] || '';
+    StorageModule.get([CACHE_PASS], async ({ [CACHE_PASS]: pass = '' }) => {
       if (!pass) return reject(new Error('Chưa có mật khẩu'));
-      if (typeof LoadingModule !== 'undefined') LoadingModule.show();
+      LoadingModule?.show();
       try {
         const res  = await fetch(API, { method: 'POST', body: JSON.stringify({ pass, action: API_ACTION_TOEIC_GET_ALL }) });
         const json = await res.json();
@@ -58,10 +35,49 @@ export const ToeicModule = (() => {
       } catch (err) {
         reject(err);
       } finally {
-        if (typeof LoadingModule !== 'undefined') LoadingModule.hide();
+        LoadingModule?.hide();
       }
     });
   });
+
+  // ── Session (in-memory, chỉ tồn tại trong phiên popup) ────────
+  // Mỗi entry: { question, state: { selected, revealed } }
+  const _session = { stack: [], pointer: -1, seenIds: new Set() };
+
+  const sessionReset = () => {
+    _session.stack   = [];
+    _session.pointer = -1;
+    _session.seenIds = new Set();
+  };
+
+  const sessionPush = (q) => {
+    // Cắt bỏ "tương lai" nếu đang ở giữa stack, rồi push câu mới
+    _session.stack = _session.stack.slice(0, _session.pointer + 1);
+    _session.stack.push({ question: q, state: { selected: null, revealed: false } });
+    _session.pointer = _session.stack.length - 1;
+    _session.seenIds.add(q.question_no ?? JSON.stringify(q));
+  };
+
+  const sessionCurrent  = () => _session.stack[_session.pointer] ?? null;
+  const sessionHasBack  = () => _session.pointer > 0;
+  const sessionHasNext  = () => _session.pointer < _session.stack.length - 1;
+  const sessionGo       = (delta) => { _session.pointer += delta; return sessionCurrent(); };
+
+  // ── Random câu chưa xem, theo parts đã lọc ────────────────────
+  const getRandomFiltered = async () => {
+    const all   = await getAll();
+    if (!all.length) return null;
+    const saved = await _get(PARTS_KEY);
+    const parts = Array.isArray(saved) && saved.length ? saved : null;
+    const pool  = (parts ? all.filter(q => parts.includes(String(q.part || '').trim())) : all)
+                    .filter(Boolean) || all;
+
+    const unseen = pool.filter(q => !_session.seenIds.has(q.question_no ?? JSON.stringify(q)));
+    // Đã xem hết → reset và cho phép lặp lại
+    if (!unseen.length) _session.seenIds.clear();
+    const src = unseen.length ? unseen : pool;
+    return src[Math.floor(Math.random() * src.length)];
+  };
 
   // ── Helpers ────────────────────────────────────────────────────
   const _esc = (str) => String(str || '')
@@ -77,7 +93,7 @@ export const ToeicModule = (() => {
   const _createRow = (q, idx) => {
     const pc  = _partClass(q.part);
     const row = document.createElement('div');
-    row.className = 'question-row';
+    row.className    = 'question-row';
     row.dataset.part = pc;
     row.dataset.idx  = idx;
 
@@ -109,30 +125,28 @@ export const ToeicModule = (() => {
   };
 
   // ── Mount chi tiết câu hỏi ─────────────────────────────────────
-  const mountDetail = (container, question, onClose, isPopupMode = false, showNext = false) => {
-    const tpl = document.getElementById('tpl-question-detail');
+  // nav (chỉ truyền ở popup manual mode):
+  //   { hasPrev, hasNext, onPrev, onNext, state, onSaveState }
+  const mountDetail = (container, question, onClose, isPopupMode = false, nav = null) => {
     container.innerHTML = '';
-    container.appendChild(tpl.content.cloneNode(true));
+    container.appendChild(document.getElementById('tpl-question-detail').content.cloneNode(true));
 
-    const pc = _partClass(question.part);
+    const pc     = _partClass(question.part);
+    const $ = (sel) => container.querySelector(sel);
 
-    // Popup: cấu trúc lại DOM — bọc nội dung vào popup-body
+    // ── Popup: bọc nội dung vào popup-body ──
     if (isPopupMode) {
-      const wrap    = container.querySelector('.detail-wrap');
-      const header  = wrap.querySelector('.detail-header');
-      const actions = wrap.querySelector('.detail-actions');
+      const wrap    = $('.detail-wrap');
+      const header  = $('.detail-header');
+      const actions = $('.detail-actions');
       const isWide  = pc === '6' || pc === '7';
-
       if (isWide) wrap.classList.add('detail-wrap--wide');
 
       const body = document.createElement('div');
       body.className = 'popup-body';
-      Array.from(wrap.childNodes).forEach(n => {
-        if (n !== header && n !== actions) body.appendChild(n);
-      });
+      Array.from(wrap.childNodes).forEach(n => { if (n !== header && n !== actions) body.appendChild(n); });
 
       if (isWide) {
-        // Part 6/7: Q + options + answer sang cột phải
         const right = document.createElement('div');
         right.className = 'popup-right';
         ['#detailQuestion','#detailOptions','#detailAnswerWrap'].forEach(sel => {
@@ -141,106 +155,125 @@ export const ToeicModule = (() => {
         });
         body.appendChild(right);
       }
-
       wrap.insertBefore(body, actions);
     }
 
-    // Điền dữ liệu
-    const pc_badge = container.querySelector('#detailPartBadge');
-    pc_badge.textContent = `Part ${pc}`;
-    pc_badge.className   = `detail-part-badge detail-part-badge--${pc}`;
+    // ── Điền dữ liệu ──
+    const badge = $('#detailPartBadge');
+    badge.textContent = `Part ${pc}`;
+    badge.className   = `detail-part-badge detail-part-badge--${pc}`;
 
-    container.querySelector('#detailQuestionNo').textContent =
+    $('#detailQuestionNo').textContent =
       question.question_no ? `Câu ${question.question_no}` : '';
-    container.querySelector('#detailSetNo').textContent =
-      [question.set_no ? `Đề ${question.set_no}` : '', question.year ? `(${question.year})` : '']
+    $('#detailSetNo').textContent =
+      [question.set_no && `Đề ${question.set_no}`, question.year && `(${question.year})`]
         .filter(Boolean).join(' ');
 
-    // Context
-    if (question.context && (pc === '6' || pc === '7')) {
-      const ctxWrap = container.querySelector('#detailContextWrap');
-      ctxWrap.classList.remove('d-none');
-      container.querySelector('#detailContext').textContent = question.context;
+    if (question.context && pc !== '5') {
+      $('#detailContextWrap').classList.remove('d-none');
+      $('#detailContext').textContent = question.context;
     }
 
-    // Câu hỏi
-    const qEl = container.querySelector('#detailQuestion');
+    const qEl = $('#detailQuestion');
     qEl.textContent = question.question || '';
     if (!question.question) qEl.classList.add('d-none');
 
-    // Đáp án A-D
-    ['A','B','C','D'].forEach(l => {
-      container.querySelector(`#opt${l}`).textContent = question[`option_${l.toLowerCase()}`] || '';
-    });
+    ['A','B','C','D'].forEach(l =>
+      $(`#opt${l}`).textContent = question[`option_${l.toLowerCase()}`] || ''
+    );
 
-    // Chọn đáp án
-    const correct = String(question.correct_answer || '').trim().toUpperCase();
-    let selected = null, revealed = false;
-    const optRows = container.querySelectorAll('.option-row');
+    // ── State ──
+    const correct    = String(question.correct_answer || '').trim().toUpperCase();
+    let { selected = null, revealed = false } = nav?.state ?? {};
 
+    const optRows    = container.querySelectorAll('.option-row');
+    const btnReveal  = $('#btnRevealAnswer');
+    const answerWrap = $('#detailAnswerWrap');
+    const btnNext    = $('#btnNextRandom');
+
+    // Reveal: applica visivamente risultato
+    const _doReveal = () => {
+      optRows.forEach(row => {
+        row.classList.remove('selected');
+        if (row.dataset.opt === correct)       row.classList.add('correct');
+        else if (row.dataset.opt === selected) row.classList.add('wrong');
+      });
+      $('#detailCorrectAnswer').textContent = correct;
+      $('#detailExplanation').textContent   = question.explanation || '';
+      answerWrap.classList.remove('d-none');
+      btnReveal.style.display = 'none';
+      if (nav && btnNext) btnNext.classList.remove('d-none');
+    };
+
+    // Restore state nếu đã xem câu này trước đó
+    if (revealed) {
+      _doReveal();
+    } else if (selected) {
+      container.querySelector(`.option-row[data-opt="${selected}"]`)?.classList.add('selected');
+    }
+
+    // Hiện btnNext ngay nếu đang ở giữa stack (không cần đợi reveal)
+    if (nav?.hasNext && btnNext) btnNext.classList.remove('d-none');
+
+    // ── Event listeners ──
     optRows.forEach(row => {
       row.addEventListener('click', () => {
         if (revealed) return;
         optRows.forEach(r => r.classList.remove('selected'));
         row.classList.add('selected');
         selected = row.dataset.opt;
+        nav?.onSaveState({ selected, revealed });
       });
     });
-
-    // Reveal đáp án
-    const btnReveal  = container.querySelector('#btnRevealAnswer');
-    const answerWrap = container.querySelector('#detailAnswerWrap');
-    const btnNext    = container.querySelector('#btnNextRandom');
 
     btnReveal.addEventListener('click', () => {
       if (revealed) return;
       revealed = true;
-      optRows.forEach(row => {
-        if (row.dataset.opt === correct)   row.classList.add('correct');
-        else if (row.dataset.opt === selected) row.classList.add('wrong');
-        row.classList.remove('selected');
-      });
-      container.querySelector('#detailCorrectAnswer').textContent = correct;
-      container.querySelector('#detailExplanation').textContent   = question.explanation || '';
-      answerWrap.classList.remove('d-none');
-      btnReveal.style.display = 'none';
-      if (showNext && btnNext) btnNext.classList.remove('d-none');
+      nav?.onSaveState({ selected, revealed });
+      _doReveal();
     });
 
-    // Câu tiếp theo
-    if (btnNext) {
-      btnNext.addEventListener('click', async () => {
-        const next = await getRandomFiltered();
-        if (next) { await _set(PENDING_KEY, next); mountDetail(container, next, onClose, true, true); }
-      });
+    if (nav) {
+      if (btnNext) {
+        btnNext.textContent = 'Câu tiếp theo →';
+        btnNext.addEventListener('click', nav.onNext);
+      }
+      if (nav.hasPrev) {
+        const btnPrev = Object.assign(document.createElement('button'), {
+          className: 'btn-prev-random',
+          textContent: '← Câu trước',
+        });
+        btnPrev.addEventListener('click', nav.onPrev);
+        $('.detail-actions')?.prepend(btnPrev);
+      }
     }
 
-    container.querySelector('#btnCloseDetail')?.addEventListener('click', onClose);
+    $('#btnCloseDetail')?.addEventListener('click', onClose);
   };
 
   // ── Manager UI ─────────────────────────────────────────────────
   const _initManager = () => {
-    const $ = (id) => document.getElementById(id);
+    const $id = (id) => document.getElementById(id);
 
-    const listEl        = $('questionList');
-    const searchInput   = $('searchInput');
-    const emptyState    = $('emptyState');
-    const questionCount = $('questionCount');
-    const overlay       = $('modalOverlay');
-    const modalCont     = $('modalContainer');
-    const settingsOver  = $('settingsOverlay');
-    const partFilter    = $('partFilter');
-    const yearFilter    = $('yearFilter');
-    const sentinel      = $('lazysentinel');
+    const listEl        = $id('questionList');
+    const searchInput   = $id('searchInput');
+    const emptyState    = $id('emptyState');
+    const questionCount = $id('questionCount');
+    const overlay       = $id('modalOverlay');
+    const modalCont     = $id('modalContainer');
+    const settingsOver  = $id('settingsOverlay');
+    const partFilter    = $id('partFilter');
+    const yearFilter    = $id('yearFilter');
+    const sentinel      = $id('lazysentinel');
 
     let _all = [], _filtered = [], _rendered = 0;
-    let _parts = new Set(), _years = new Set();
+    const _parts = new Set(), _years = new Set();
     let _observer = null;
 
-    // Lazy load
+    // ── Lazy render ──
     const _renderMore = () => {
-      const to = Math.min(_rendered + PAGE_SIZE, _filtered.length);
       if (_rendered >= _filtered.length) return;
+      const to   = Math.min(_rendered + PAGE_SIZE, _filtered.length);
       const frag = document.createDocumentFragment();
       for (let i = _rendered; i < to; i++) frag.appendChild(_createRow(_filtered[i], i));
       listEl.insertBefore(frag, sentinel);
@@ -260,13 +293,12 @@ export const ToeicModule = (() => {
     const _resetRender = () => {
       Array.from(listEl.children).forEach(el => { if (el.id !== 'lazysentinel') el.remove(); });
       _rendered = 0;
-      sentinel.style.display = 'block';
+      sentinel.style.display = _filtered.length ? 'block' : 'none';
       _renderMore();
       emptyState.classList.toggle('d-none', _filtered.length > 0);
-      if (!_filtered.length) sentinel.style.display = 'none';
     };
 
-    // Filters
+    // ── Filters ──
     const applyFilters = () => {
       const q = searchInput.value.trim().toLowerCase();
       _filtered = _all.filter(item => {
@@ -290,7 +322,6 @@ export const ToeicModule = (() => {
 
     const loadData = async () => {
       _all = await getAll();
-      // Build year chips
       yearFilter.innerHTML = '';
       [...new Set(_all.map(q => q.year).filter(Boolean))].sort().forEach(y => {
         const chip = Object.assign(document.createElement('button'), {
@@ -304,23 +335,20 @@ export const ToeicModule = (() => {
       _setupObserver();
     };
 
-    // Modal
-    const openDetail = (q) => {
+    // ── Modal chi tiết ──
+    const closeDetail = () => { overlay.classList.remove('active'); modalCont.innerHTML = ''; };
+    const openDetail  = (q) => {
       overlay.classList.add('active');
-      mountDetail(modalCont, q, () => {
-        overlay.classList.remove('active');
-        modalCont.innerHTML = '';
-      }, false);
+      mountDetail(modalCont, q, closeDetail);
     };
 
     listEl.addEventListener('click', (e) => {
       const row = e.target.closest('.question-row');
       if (row && _filtered[+row.dataset.idx]) openDetail(_filtered[+row.dataset.idx]);
     });
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) { overlay.classList.remove('active'); modalCont.innerHTML = ''; }
-    });
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDetail(); });
 
+    // ── Bộ lọc ──
     partFilter.addEventListener('click', (e) => {
       const chip = e.target.closest('.chip');
       if (chip) _toggleChip(chip, _parts, 'part');
@@ -339,8 +367,8 @@ export const ToeicModule = (() => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'f') { e.preventDefault(); searchInput.focus(); searchInput.select(); }
     });
 
-    // Đồng bộ
-    $('btnSync').addEventListener('click', async () => {
+    // ── Đồng bộ ──
+    $id('btnSync').addEventListener('click', async () => {
       if (!confirm('Ghi đè dữ liệu local bằng dữ liệu từ Google Sheet?')) return;
       try {
         await pullFromServer();
@@ -350,59 +378,58 @@ export const ToeicModule = (() => {
       } catch (err) { alert('Lỗi đồng bộ: ' + err.message); }
     });
 
-    // Ôn tập ngẫu nhiên — mở popup thủ công
-    $('btnRandom').addEventListener('click', () => {
+    $id('btnRandom').addEventListener('click', () => {
       if (!_all.length) { alert('Chưa có dữ liệu. Hãy đồng bộ trước!'); return; }
       chrome.runtime.sendMessage({ action: 'showToeicPopup' });
     });
 
-    // Settings
+    // ── Settings ──
     const _fmtSec = (s) => s >= 60 ? `${Math.floor(s/60)}p${s%60 ? ` ${s%60}s` : ''}` : `${s}s`;
 
     const _syncSliderState = (enabled) => {
-      const area = $('popupSettingsArea');
+      const area = $id('popupSettingsArea');
       if (!area) return;
-      area.style.opacity = enabled ? '1' : '0.4';
+      area.style.opacity      = enabled ? '1' : '0.4';
       area.style.pointerEvents = enabled ? '' : 'none';
       area.querySelectorAll('input[type="range"]').forEach(el => el.disabled = !enabled);
     };
 
     const _updateBadges = () => {
-      const [ic, im, ix] = ['toeicAutoCloseSec','toeicTimerMinSec','toeicTimerMaxSec'].map($);
-      const bd = $('toeicAutoCloseDisplay'), br = $('toeicTimerRangeDisplay');
+      const [ic, im, ix] = ['toeicAutoCloseSec','toeicTimerMinSec','toeicTimerMaxSec'].map($id);
+      const bd = $id('toeicAutoCloseDisplay'), br = $id('toeicTimerRangeDisplay');
       if (bd && ic) bd.textContent = _fmtSec(+ic.value);
       if (br && im && ix) br.textContent = `${_fmtSec(+im.value)} – ${_fmtSec(+ix.value)}`;
     };
 
-    $('btnSettings').addEventListener('click', () => {
+    $id('btnSettings').addEventListener('click', () => {
       chrome.storage.local.get([SETTINGS_KEY, TIMER_KEY, PARTS_KEY], (data) => {
-        const s  = data[SETTINGS_KEY] || {};
-        const tv = { ...TIMER_DEFAULTS, ...(data[TIMER_KEY] || {}) };
-        const chk = $('toeicEnableAutoPopup');
+        const s       = data[SETTINGS_KEY] || {};
+        const tv      = { ...TIMER_DEFAULTS, ...(data[TIMER_KEY] || {}) };
         const enabled = s.toeicEnableAutoPopup ?? false;
+        const chk     = $id('toeicEnableAutoPopup');
         if (chk) chk.checked = enabled;
-        [$('toeicAutoCloseSec'), $('toeicTimerMinSec'), $('toeicTimerMaxSec')]
+        [$id('toeicAutoCloseSec'), $id('toeicTimerMinSec'), $id('toeicTimerMaxSec')]
           .forEach((el, i) => { if (el) el.value = [tv.autoCloseSec, tv.timerMinSec, tv.timerMaxSec][i]; });
         _updateBadges();
         _syncSliderState(enabled);
         const saved = Array.isArray(data[PARTS_KEY]) ? data[PARTS_KEY] : [];
-        document.querySelectorAll('#settingsPartFilter .chip').forEach(c => {
-          c.classList.toggle('chip--active', saved.includes(c.dataset.part));
-        });
+        document.querySelectorAll('#settingsPartFilter .chip').forEach(c =>
+          c.classList.toggle('chip--active', saved.includes(c.dataset.part))
+        );
       });
       settingsOver.classList.add('active');
     });
 
-    $('btnCloseSettings').addEventListener('click', () => settingsOver.classList.remove('active'));
+    $id('btnCloseSettings').addEventListener('click', () => settingsOver.classList.remove('active'));
     settingsOver.addEventListener('click', (e) => { if (e.target === settingsOver) settingsOver.classList.remove('active'); });
 
     let saveTimer;
     const saveSettings = () => {
       clearTimeout(saveTimer);
       saveTimer = setTimeout(() => {
-        const chk = $('toeicEnableAutoPopup');
-        const [ic, im, ix] = ['toeicAutoCloseSec','toeicTimerMinSec','toeicTimerMaxSec'].map($);
-        const autoCloseSec = parseInt(ic?.value) || TIMER_DEFAULTS.autoCloseSec;
+        const chk = $id('toeicEnableAutoPopup');
+        const [ic, im, ix] = ['toeicAutoCloseSec','toeicTimerMinSec','toeicTimerMaxSec'].map($id);
+        const autoCloseSec = parseInt(ic?.value)  || TIMER_DEFAULTS.autoCloseSec;
         const timerMinSec  = Math.max(10, parseInt(im?.value) || TIMER_DEFAULTS.timerMinSec);
         const timerMaxSec  = Math.max(timerMinSec, parseInt(ix?.value) || TIMER_DEFAULTS.timerMaxSec);
         const selParts     = [...document.querySelectorAll('#settingsPartFilter .chip--active')]
@@ -410,10 +437,10 @@ export const ToeicModule = (() => {
         chrome.storage.local.get([SETTINGS_KEY], (data) => {
           chrome.storage.local.set({
             [SETTINGS_KEY]: { ...(data[SETTINGS_KEY] || {}), toeicEnableAutoPopup: chk?.checked ?? false },
-            [TIMER_KEY]: { autoCloseSec, timerMinSec, timerMaxSec },
-            [PARTS_KEY]: selParts,
+            [TIMER_KEY]:    { autoCloseSec, timerMinSec, timerMaxSec },
+            [PARTS_KEY]:    selParts,
           }, () => {
-            const st = $('settingsStatus');
+            const st = $id('settingsStatus');
             if (st) { st.textContent = '✓ Đã lưu'; st.style.opacity = '1'; setTimeout(() => st.style.opacity = '0', 1800); }
             chrome.runtime.sendMessage({ action: 'toeicTimerUpdated', enabled: chk?.checked ?? false });
           });
@@ -421,47 +448,71 @@ export const ToeicModule = (() => {
       }, 500);
     };
 
-    const chkEl = $('toeicEnableAutoPopup');
+    const chkEl = $id('toeicEnableAutoPopup');
     chkEl?.addEventListener('change', () => { _syncSliderState(chkEl.checked); saveSettings(); });
-    $('settingsPartFilter')?.addEventListener('click', (e) => {
+    $id('settingsPartFilter')?.addEventListener('click', (e) => {
       const c = e.target.closest('.chip');
       if (c) { c.classList.toggle('chip--active'); saveSettings(); }
     });
-    ['toeicAutoCloseSec','toeicTimerMinSec','toeicTimerMaxSec'].forEach(id => {
-      $(id)?.addEventListener('input', () => { _updateBadges(); saveSettings(); });
-    });
+    ['toeicAutoCloseSec','toeicTimerMinSec','toeicTimerMaxSec'].forEach(id =>
+      $id(id)?.addEventListener('input', () => { _updateBadges(); saveSettings(); })
+    );
 
     loadData();
   };
 
   // ── Khởi động ──────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', async () => {
-    const params = new URLSearchParams(window.location.search);
-    const mode   = params.get('mode');
-    const source = params.get('source');
+    const params   = new URLSearchParams(window.location.search);
+    const isPopup  = params.get('mode') === 'popup';
+    const isManual = params.get('source') === 'manual';
 
-    if (mode === 'popup') {
-      document.getElementById('sectionManager').style.display = 'none';
-      document.body.classList.add('popup-mode');
+    if (!isPopup) { _initManager(); return; }
 
-      const card = Object.assign(document.createElement('div'), { className: 'modal-card' });
-      document.body.appendChild(card);
+    document.getElementById('sectionManager').style.display = 'none';
+    document.body.classList.add('popup-mode');
 
-      const q = await _get(PENDING_KEY);
-      if (q) {
-        mountDetail(card, q, () => window.close(), true, source === 'manual');
-        if (source !== 'manual') {
-          const tv = await _get(TIMER_KEY).then(r => ({ ...TIMER_DEFAULTS, ...(r || {}) }));
-          let t = tv.autoCloseSec;
-          const timer = setInterval(() => { if (--t <= 0) { clearInterval(timer); window.close(); } }, 1000);
-        }
-      } else {
-        card.innerHTML = '<div style="padding:40px;text-align:center;color:#666">Không có câu hỏi nào.</div>';
-      }
-    } else {
-      _initManager();
+    const card  = Object.assign(document.createElement('div'), { className: 'modal-card' });
+    document.body.appendChild(card);
+
+    const firstQ = await _get(PENDING_KEY);
+    if (!firstQ) {
+      card.innerHTML = '<div style="padding:40px;text-align:center;color:#666">Không có câu hỏi nào.</div>';
+      return;
+    }
+
+    sessionReset();
+    sessionPush(firstQ);
+
+    const renderCurrent = () => {
+      const entry = sessionCurrent();
+      if (!entry) return;
+      const { question, state } = entry;
+
+      const nav = isManual ? {
+        hasPrev:     sessionHasBack(),
+        hasNext:     sessionHasNext(),
+        state,
+        onSaveState: (newState) => Object.assign(entry.state, newState),
+        onPrev:      () => { sessionGo(-1); renderCurrent(); },
+        onNext:      async () => {
+          if (sessionHasNext()) { sessionGo(1); renderCurrent(); return; }
+          const next = await getRandomFiltered();
+          if (next) { sessionPush(next); renderCurrent(); }
+        },
+      } : null;
+
+      mountDetail(card, question, () => window.close(), true, nav);
+    };
+
+    renderCurrent();
+
+    if (!isManual) {
+      const tv = await _get(TIMER_KEY).then(r => ({ ...TIMER_DEFAULTS, ...(r || {}) }));
+      let t = tv.autoCloseSec;
+      const timer = setInterval(() => { if (--t <= 0) { clearInterval(timer); window.close(); } }, 1000);
     }
   });
 
-  return { getAll, getRandom, pullFromServer };
+  return { getAll, pullFromServer, sessionReset };
 })();
