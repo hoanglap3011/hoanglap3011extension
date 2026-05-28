@@ -1,386 +1,315 @@
 import { TuVungModule } from './tuvung.js';
 import { initSCChecker } from './selfcontrol_bg.js';
+
 const SETTINGS_KEY = 'LapsExtensionSettings';
 const DEFAULT_SETTINGS = {
   tvEnableAutoPopup: true,
-  // ... các key khác nếu background dùng đến
+  toeicEnableAutoPopup: false,
 };
 
+// ── TOEIC: tự xử lý trong background, không import toeic.js (UI module) ──
+const TOEIC_STORAGE_KEY = 'toeic_questions';
+const TOEIC_PENDING_KEY = 'toeic_pending_question';
+const TOEIC_TIMER_KEY   = 'toeicTimerSettings';
+const TOEIC_ALARM_NAME  = 'toeic_random_popup';
 
-// xử lý tự động hiển thị popup từ vựng
+// Trả về Promise resolve(windowId) khi popup đã được tạo
+function showToeicPopup(source = 'auto') {
+    return new Promise(async (resolve) => {
+        const data = await chrome.storage.local.get([TOEIC_STORAGE_KEY]);
+        const list = data[TOEIC_STORAGE_KEY] || [];
+        if (!list.length) { console.log('⚠️ [TOEIC] Chưa có dữ liệu câu hỏi.'); return resolve(null); }
+
+        // Lọc theo parts nếu có cài đặt
+        const partsData = await chrome.storage.local.get(['toeicPopupParts']);
+        const selectedParts = Array.isArray(partsData.toeicPopupParts) && partsData.toeicPopupParts.length
+            ? partsData.toeicPopupParts : null;
+        const pool = selectedParts
+            ? list.filter(q => selectedParts.includes(String(q.part || '').trim()))
+            : list;
+        const finalPool = pool.length ? pool : list;
+        const q = finalPool[Math.floor(Math.random() * finalPool.length)];
+        await chrome.storage.local.set({ [TOEIC_PENDING_KEY]: q });
+
+        const url = chrome.runtime.getURL(`toeic.html?mode=popup&source=${source}`);
+
+        // Lấy tất cả cửa sổ type "normal" để tránh lấy nhầm cửa sổ popup nhỏ
+        chrome.windows.getAll({ windowTypes: ['normal'] }, (windows) => {
+            // Ưu tiên cửa sổ đang focused, fallback về cửa sổ lớn nhất
+            const focused = windows.find(w => w.focused);
+            const largest = windows.reduce((a, b) => (b.width > a.width ? b : a), windows[0] || {});
+            const ref = focused || largest || { width: 1440, height: 900, left: 0, top: 0 };
+
+            const screenW = ref.width  || 1440;
+            const screenH = ref.height || 900;
+            const w    = Math.round(screenW * 2 / 3);
+            const h    = screenH;
+            const left = (ref.left || 0) + Math.round((screenW - w) / 2);
+            const top  = ref.top || 0;
+            chrome.windows.create({ url, type: 'popup', width: w, height: h, left, top }, (win) => {
+                resolve(win?.id ?? null);
+            });
+        });
+    });
+}
+
+async function scheduleToeicAlarm() {
+    const data = await chrome.storage.local.get([TOEIC_TIMER_KEY]);
+    const tv   = { timerMinSec: 10, timerMaxSec: 60, ...(data[TOEIC_TIMER_KEY] || {}) };
+    const delaySec = tv.timerMinSec + Math.random() * (tv.timerMaxSec - tv.timerMinSec);
+    chrome.alarms.create(TOEIC_ALARM_NAME, { delayInMinutes: delaySec / 60 });
+    console.log(`⏱ [TOEIC] Alarm tiếp theo sau ${Math.round(delaySec)}s`);
+}
+
+// ── Khởi động ─────────────────────────────────────────────────────
 chrome.storage.local.get(SETTINGS_KEY, (data) => {
     const settings = { ...DEFAULT_SETTINGS, ...(data[SETTINGS_KEY] || {}) };
-    if (settings.tvEnableAutoPopup) {
-        TuVungModule.startRandomTimer();
+    if (settings.tvEnableAutoPopup)    TuVungModule.startRandomTimer();
+    if (settings.toeicEnableAutoPopup) { scheduleToeicAlarm(); console.log('🚀 [Background] Đã bật timer TOEIC.'); }
+});
+
+// ── Lắng nghe thay đổi settings ──────────────────────────────────
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && changes[SETTINGS_KEY]) {
+        const newS = changes[SETTINGS_KEY].newValue;
+        const oldS = changes[SETTINGS_KEY].oldValue;
+        if (!newS || !oldS) return;
+
+        if (newS.tvEnableAutoPopup && !oldS.tvEnableAutoPopup)    { TuVungModule.startRandomTimer(); console.log('🚀 [Background] Bật timer từ vựng.'); }
+        else if (!newS.tvEnableAutoPopup && oldS.tvEnableAutoPopup) { TuVungModule.stopRandomTimer();  console.log('🛑 [Background] Tắt timer từ vựng.'); }
+
+        if (newS.toeicEnableAutoPopup && !oldS.toeicEnableAutoPopup)    { scheduleToeicAlarm(); console.log('🚀 [Background] Bật timer TOEIC.'); }
+        else if (!newS.toeicEnableAutoPopup && oldS.toeicEnableAutoPopup) { chrome.alarms.clear(TOEIC_ALARM_NAME); console.log('🛑 [Background] Tắt timer TOEIC.'); }
     }
 });
 
-// Lắng nghe thay đổi
-chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === 'local' && changes[SETTINGS_KEY]) {
-        const newSettings = changes[SETTINGS_KEY].newValue;
-        const oldSettings = changes[SETTINGS_KEY].oldValue;
+// ── Alarm listener ────────────────────────────────────────────────
+// Helper: kiểm tra setting có còn bật không trước khi schedule
+async function _isToeicEnabled() {
+    const data = await chrome.storage.local.get([SETTINGS_KEY]);
+    return !!(data[SETTINGS_KEY]?.toeicEnableAutoPopup);
+}
 
-        if (newSettings && oldSettings) {
-            // Nếu người dùng vừa BẬT
-            if (newSettings.tvEnableAutoPopup && !oldSettings.tvEnableAutoPopup) {
-                TuVungModule.startRandomTimer();
-                console.log("🚀 [Background] Đã bật timer từ vựng.");
-            }
-            // Nếu người dùng vừa TẮT
-            else if (!newSettings.tvEnableAutoPopup && oldSettings.tvEnableAutoPopup) {
-                TuVungModule.stopRandomTimer();
-                console.log("🛑 [Background] Đã dừng timer từ vựng.");
-            }
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+    if (alarm.name === TOEIC_ALARM_NAME) {
+        console.log('⏰ [Background] TOEIC alarm fired');
+
+        // Kiểm tra setting ngay tại thời điểm alarm fire
+        if (!(await _isToeicEnabled())) {
+            console.log('🛑 [TOEIC] Setting đã tắt, bỏ qua alarm.');
+            return;
+        }
+
+        const winId = await showToeicPopup();
+
+        if (winId) {
+            // Chờ popup đóng rồi mới lên lịch — nhưng kiểm tra setting lại lần nữa
+            const onRemoved = async (removedId) => {
+                if (removedId === winId) {
+                    chrome.windows.onRemoved.removeListener(onRemoved);
+                    if (await _isToeicEnabled()) {
+                        console.log('🚪 [TOEIC] Popup đã đóng, lên lịch alarm tiếp theo...');
+                        scheduleToeicAlarm();
+                    } else {
+                        console.log('🛑 [TOEIC] Setting đã tắt khi popup đóng, không schedule tiếp.');
+                    }
+                }
+            };
+            chrome.windows.onRemoved.addListener(onRemoved);
+        } else {
+            // Không có data / lỗi tạo window — kiểm tra setting trước khi schedule
+            if (await _isToeicEnabled()) await scheduleToeicAlarm();
         }
     }
 });
 
-let cachedTokens = {
-    at: null,
-    bl: null,
-    timestamp: 0
-};
-
+let cachedTokens = { at: null, bl: null, timestamp: 0 };
 let vietgidoTabId = null;
-let shouldAutoRunAll = false; 
-
+let shouldAutoRunAll = false;
 
 chrome.commands.onCommand.addListener((command) => {
   if (command === "open_command_hub") {
-
-    // Kích thước của popup
-    const width = 600;
-    const height = 400;
-
-    // Tính toán để mở popup ở giữa màn hình
+    const width = 600; const height = 400;
     chrome.windows.getLastFocused((lastWindow) => {
       const left = lastWindow.left + Math.round((lastWindow.width - width) / 2);
-      const top = lastWindow.top + Math.round((lastWindow.height - height) / 2);
-
-      // Tạo một cửa sổ "popup" thay vì một "tab"
-      chrome.windows.create({
-        url: chrome.runtime.getURL('hub.html'),
-        type: 'popup', // Đây là chìa khoá
-        width: width,
-        height: height,
-        left: left,
-        top: top,
-        focused: true // Tự động focus vào cửa sổ này
-      });
+      const top  = lastWindow.top  + Math.round((lastWindow.height - height) / 2);
+      chrome.windows.create({ url: chrome.runtime.getURL('hub.html'), type: 'popup', width, height, left, top, focused: true });
     });
   }
-
-
-  if (command === "open_option") {
-    chrome.tabs.create({ url: chrome.runtime.getURL("options.html") });
-    return;
-  }
-
-  if (command === "open-extensions-page") {
-    chrome.tabs.create({ url: 'chrome://extensions/' });
-    return;
-  }
-
+  if (command === "open_option")         { chrome.tabs.create({ url: chrome.runtime.getURL("options.html") }); return; }
+  if (command === "open-extensions-page") { chrome.tabs.create({ url: 'chrome://extensions/' }); return; }
   if (command === "open_media_hub") {
-    const fileUrl = chrome.runtime.getURL("media_hub.html");
-    chrome.windows.create({
-      url: fileUrl,
-      type: 'popup',
-      width: 630,
-      height: 600
-    });
+    chrome.windows.create({ url: chrome.runtime.getURL("media_hub.html"), type: 'popup', width: 630, height: 600 });
     return;
   }
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+
+    // ── Popup bất kỳ từ Hub (tránh gọi chrome.windows từ hub context) ──
+    if (request.action === "showTuvungPopup") {
+        TuVungModule.show()
+            .then(() => sendResponse({ ok: true }))
+            .catch(err => sendResponse({ ok: false, error: err.message }));
+        return true;
+    }
+
+    if (request.action === "showToeicPopup") {
+        showToeicPopup('manual')
+            .then(() => sendResponse({ ok: true }))
+            .catch(err => sendResponse({ ok: false, error: err.message }));
+        return true;
+    }
+
     if (request.action === "create_notebook_from_youtube") {
         console.log("[Background] Nhận yêu cầu tạo NotebookLM cho:", request.url);
-        
         handleNotebookFlow(request.url)
             .then((notebookId) => {
-                // Mở tab mới
                 chrome.tabs.create({ url: `https://notebooklm.google.com/notebook/${notebookId}` });
-                sendResponse({ success: true, notebookId: notebookId });
+                sendResponse({ success: true, notebookId });
             })
-            .catch((err) => {
-                console.error("[Background] Lỗi quy trình:", err);
-                sendResponse({ success: false, error: err.message });
-            });
-
-        return true; // Keep channel open
+            .catch((err) => { console.error("[Background] Lỗi:", err); sendResponse({ success: false, error: err.message }); });
+        return true;
     }
 
-  // 1. Nhận tín hiệu từ YouTube: "Chuẩn bị chạy auto nha!"
-  if (request.action === "expectAutoFeatures") {
-    shouldAutoRunAll = true;
-    console.log("🚩 [Background] Đã bật chế độ: Chạy tất cả tính năng (Mindmap + Briefing).");
-
-    // Tự động tắt sau 60s phòng hờ
-    setTimeout(() => { shouldAutoRunAll = false; }, 60000);
-
-    sendResponse({ received: true });
-    return true;
-  }
-
-  if (request.action === "closeThisTab") {
-    // Kiểm tra xem tin nhắn có đến từ một tab hợp lệ không
-    if (sender.tab && sender.tab.id) {
-      console.log(`🗑 [Background] Đã xong nhiệm vụ. Đang đóng tab ID: ${sender.tab.id}`);
-      chrome.tabs.remove(sender.tab.id);
+    if (request.action === "expectAutoFeatures") {
+        shouldAutoRunAll = true;
+        setTimeout(() => { shouldAutoRunAll = false; }, 60000);
+        sendResponse({ received: true });
+        return true;
     }
-    return true;
-  }
 
-  if (request.action === "openVietGidoTab" && request.data) {
-    const params = new URLSearchParams();
-    for (const [key, value] of Object.entries(request.data)) {
-      params.append(key, value);
+    if (request.action === "closeThisTab") {
+        if (sender.tab?.id) chrome.tabs.remove(sender.tab.id);
+        return true;
     }
-    const url = chrome.runtime.getURL(`vietgido.html?${params.toString()}`);
 
-    // Cập nhật: Lưu lại tabId khi tạo
-    chrome.tabs.create({ url: url }, (tab) => {
-      vietgidoTabId = tab.id; // <--- QUAN TRỌNG: Lưu ID lại để lát gửi tin nhắn
-      console.log("[Background] Đã mở Vietgido tại Tab ID:", vietgidoTabId);
-    });
+    if (request.action === "openVietGidoTab" && request.data) {
+        const params = new URLSearchParams();
+        for (const [key, value] of Object.entries(request.data)) params.append(key, value);
+        const url = chrome.runtime.getURL(`vietgido.html?${params.toString()}`);
+        chrome.tabs.create({ url }, (tab) => { vietgidoTabId = tab.id; });
+        sendResponse({ status: "success", openedUrl: url });
+        return true;
+    }
 
-    sendResponse({ status: "success", openedUrl: url });
-    return true;
-  }
-
-  if (request.action === "getMediaInfo") {
-    chrome.tabs.query({}, async (tabs) => {
-      const SKIPPED_PROTOCOLS = ['chrome://', 'chrome-extension://', 'about:', 'data:'];
-
-      async function queryTab(tab) {
-        if (!tab.url || SKIPPED_PROTOCOLS.some(p => tab.url.startsWith(p))) return null;
-
-        // Lần 1: thử query bình thường
-        const firstTry = await new Promise((resolve) => {
-          chrome.tabs.sendMessage(tab.id, { action: "getMediaState" }, (response) => {
-            if (chrome.runtime.lastError || !response) resolve(null);
-            else resolve(response);
-          });
+    if (request.action === "getMediaInfo") {
+        chrome.tabs.query({}, async (tabs) => {
+            const SKIPPED = ['chrome://', 'chrome-extension://', 'about:', 'data:'];
+            async function queryTab(tab) {
+                if (!tab.url || SKIPPED.some(p => tab.url.startsWith(p))) return null;
+                const firstTry = await new Promise((resolve) => {
+                    chrome.tabs.sendMessage(tab.id, { action: "getMediaState" }, (r) => {
+                        if (chrome.runtime.lastError || !r) resolve(null); else resolve(r);
+                    });
+                });
+                if (firstTry) return { ...firstTry, tabId: tab.id, tabTitle: tab.title, tabUrl: tab.url, favIconUrl: tab.favIconUrl };
+                try {
+                    const isSpotify = tab.url.includes('open.spotify.com');
+                    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: [isSpotify ? 'spotify_detector.js' : 'media_detector.js'] });
+                } catch (e) { return null; }
+                await new Promise(r => setTimeout(r, 1200));
+                const secondTry = await new Promise((resolve) => {
+                    chrome.tabs.sendMessage(tab.id, { action: "getMediaState" }, (r) => {
+                        if (chrome.runtime.lastError || !r) resolve(null); else resolve(r);
+                    });
+                });
+                return secondTry ? { ...secondTry, tabId: tab.id, tabTitle: tab.title, tabUrl: tab.url, favIconUrl: tab.favIconUrl } : null;
+            }
+            const mediaInfos = (await Promise.all(tabs.map(queryTab))).filter(i => i !== null && i.hasMedia);
+            sendResponse({ mediaInfos });
         });
+        return true;
+    }
 
-        if (firstTry) {
-          return { ...firstTry, tabId: tab.id, tabTitle: tab.title, tabUrl: tab.url, favIconUrl: tab.favIconUrl };
-        }
+    if (request.action === "controlMedia") {
+        const { tabId, command, value } = request;
+        chrome.tabs.sendMessage(tabId, { action: "mediaControl", command, value }, (r) => sendResponse(r || { success: false }));
+        return true;
+    }
 
-        // Lần 1 thất bại -> content script chết (extension vừa reload)
-        // Inject lại media_detector.js (hoặc spotify_detector.js) vào tab đó
-        console.log(`[Media Hub] Tab ${tab.id} not responding, re-injecting script...`);
-        try {
-          const isSpotify = tab.url.includes('open.spotify.com');
-          await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: [isSpotify ? 'spotify_detector.js' : 'media_detector.js']
-          });
-        } catch (e) {
-          console.log(`[Media Hub] Cannot inject into tab ${tab.id}:`, e.message);
-          return null;
-        }
-
-        // Đợi script khởi tạo xong (initialize() có setTimeout 1000ms bên trong)
-        await new Promise(r => setTimeout(r, 1200));
-
-        // Lần 2: query lại sau khi inject
-        const secondTry = await new Promise((resolve) => {
-          chrome.tabs.sendMessage(tab.id, { action: "getMediaState" }, (response) => {
-            if (chrome.runtime.lastError || !response) resolve(null);
-            else resolve(response);
-          });
+    if (request.action === "focusTab") {
+        chrome.tabs.update(request.tabId, { active: true }, () => {
+            chrome.windows.getCurrent((window) => chrome.windows.update(window.id, { focused: true }));
+            sendResponse({ success: true });
         });
+        return true;
+    }
 
-        if (secondTry) {
-          return { ...secondTry, tabId: tab.id, tabTitle: tab.title, tabUrl: tab.url, favIconUrl: tab.favIconUrl };
-        }
-        return null;
-      }
+    if (request.action === "toeicTimerUpdated") {
+        if (request.enabled) { scheduleToeicAlarm(); console.log('🚀 [Background] Bật timer TOEIC.'); }
+        else { chrome.alarms.clear(TOEIC_ALARM_NAME); console.log('🛑 [Background] Tắt timer TOEIC.'); }
+        sendResponse({ ok: true });
+        return true;
+    }
 
-      const mediaInfos = await Promise.all(tabs.map(queryTab));
-      const validMediaInfos = mediaInfos.filter(info => info !== null && info.hasMedia);
-
-      console.log('[Media Hub] Found media:', validMediaInfos.length);
-      sendResponse({ mediaInfos: validMediaInfos });
-    });
-    return true;
-  }
-
-  if (request.action === "controlMedia") {
-    const { tabId, command, value } = request;
-    chrome.tabs.sendMessage(tabId, { action: "mediaControl", command, value }, (response) => {
-      sendResponse(response || { success: false });
-    });
-    return true;
-  }
-
-  if (request.action === "focusTab") {
-    const { tabId } = request;
-    chrome.tabs.update(tabId, { active: true }, () => {
-      chrome.windows.getCurrent((window) => {
-        chrome.windows.update(window.id, { focused: true });
-      });
-      sendResponse({ success: true });
-    });
-    return true;
-  }
-
-  return false;
+    return false;
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && tab.url && tab.url.includes("notebooklm.google.com/notebook/")) {
-    console.log("🎯 [Background] Bắt được link NotebookLM:", tab.url);
-
-    // Logic gửi link sang Vietgido (giữ nguyên)
-    if (vietgidoTabId) {
-      chrome.tabs.sendMessage(vietgidoTabId, {
-        action: "autofillNotebookLink",
-        notebookUrl: tab.url
-      }).catch(() => { vietgidoTabId = null; });
-    }
-
-    // 2. Kiểm tra cờ và Gửi lệnh tổng lực "activateAll"
-    if (shouldAutoRunAll) {
-      console.log("🚀 [Background] Tab đã load. Gửi lệnh kích hoạt TOÀN BỘ.");
-
-      chrome.tabs.sendMessage(tabId, { action: "activateAll" }, (response) => {
-        if (chrome.runtime.lastError) {
-          // Retry nếu script chưa load
-          setTimeout(() => chrome.tabs.sendMessage(tabId, { action: "activateAll" }), 1000);
+    if (changeInfo.status === 'complete' && tab.url?.includes("notebooklm.google.com/notebook/")) {
+        if (vietgidoTabId) {
+            chrome.tabs.sendMessage(vietgidoTabId, { action: "autofillNotebookLink", notebookUrl: tab.url })
+                .catch(() => { vietgidoTabId = null; });
         }
-      });
-
-      shouldAutoRunAll = false; // Tắt cờ ngay
+        if (shouldAutoRunAll) {
+            chrome.tabs.sendMessage(tabId, { action: "activateAll" }, (response) => {
+                if (chrome.runtime.lastError) setTimeout(() => chrome.tabs.sendMessage(tabId, { action: "activateAll" }), 1000);
+            });
+            shouldAutoRunAll = false;
+        }
     }
-  }
-
 });
 
-
-// ===================================================================
-// LOGIC CHÍNH (Sử dụng Token động)
-// ===================================================================
-
+// ── NotebookLM ────────────────────────────────────────────────────
 async function handleNotebookFlow(targetUrl) {
-    // BƯỚC 0: Lấy chìa khóa vạn năng (Token)
     const tokens = await getFreshGoogleTokens();
-    
-    // BƯỚC 1: Tạo sổ tay
-    const newId = await buoc1_TaoSoTay(tokens);
-    
-    // BƯỚC 2: Thêm nguồn
+    const newId  = await buoc1_TaoSoTay(tokens);
     await buoc2_ThemNguon(newId, targetUrl, tokens);
-    
     return newId;
 }
 
-// --- HÀM 1: TẠO SỔ TAY ---
 async function buoc1_TaoSoTay(tokens) {
-    console.log("1️⃣ [Background] Đang tạo sổ tay mới (Dynamic Token)...");
-
-    // Xây dựng URL với tham số 'bl' động
-    // f.sid thường không bắt buộc phải chính xác trong URL nếu đã có cookie, 
-    // nhưng nếu lỗi ta có thể scrape thêm f.sid sau.
-    const apiUrl = `https://notebooklm.google.com/_/LabsTailwindUi/data/batchexecute?rpcids=CCqFvf&source-path=%2F&bl=${tokens.bl}&hl=vi&_reqid=${Math.floor(Math.random() * 999999)}&rt=c`;
-
+    console.log("1️⃣ [Background] Đang tạo sổ tay mới...");
+    const apiUrl = `https://notebooklm.google.com/_/LabsTailwindUi/data/batchexecute?rpcids=CCqFvf&source-path=%2F&bl=${tokens.bl}&hl=vi&_reqid=${Math.floor(Math.random()*999999)}&rt=c`;
     const response = await fetch(apiUrl, {
-        "headers": {
-            "content-type": "application/x-www-form-urlencoded;charset=UTF-8",
-            "x-same-domain": "1"
-        },
-        // SỬ DỤNG TOKEN 'at' ĐỘNG Ở ĐÂY
-        "body": `f.req=%5B%5B%5B%22CCqFvf%22%2C%22%5B%5C%22%5C%22%2Cnull%2Cnull%2C%5B2%5D%2C%5B1%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C%5B1%5D%5D%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&at=${tokens.at}&`,
-        "method": "POST"
+        headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8", "x-same-domain": "1" },
+        body: `f.req=%5B%5B%5B%22CCqFvf%22%2C%22%5B%5C%22%5C%22%2Cnull%2Cnull%2C%5B2%5D%2C%5B1%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C%5B1%5D%5D%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&at=${tokens.at}&`,
+        method: "POST"
     });
-
-    const text = await response.text();
-    const uuidPattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/;
-    const match = text.match(uuidPattern);
-
-    if (match) {
-        console.log("✅ [Background] ID sổ tay:", match[0]);
-        return match[0];
-    } else {
-        console.error("Debug Text:", text.substring(0, 500)); // Log để soi nếu lỗi
-        throw new Error("Không tìm thấy ID sổ tay (Token có thể không hợp lệ?)");
-    }
+    const text  = await response.text();
+    const match = text.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/);
+    if (match) { console.log("✅ [Background] ID sổ tay:", match[0]); return match[0]; }
+    console.error("Debug Text:", text.substring(0, 500));
+    throw new Error("Không tìm thấy ID sổ tay");
 }
 
-// --- HÀM 2: THÊM NGUỒN ---
 async function buoc2_ThemNguon(notebookId, url, tokens) {
-    console.log(`2️⃣ [Background] Đang thêm nguồn...`);
-    
-    const apiUrl = `https://notebooklm.google.com/_/LabsTailwindUi/data/batchexecute?rpcids=izAoDd&source-path=%2Fnotebook%2F${notebookId}&bl=${tokens.bl}&hl=vi&_reqid=${Math.floor(Math.random() * 999999)}&rt=c`;
-
-    // Encode URL để tránh lỗi ký tự đặc biệt
-    // Google Batchexecute format hơi dị, ta cần cẩn thận các dấu ngoặc
-    // Body gốc: f.req=[[["izAoDd","[[[null,null,null,null,null,null,null,[\"URL_HERE\"]...
-    
-    // Mẹo: Dùng encodeURIComponent cho URL Youtube để an toàn
-    // Nhưng vì cấu trúc JSON string bên trong của Google đã escape, ta cứ chèn raw string vào template
-    // chỉ cần cẩn thận dấu ngoặc kép.
-    
+    console.log("2️⃣ [Background] Đang thêm nguồn...");
+    const apiUrl  = `https://notebooklm.google.com/_/LabsTailwindUi/data/batchexecute?rpcids=izAoDd&source-path=%2Fnotebook%2F${notebookId}&bl=${tokens.bl}&hl=vi&_reqid=${Math.floor(Math.random()*999999)}&rt=c`;
     const reqBody = `f.req=%5B%5B%5B%22izAoDd%22%2C%22%5B%5B%5Bnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C%5B%5C%22${url}%5C%22%5D%2Cnull%2Cnull%2C1%5D%5D%2C%5C%22${notebookId}%5C%22%2C%5B2%5D%2C%5B1%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C%5B1%5D%5D%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&at=${tokens.at}&`;
-
     const response = await fetch(apiUrl, {
-        "headers": {
-            "content-type": "application/x-www-form-urlencoded;charset=UTF-8",
-            "x-same-domain": "1",
-            "x-goog-ext-353267353-jspb": "[null,null,null,276544]"
-        },
-        "body": reqBody,
-        "method": "POST"
+        headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8", "x-same-domain": "1", "x-goog-ext-353267353-jspb": "[null,null,null,276544]" },
+        body: reqBody, method: "POST"
     });
-
-    if (response.ok) {
-        console.log("✅ [Background] Thêm nguồn thành công!");
-    } else {
-        throw new Error("API thêm nguồn thất bại: " + response.status);
-    }
+    if (response.ok) console.log("✅ [Background] Thêm nguồn thành công!");
+    else throw new Error("API thêm nguồn thất bại: " + response.status);
 }
 
-// Hàm lấy Token tươi từ trang chủ Google
 async function getFreshGoogleTokens() {
-    // Nếu token còn mới (dưới 10 phút) thì dùng lại
     if (cachedTokens.at && (Date.now() - cachedTokens.timestamp < 10 * 60 * 1000)) {
         console.log("♻️ [Token] Dùng lại token từ cache.");
         return cachedTokens;
     }
-
-    console.log("Gởi request lấy token mới...");
     try {
-        const response = await fetch("https://notebooklm.google.com/");
-        const html = await response.text();
-
-        // 1. Tìm 'at' (SNlM0e) - Quan trọng nhất
-        // Pattern: "SNlM0e":"<TOKEN_O_DAY>"
-        const atMatch = html.match(/"SNlM0e":"([^"]+)"/);
-        
-        // 2. Tìm 'bl' (cfb2h) - Phiên bản build
-        // Pattern: "cfb2h":"<VERSION_O_DAY>"
-        const blMatch = html.match(/"cfb2h":"([^"]+)"/);
-
-        if (!atMatch || !blMatch) {
-            throw new Error("Không tìm thấy token bảo mật (SNlM0e/cfb2h) trong HTML.");
-        }
-
-        cachedTokens = {
-            at: atMatch[1],
-            bl: blMatch[1],
-            timestamp: Date.now()
-        };
-
-        console.log("✅ [Token] Đã cập nhật token mới:", cachedTokens);
+        const html     = await (await fetch("https://notebooklm.google.com/")).text();
+        const atMatch  = html.match(/"SNlM0e":"([^"]+)"/);
+        const blMatch  = html.match(/"cfb2h":"([^"]+)"/);
+        if (!atMatch || !blMatch) throw new Error("Không tìm thấy token bảo mật.");
+        cachedTokens = { at: atMatch[1], bl: blMatch[1], timestamp: Date.now() };
+        console.log("✅ [Token] Đã cập nhật token mới.");
         return cachedTokens;
-
-    } catch (e) {
-        console.error("❌ [Token] Lỗi lấy token:", e);
-        throw e;
-    }
+    } catch (e) { console.error("❌ [Token] Lỗi:", e); throw e; }
 }
-// Khởi động SelfControl Checker
+
 initSCChecker();

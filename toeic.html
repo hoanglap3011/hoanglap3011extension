@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TOEIC Reading</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="toeic.css" />
+</head>
+<body>
+
+  <div id="sectionManager">
+    <header class="mgr-header">
+      <div class="mgr-header-inner">
+        <div class="mgr-logo">
+          <span class="mgr-logo-icon">📝</span>
+          <div>
+            <h1 class="mgr-title">TOEIC Reading</h1>
+            <p class="mgr-subtitle">Question Bank</p>
+          </div>
+        </div>
+        <div class="mgr-header-actions">
+          <span class="mgr-count" id="questionCount">0 câu</span>
+
+          <button class="btn-icon-header" id="btnSettings" title="Cài đặt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
+
+          <button class="btn-primary" id="btnSync">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+              <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+            Đồng bộ
+          </button>
+
+          <button class="btn-primary" id="btnRandom">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+            Ôn tập ngẫu nhiên
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="mgr-main">
+
+      <!-- Sticky: Search + Bộ lọc -->
+      <div class="mgr-sticky">
+      <div class="mgr-search-bar">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="Tìm câu hỏi, đáp án, giải thích…" />
+      </div>
+
+      <!-- Bộ lọc -->
+      <div class="filter-section">
+        <div class="filter-row">
+          <span class="filter-label">Part</span>
+          <div class="filter-chips" id="partFilter">
+            <button class="chip" data-part="5">Part 5</button>
+            <button class="chip" data-part="6">Part 6</button>
+            <button class="chip" data-part="7">Part 7</button>
+          </div>
+        </div>
+        <div class="filter-row">
+          <span class="filter-label">Năm</span>
+          <!-- chips năm được build động bởi JS -->
+          <div class="filter-chips" id="yearFilter"></div>
+        </div>
+      </div>
+
+      </div><!-- /.mgr-sticky -->
+
+      <!-- Danh sách câu hỏi (lazy load) -->
+      <div class="question-list" id="questionList">
+        <!-- sentinel cho IntersectionObserver -->
+        <div id="lazysentinel" class="lazy-sentinel"></div>
+      </div>
+
+      <div class="empty-state d-none" id="emptyState">
+        <div class="empty-icon">📖</div>
+        <p class="empty-text">Không có câu nào khớp.<br/>Thử bỏ bớt bộ lọc hoặc nhấn <strong>Đồng bộ</strong> để tải dữ liệu.</p>
+      </div>
+
+    </main>
+
+    <!-- Modal chi tiết -->
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal-card" id="modalContainer"></div>
+    </div>
+
+    <!-- Modal cài đặt -->
+    <div class="modal-overlay" id="settingsOverlay">
+      <div class="comp-card" id="settingsContainer">
+        <div class="comp-header">
+          <div class="comp-logo">
+            <span class="comp-logo-icon">⚙️</span>
+            <div>
+              <h2 class="comp-title">Cài đặt</h2>
+              <p class="comp-subtitle">TOEIC Reading</p>
+            </div>
+          </div>
+          <button class="comp-close" id="btnCloseSettings">✕</button>
+        </div>
+        <div class="comp-body">
+
+          <!-- Popup tự động -->
+          <div class="form-group">
+            <label class="form-label">Popup tự động</label>
+            <div class="tv-setting-row">
+              <span class="tv-setting-label-modal">Bật / Tắt</span>
+              <label class="tv-switch">
+                <input type="checkbox" id="toeicEnableAutoPopup" />
+                <span class="tv-slider"></span>
+              </label>
+            </div>
+            <div id="popupSettingsArea">
+              <div class="tv-slider-label-row mt-3">
+                <label class="form-label" style="margin-bottom:0;text-transform:none;color:var(--white);">Thời gian tự đóng popup</label>
+                <span class="tv-slider-value-badge" id="toeicAutoCloseDisplay">30 giây</span>
+              </div>
+              <div class="tv-range-wrap mb-3">
+                <span class="tv-range-min">10s</span>
+                <input type="range" id="toeicAutoCloseSec" class="tv-range" min="10" max="120" value="30" step="5" />
+                <span class="tv-range-max">2p</span>
+              </div>
+              <div class="tv-slider-label-row">
+                <label class="form-label" style="margin-bottom:0;text-transform:none;color:var(--white);">Khoảng cách giữa các popup</label>
+                <span class="tv-slider-value-badge" id="toeicTimerRangeDisplay">5 – 10 phút</span>
+              </div>
+              <div class="tv-range-wrap" style="margin-bottom:8px">
+                <span class="tv-range-min">10s</span>
+                <input type="range" id="toeicTimerMinSec" class="tv-range" min="10" max="1800" value="300" step="10" />
+                <span class="tv-range-max">30p</span>
+              </div>
+              <div class="tv-range-wrap">
+                <span class="tv-range-min">10s</span>
+                <input type="range" id="toeicTimerMaxSec" class="tv-range" min="10" max="1800" value="600" step="10" />
+                <span class="tv-range-max">30p</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Part của popup -->
+          <div class="form-group">
+            <label class="form-label">Part của popup</label>
+            <div class="filter-chips" id="settingsPartFilter">
+              <button class="chip chip--settings" data-part="5">Part 5</button>
+              <button class="chip chip--settings" data-part="6">Part 6</button>
+              <button class="chip chip--settings" data-part="7">Part 7</button>
+            </div>
+            <p class="settings-hint">Không chọn = tất cả các Part</p>
+          </div>
+
+          <p class="comp-status" id="settingsStatus"></p>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /#sectionManager -->
+
+  <!-- Template: chi tiết câu hỏi -->
+  <template id="tpl-question-detail">
+    <div class="detail-wrap">
+      <div class="detail-header">
+        <div class="detail-meta">
+          <span class="detail-part-badge" id="detailPartBadge">Part 5</span>
+          <span class="detail-question-no" id="detailQuestionNo"></span>
+          <span class="detail-set-no" id="detailSetNo"></span>
+        </div>
+        <button class="comp-close" id="btnCloseDetail">✕</button>
+      </div>
+
+      <!-- Context (Part 6, 7) -->
+      <div class="detail-context-wrap d-none" id="detailContextWrap">
+        <div class="detail-section-label">📄 Ngữ cảnh</div>
+        <div class="detail-context" id="detailContext"></div>
+      </div>
+
+      <!-- Câu hỏi -->
+      <div class="detail-question" id="detailQuestion"></div>
+
+      <!-- 4 đáp án -->
+      <div class="detail-options" id="detailOptions">
+        <div class="option-row" data-opt="A"><span class="option-letter">A</span><span class="option-text" id="optA"></span></div>
+        <div class="option-row" data-opt="B"><span class="option-letter">B</span><span class="option-text" id="optB"></span></div>
+        <div class="option-row" data-opt="C"><span class="option-letter">C</span><span class="option-text" id="optC"></span></div>
+        <div class="option-row" data-opt="D"><span class="option-letter">D</span><span class="option-text" id="optD"></span></div>
+      </div>
+
+      <!-- Đáp án + Giải thích -->
+      <div class="detail-answer-wrap d-none" id="detailAnswerWrap">
+        <div class="answer-correct-row">
+          <span class="answer-label">Đáp án đúng:</span>
+          <span class="answer-correct-letter" id="detailCorrectAnswer"></span>
+        </div>
+        <div class="answer-explanation" id="detailExplanation"></div>
+      </div>
+
+      <div class="detail-actions">
+        <button class="btn-reveal" id="btnRevealAnswer">
+          Xem đáp án
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+        <button class="btn-primary btn-next-random d-none" id="btnNextRandom">Câu tiếp theo →</button>
+      </div>
+    </div>
+  </template>
+
+  <script src="config.js"></script>
+  <script type="module" src="toeic.js"></script>
+</body>
+</html>

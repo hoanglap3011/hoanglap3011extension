@@ -14,6 +14,7 @@ const API_ACTION_GET_METADATA_INTENT_TIME = "getMetaDataIntentTime";
 const API_ACTION_ADD_INTENT_TIME_DATA = "addIntentTimeData";
 const API_ACTION_TUVUNG_GET_ALL = "tuvungGetAll";
 const API_ACTION_TUVUNG_SYNC_ONE = "tuvungSyncOne";
+const API_ACTION_TOEIC_GET_ALL = "toeicGetAll";
 
 // CACHE KEYS
 const CACHE_PASS = "pass";

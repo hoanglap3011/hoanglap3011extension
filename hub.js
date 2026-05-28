@@ -3,6 +3,7 @@ import { DatePickerModule } from './DatePickerModule.js';
 import { DateModule } from './DateModule.js';
 import { TuVungModule } from './tuvung.js';
 
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- 1. DANH SÁCH LỆNH CỐ ĐỊNH ---
@@ -113,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             id: 'open_quanlytuvung',
             name: 'Quản lý từ vựng',
-            keywords: 'quan ly',
+            keywords: 'quan ly tuvung',
             action: async () => {
                 chrome.tabs.create({ url: chrome.runtime.getURL('tuvung.html') })
             }
@@ -121,19 +122,35 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             id: 'open_tuvungbatky',
             name: 'Từ vựng bất kỳ',
-            keywords: 'từ vựng bất kỳ tu vung bat ky tubatky',
+            keywords: 'tuvung bat ky tubatky',
             action: async () => {
-                await TuVungModule.show();
+                chrome.runtime.sendMessage({ action: 'showTuvungPopup' });
             }
         },
         {
             id: 'open_themtuvung',
             name: 'Thêm từ vựng',
-            keywords: 'them tu vung',
+            keywords: 'them tuvung',
             action: async () => {
                 await TuVungModule.openAddForm();
             }
-        }        
+        }    
+        ,{
+            id: 'open_quanlytoeic',
+            name: 'Quản lý Toeic',
+            keywords: 'quan ly toeic',
+            action: async () => {
+                chrome.tabs.create({ url: chrome.runtime.getURL('toeic.html') })
+            }
+        },
+        {
+            id: 'open_toeicbatky',
+            name: 'Toeic bất kỳ',
+            keywords: 'toeic batky ',
+            action: async () => {
+                chrome.runtime.sendMessage({ action: 'showToeicPopup' });
+            }
+        },    
     ];
 
     // --- 2. CACHE DOM VÀ TRẠNG THÁI ---
