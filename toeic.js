@@ -7,7 +7,6 @@ import { StorageModule } from './StorageModule.js';
 export const ToeicModule = (() => {
 
   // ── Constants ──────────────────────────────────────────────────
-  const STORAGE_KEY    = 'toeic_questions';
   const SETTINGS_KEY   = 'LapsExtensionSettings';
   const TIMER_KEY      = 'toeicTimerSettings';
   const PENDING_KEY    = 'toeic_pending_question';
@@ -15,12 +14,57 @@ export const ToeicModule = (() => {
   const PAGE_SIZE      = 40;
   const TIMER_DEFAULTS = { autoCloseSec: 30, timerMinSec: 10, timerMaxSec: 60 };
 
-  // ── Storage helpers ────────────────────────────────────────────
+  // ── chrome.storage.local helpers (chỉ dùng cho settings nhỏ) ──
   const _get = (key) => new Promise(res => chrome.storage.local.get([key], r => res(r[key] ?? null)));
   const _set = (key, val) => new Promise(res => chrome.storage.local.set({ [key]: val }, res));
 
+  // ── IndexedDB — lưu câu hỏi (không giới hạn quota) ────────────
+  const DB_NAME    = 'toeic_db';
+  const DB_VERSION = 1;
+  const STORE_NAME = 'questions';
+
+  let _dbInstance = null;
+
+  const _openDB = () => new Promise((resolve, reject) => {
+    if (_dbInstance) { resolve(_dbInstance); return; }
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        // keyPath = _id là số thứ tự tự sinh; có thể đổi thành question_no nếu luôn unique
+        db.createObjectStore(STORE_NAME, { keyPath: '_id', autoIncrement: true });
+      }
+    };
+    req.onsuccess  = (e) => { _dbInstance = e.target.result; resolve(_dbInstance); };
+    req.onerror    = (e) => reject(e.target.error);
+  });
+
+  /** Xoá toàn bộ và ghi mới — dùng transaction để atomic */
+  const _dbSaveAll = async (arr) => {
+    const db = await _openDB();
+    return new Promise((resolve, reject) => {
+      const tx    = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      store.clear();
+      arr.forEach((item, i) => store.put({ ...item, _id: i + 1 }));
+      tx.oncomplete = () => resolve();
+      tx.onerror    = (e) => reject(e.target.error);
+    });
+  };
+
+  /** Đọc toàn bộ câu hỏi */
+  const _dbGetAll = async () => {
+    const db = await _openDB();
+    return new Promise((resolve, reject) => {
+      const tx    = db.transaction(STORE_NAME, 'readonly');
+      const req   = tx.objectStore(STORE_NAME).getAll();
+      req.onsuccess = (e) => resolve(e.target.result || []);
+      req.onerror   = (e) => reject(e.target.error);
+    });
+  };
+
   // ── Data ───────────────────────────────────────────────────────
-  const getAll = async () => (await _get(STORAGE_KEY)) || [];
+  const getAll = () => _dbGetAll();
 
   const pullFromServer = () => new Promise((resolve, reject) => {
     StorageModule.get([CACHE_PASS], async ({ [CACHE_PASS]: pass = '' }) => {
@@ -30,7 +74,7 @@ export const ToeicModule = (() => {
         const res  = await fetch(API, { method: 'POST', body: JSON.stringify({ pass, action: API_ACTION_TOEIC_GET_ALL }) });
         const json = await res.json();
         if (json.code !== 1) throw new Error(json.error || 'Lỗi server');
-        await _set(STORAGE_KEY, json.data || []);
+        await _dbSaveAll(json.data || []);   // ← IndexedDB, không còn quota
         resolve(json.data || []);
       } catch (err) {
         reject(err);
