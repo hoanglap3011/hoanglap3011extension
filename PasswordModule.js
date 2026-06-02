@@ -1,5 +1,7 @@
 import { StorageModule } from './StorageModule.js';
 export const PasswordModule = (function () {
+    // Callback tuỳ chọn, gọi sau khi lưu mật khẩu thành công
+    let _onSavedCallback = null;
     // 1. Định nghĩa CSS dưới dạng chuỗi (từ password.css)
     const css = `
         #pwd-modal-overlay {
@@ -62,11 +64,11 @@ export const PasswordModule = (function () {
         const saveBtn = document.getElementById('pwd-save-btn');
         const input = document.getElementById('pwd-input');
 
-        closeBtn.onclick = () => overlay.style.display = 'none';
-        
+        closeBtn.onclick = () => { _onSavedCallback = null; overlay.style.display = 'none'; };
+
         // Đóng khi click ra ngoài overlay
         overlay.onclick = (e) => {
-            if (e.target === overlay) overlay.style.display = 'none';
+            if (e.target === overlay) { _onSavedCallback = null; overlay.style.display = 'none'; }
         };
 
         saveBtn.onclick = () => {
@@ -80,7 +82,12 @@ export const PasswordModule = (function () {
                 const msg = document.getElementById('pwd-message');
                 msg.style.display = 'block';
                 saveBtn.textContent = "Đã lưu!";
-                
+
+                // Gọi callback (nếu có) — chỉ gọi 1 lần
+                const cb = _onSavedCallback;
+                _onSavedCallback = null;
+                if (cb) cb(val);
+
                 setTimeout(() => {
                     overlay.style.display = 'none';
                     saveBtn.disabled = false;
@@ -95,7 +102,9 @@ export const PasswordModule = (function () {
         };
     }
 
-    function openPasswordPopup() {
+    function openPasswordPopup(onSaved) {
+        // Chỉ nhận hàm; nếu gọi như click handler (truyền event) thì bỏ qua
+        _onSavedCallback = (typeof onSaved === 'function') ? onSaved : null;
         injectCSS();
         createModalHTML();
         

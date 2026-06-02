@@ -3,6 +3,7 @@
 // ================================================================
 import { LoadingModule } from './LoadingModule.js';
 import { StorageModule } from './StorageModule.js';
+import { PasswordModule } from './PasswordModule.js';
 
 export const ToeicModule = (() => {
 
@@ -418,7 +419,7 @@ export const ToeicModule = (() => {
     });
 
     // ── Đồng bộ ──
-    $id('btnSync').addEventListener('click', async () => {
+    const doSync = async () => {
       if (!confirm('Ghi đè dữ liệu local bằng dữ liệu từ Google Sheet?')) return;
       try {
         await pullFromServer();
@@ -426,6 +427,18 @@ export const ToeicModule = (() => {
         document.querySelectorAll('.chip').forEach(c => c.classList.remove('chip--active'));
         await loadData();
       } catch (err) { alert('Lỗi đồng bộ: ' + err.message); }
+    };
+
+    $id('btnSync').addEventListener('click', () => {
+      StorageModule.get([CACHE_PASS], (r) => {
+        const pass = r?.[CACHE_PASS] || '';
+        if (!pass) {
+          // Chưa có mật khẩu → mở popup nhập (giống màn hoanglap3011); nhập xong tự đồng bộ
+          PasswordModule.openPasswordPopup(() => doSync());
+          return;
+        }
+        doSync();
+      });
     });
 
     $id('btnRandom').addEventListener('click', () => {

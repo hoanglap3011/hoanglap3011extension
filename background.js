@@ -62,23 +62,50 @@ const scheduleTvAlarm    = () => _scheduleAlarm(TV_ALARM_NAME, TV_TIMER_KEY, TV_
 const _isTvEnabled       = () => _isEnabled('tvEnableAutoPopup');
 
 // ── TOEIC ─────────────────────────────────────────────────────────
-const TOEIC_STORAGE_KEY = 'toeic_questions';
 const TOEIC_PENDING_KEY = 'toeic_pending_question';
 const TOEIC_TIMER_KEY   = 'toeicTimerSettings';
 const TOEIC_ALARM_NAME  = 'toeic_random_popup';
 const TOEIC_TIMER_DEFS  = { timerMinSec: 10, timerMaxSec: 60 };
 
+// ── IndexedDB: đọc câu hỏi TOEIC (cùng DB với toeic.js) ──────────
+const TOEIC_DB_NAME    = 'toeic_db';
+const TOEIC_DB_VERSION = 1;
+const TOEIC_STORE      = 'questions';
+
+function _openToeicDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(TOEIC_DB_NAME, TOEIC_DB_VERSION);
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(TOEIC_STORE)) {
+                db.createObjectStore(TOEIC_STORE, { keyPath: '_id', autoIncrement: true });
+            }
+        };
+        req.onsuccess = (e) => resolve(e.target.result);
+        req.onerror   = (e) => reject(e.target.error);
+    });
+}
+
+async function _toeicGetAll() {
+    const db = await _openToeicDB();
+    return new Promise((resolve, reject) => {
+        const req = db.transaction(TOEIC_STORE, 'readonly').objectStore(TOEIC_STORE).getAll();
+        req.onsuccess = (e) => resolve(e.target.result || []);
+        req.onerror   = (e) => reject(e.target.error);
+    });
+}
+
 async function showToeicPopup(source = 'auto') {
-    const data = await chrome.storage.local.get([TOEIC_STORAGE_KEY]);
-    const list = data[TOEIC_STORAGE_KEY] || [];
+    const list = await _toeicGetAll();   // ← đọc IndexedDB thay vì chrome.storage.local
     if (!list.length) { console.log('⚠️ [TOEIC] Chưa có dữ liệu câu hỏi.'); return null; }
 
     const partsData = await chrome.storage.local.get(['toeicPopupParts']);
     const parts = partsData.toeicPopupParts;
     const pool  = (Array.isArray(parts) && parts.length)
-        ? (list.filter(q => parts.includes(String(q.part || '').trim())) || list)
+        ? list.filter(q => parts.includes(String(q.part || '').trim()))
         : list;
-    const q = pool[Math.floor(Math.random() * pool.length)];
+    const safePool = pool.length ? pool : list;   // ← lọc Part ra rỗng thì fallback toàn bộ
+    const q = safePool[Math.floor(Math.random() * safePool.length)];
     await chrome.storage.local.set({ [TOEIC_PENDING_KEY]: q });
 
     return _openPopupWindow(chrome.runtime.getURL(`toeic.html?mode=popup&source=${source}`),
