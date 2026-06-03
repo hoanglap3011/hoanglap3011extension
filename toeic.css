@@ -535,6 +535,57 @@ input, textarea { font-family: inherit; }
 }
 .btn-reveal:hover { background: var(--gold); color: var(--navy); }
 
+/* ── Nút Dịch + các phần dịch nghĩa ── */
+.btn-translate {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 16px;
+  border-radius: 50px;
+  border: 1.5px solid #c8cdd8;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 13px;
+  background: transparent;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-translate:hover { background: #f0f2f5; color: var(--text-main); border-color: #b3b9c4; }
+.btn-translate--active { border-color: var(--gold); color: var(--gold); background: rgba(200,168,75,.08); }
+
+/* Dòng dịch dưới câu hỏi */
+.detail-question-vi {
+  font-size: 14px;
+  font-style: italic;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: -8px 0 18px;
+  padding-left: 1px;
+}
+
+/* Vùng dịch dưới context */
+.detail-context-vi {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #dfe3ea;
+}
+.detail-context-vi .detail-section-label { margin-bottom: 6px; }
+.detail-context-vi-text {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-muted);
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+/* Đuôi dịch trong mỗi đáp án */
+.option-text-vi {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
 /* ── Settings modal (reuse từ tuvung) ── */
 .comp-card {
   background: var(--navy-mid);

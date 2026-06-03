@@ -260,6 +260,71 @@ export const ToeicModule = (() => {
     // Hiện btnNext ngay nếu đang ở giữa stack (không cần đợi reveal)
     if (nav?.hasNext && btnNext) btnNext.classList.remove('d-none');
 
+    // ── Dịch nghĩa (toggle: Dịch ↔ Ẩn dịch) ──
+    const _viFields = ['question_vi','context_vi','option_a_vi','option_b_vi','option_c_vi','option_d_vi'];
+    const _hasVi = _viFields.some(k => String(question[k] || '').trim() !== '');
+    if (_hasVi) {
+      const viEls = []; // các phần dịch để bật/tắt
+
+      // Câu hỏi: thêm 1 dòng dịch ngay dưới
+      if (String(question.question_vi || '').trim()) {
+        const qvi = document.createElement('div');
+        qvi.className = 'detail-question-vi d-none';
+        qvi.textContent = question.question_vi;
+        qEl.after(qvi);
+        viEls.push(qvi);
+      }
+
+      // Context: thêm 1 vùng dịch ngay dưới (chỉ khi context đang hiển thị)
+      const _ctxWrap = $('#detailContextWrap');
+      if (String(question.context_vi || '').trim() && !_ctxWrap.classList.contains('d-none')) {
+        const cvi = document.createElement('div');
+        cvi.className = 'detail-context-vi d-none';
+        const lbl = document.createElement('div');
+        lbl.className = 'detail-section-label';
+        lbl.textContent = '🌐 Dịch nghĩa';
+        const txt = document.createElement('div');
+        txt.className = 'detail-context-vi-text';
+        txt.textContent = question.context_vi;
+        cvi.appendChild(lbl);
+        cvi.appendChild(txt);
+        $('#detailContext').after(cvi);
+        viEls.push(cvi);
+      }
+
+      // Đáp án: nối đuôi dịch (in nhạt/nghiêng), ngăn cách bằng " - "
+      ['A','B','C','D'].forEach(l => {
+        const vi = String(question[`option_${l.toLowerCase()}_vi`] || '').trim();
+        if (!vi) return;
+        const span = document.createElement('span');
+        span.className = 'option-text-vi d-none';
+        span.textContent = ` - ${vi}`;
+        $(`#opt${l}`).appendChild(span);
+        viEls.push(span);
+      });
+
+      // Nút "Dịch" đặt ngay trước nút "Xem đáp án"
+      let translated = nav?.state?.translated ?? false;
+      const btnTranslate = document.createElement('button');
+      btnTranslate.type = 'button';
+      btnTranslate.className = 'btn-translate';
+
+      const _applyTranslate = (show) => {
+        viEls.forEach(el => el.classList.toggle('d-none', !show));
+        btnTranslate.textContent = show ? 'Ẩn dịch' : 'Dịch';
+        btnTranslate.classList.toggle('btn-translate--active', show);
+      };
+
+      btnTranslate.addEventListener('click', () => {
+        translated = !translated;
+        nav?.onSaveState({ translated });
+        _applyTranslate(translated);
+      });
+
+      btnReveal.before(btnTranslate);
+      _applyTranslate(translated); // khôi phục trạng thái khi quay lại câu cũ
+    }
+
     // ── Event listeners ──
     optRows.forEach(row => {
       row.addEventListener('click', () => {
