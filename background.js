@@ -279,9 +279,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     if (request.action === "focusTab") {
-        chrome.tabs.update(request.tabId, { active: true }, () => {
-            chrome.windows.getCurrent((window) => chrome.windows.update(window.id, { focused: true }));
-            sendResponse({ success: true });
+        chrome.tabs.get(request.tabId, (tab) => {
+            if (chrome.runtime.lastError || !tab) {
+                sendResponse({ success: false, error: chrome.runtime.lastError?.message });
+                return;
+            }
+            // Đưa cửa sổ chứa tab lên trước...
+            chrome.windows.update(tab.windowId, { focused: true }, () => {
+                // ...rồi chọn đúng tab trong cửa sổ đó
+                chrome.tabs.update(request.tabId, { active: true }, () => {
+                    sendResponse({ success: true });
+                });
+            });
         });
         return true;
     }
