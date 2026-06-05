@@ -921,3 +921,47 @@ body.popup-mode .detail-actions .btn-prev-random {
   min-width: 32px;
   text-align: center;
 }
+
+/* ══ MOBILE: header màn quản lý gọn lại ══════════════════════════
+   - Ẩn phụ đề "Question Bank"
+   - Tiêu đề 1 dòng (cắt gọn nếu hẹp), số câu 1 dòng
+   - Nút "Đồng bộ" / "Ôn tập ngẫu nhiên" → nút tròn chỉ-icon
+   ════════════════════════════════════════════════════════════════ */
+@media (max-width: 600px) {
+  .mgr-header { padding: 0 12px; }
+
+  .mgr-header-inner { gap: 10px; }
+
+  /* Logo chiếm phần còn lại và co được để nhường chỗ cho actions */
+  .mgr-logo { flex: 1; min-width: 0; gap: 10px; }
+  .mgr-logo > div { min-width: 0; }
+  .mgr-logo-icon { font-size: 24px; flex-shrink: 0; }
+  .mgr-title {
+    font-size: 18px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mgr-subtitle { display: none; }
+
+  /* Cụm nút không bao giờ bị nén/cắt */
+  .mgr-header-actions { gap: 8px; flex-shrink: 0; }
+  .mgr-count { flex-shrink: 0; white-space: nowrap; font-size: 11px; }
+
+  /* "Đồng bộ" + "Ôn tập ngẫu nhiên": ẩn chữ (font-size:0), giữ icon SVG */
+  .mgr-header-actions .btn-primary {
+    font-size: 0;
+    gap: 0;
+    padding: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+}
+
+/* Màn rất hẹp (≤360px): ẩn luôn số câu cho thoáng */
+@media (max-width: 360px) {
+  .mgr-count { display: none; }
+}
