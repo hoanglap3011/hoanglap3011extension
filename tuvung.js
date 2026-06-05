@@ -1,5 +1,6 @@
 import { LoadingModule } from './LoadingModule.js';
 import { StorageModule } from './StorageModule.js';
+import { PasswordModule } from './PasswordModule.js';
 
 export const TuVungModule = (() => {
 
@@ -15,6 +16,7 @@ export const TuVungModule = (() => {
   };
 
   const _isChromeStorage = typeof chrome !== 'undefined' && chrome.storage;
+  const IS_EXT = StorageModule.isExtensionEnv();
   const _storageGet = (key) => new Promise((resolve) =>
     _isChromeStorage
       ? chrome.storage.local.get([key], (r) => resolve(r[key] ?? null))
@@ -58,7 +60,7 @@ export const TuVungModule = (() => {
     StorageModule.get([CACHE_PASS], async (result) => {
       const pass = result[CACHE_PASS] || '';
       if (!pass) {
-        if (typeof PasswordUtil !== 'undefined') PasswordUtil.openPasswordPopup();
+        if (typeof PasswordModule !== 'undefined') PasswordModule.openPasswordPopup();
         return reject(new Error('Chưa có mật khẩu'));
       }
       try {
@@ -352,7 +354,9 @@ export const TuVungModule = (() => {
 
   };
 
-  const openAddForm = () => chrome.windows.create({ url: chrome.runtime.getURL('tuvung.html?mode=add-form'), type: 'popup', width: 500, height: 680, focused: true });
+  const openAddForm = () => IS_EXT
+    ? chrome.windows.create({ url: chrome.runtime.getURL('tuvung.html?mode=add-form'), type: 'popup', width: 500, height: 680, focused: true })
+    : (location.href = 'tuvung.html?mode=add-form');
 
   let _mgrWords = [], _mgrFiltered = [], _delIdx = -1;
 
@@ -362,6 +366,11 @@ export const TuVungModule = (() => {
       list: $('wordList'), count: $('wordCount'), search: $('searchInput'), empty: $('emptyState'),
       overlay: $('modalOverlay'), container: $('modalContainer'), confirmOver: $('confirmOverlay'), msg: $('confirmMsg')
     };
+
+    // Web thường: không có chrome.alarms / cửa sổ background → ẩn khối "Popup tự động".
+    if (!IS_EXT) {
+      document.getElementById('tvEnableAutoPopup')?.closest('.form-group')?.classList.add('d-none');
+    }
 
     const renderList = () => {
       r.count.textContent = `${_mgrWords.length} từ`;
@@ -421,7 +430,7 @@ export const TuVungModule = (() => {
     if (chkAutoPopup) chkAutoPopup.addEventListener('change', (e) => _applyPopupAreaState(e.target.checked));
 
     const openSettings = () => {
-      chrome.storage.local.get([SETTINGS_KEY, _TV_TIMER_KEY], (data) => {
+      StorageModule.get([SETTINGS_KEY, _TV_TIMER_KEY], (data) => {
         const settings = { tvEnableAutoPopup: true, ...(data[SETTINGS_KEY] || {}) };
         const tv       = { ..._TV_TIMER_DEFAULTS, ...(data[_TV_TIMER_KEY] || {}) };
         if (chkAutoPopup) chkAutoPopup.checked = settings.tvEnableAutoPopup ?? true;
@@ -450,10 +459,10 @@ export const TuVungModule = (() => {
         if (inpTimerMin)  inpTimerMin.value  = timerMinSec;
         if (inpTimerMax)  inpTimerMax.value  = timerMaxSec;
 
-        chrome.storage.local.get([SETTINGS_KEY], (data) => {
+        StorageModule.get([SETTINGS_KEY], (data) => {
           const settings = { ...(data[SETTINGS_KEY] || {}), tvEnableAutoPopup: chkAutoPopup?.checked ?? true };
-          chrome.storage.local.set({ [SETTINGS_KEY]: settings, [_TV_TIMER_KEY]: { autoCloseMs, timerMinSec, timerMaxSec } }, () => {
-            chrome.runtime.sendMessage({ action: 'tvTimerUpdated', enabled: chkAutoPopup?.checked ?? true });
+          StorageModule.set({ [SETTINGS_KEY]: settings, [_TV_TIMER_KEY]: { autoCloseMs, timerMinSec, timerMaxSec } }, () => {
+            if (IS_EXT) chrome.runtime.sendMessage({ action: 'tvTimerUpdated', enabled: chkAutoPopup?.checked ?? true });
             if (statusEl2) { statusEl2.textContent = '✓ Đã lưu'; statusEl2.style.opacity = '1'; setTimeout(() => statusEl2.style.opacity = '0', 1800); }
           });
         });
@@ -466,16 +475,45 @@ export const TuVungModule = (() => {
     });
 
     $('btnOpenForm').addEventListener('click', () => openModalForm(-1));
-    $('btnDemo').addEventListener('click', () => chrome.runtime.sendMessage({ action: 'showTuvungPopup' }));
+    $('btnDemo').addEventListener('click', async () => {
+      if (IS_EXT) { chrome.runtime.sendMessage({ action: 'showTuvungPopup' }); return; }
+      const entry = await getRandom();
+      if (!entry) { alert('Chưa có từ vựng nào (đang bật hiển thị).'); return; }
+      await _storageSet(PENDING_KEY, entry);
+      location.href = 'tuvung.html?mode=popup&source=manual';
+    });
     $('btnCancelDelete').addEventListener('click', closeConfirm);
-    $('btnPullServer').addEventListener('click', async () => { if(confirm('Ghi đè local bằng dữ liệu từ Server?')) { await pullFromServer(); loadData(); }});
+
+    const doPull = async () => {
+      if (!confirm('Ghi đè local bằng dữ liệu từ Server?')) return;
+      try { await pullFromServer(); loadData(); }
+      catch (err) { alert('Lỗi đồng bộ: ' + (err?.message || err)); }
+    };
+    $('btnPullServer').addEventListener('click', () => {
+      StorageModule.get([CACHE_PASS], (res) => {
+        const pass = res?.[CACHE_PASS] || '';
+        if (!pass) { PasswordModule.openPasswordPopup(() => doPull()); return; }
+        doPull();
+      });
+    });
     $('btnConfirmDelete').addEventListener('click', async () => { if(_delIdx >= 0) { await remove(_delIdx); closeConfirm(); loadData(); } });
 
     r.list.addEventListener('click', (e) => {
       const btnEdit = e.target.closest('.btn-icon-edit');
       const btnDel = e.target.closest('.btn-icon-delete');
-      if (btnEdit) openModalForm(_mgrWords.findIndex(x => String(x.id) === btnEdit.dataset.id));
-      else if (btnDel) openConfirm(_mgrWords.findIndex(x => String(x.id) === btnDel.dataset.id));
+      if (btnEdit) { openModalForm(_mgrWords.findIndex(x => String(x.id) === btnEdit.dataset.id)); return; }
+      if (btnDel) { openConfirm(_mgrWords.findIndex(x => String(x.id) === btnDel.dataset.id)); return; }
+      // Web: chạm thẻ để xem chi tiết (extension dùng double-click bên dưới)
+      if (!IS_EXT) {
+        const card = e.target.closest('.word-card');
+        if (!card) return;
+        const eb = card.querySelector('.btn-icon-edit');
+        const idx = eb ? _mgrWords.findIndex(x => String(x.id) === eb.dataset.id) : -1;
+        if (idx < 0) return;
+        _storageSet(PENDING_KEY, _mgrWords[idx]).then(() => {
+          location.href = 'tuvung.html?mode=popup&source=manual';
+        });
+      }
     });
 
     let searchTimeout;
@@ -500,6 +538,7 @@ export const TuVungModule = (() => {
     });
 
     r.list.addEventListener('dblclick', (e) => {
+      if (!IS_EXT) return;  // web đã mở chi tiết bằng click 1 lần ở trên
       const card = e.target.closest('.word-card');
       if (!card) return;
       if (e.target.closest('.btn-icon')) return;
@@ -526,7 +565,11 @@ export const TuVungModule = (() => {
 
       if (mode) {
         if (sectionStandalone) sectionStandalone.classList.remove('d-none');
-        const closeWin = () => window.close();
+        const closeWin = () => {
+          if (IS_EXT) { window.close(); return; }
+          if (history.length > 1) history.back();
+          else location.href = 'tuvung.html';
+        };
 
         if (mode === 'add-form') {
           const card = Object.assign(document.createElement('div'), { className: 'comp-card' });
