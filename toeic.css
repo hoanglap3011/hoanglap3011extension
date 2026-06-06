@@ -706,17 +706,20 @@ body.popup-mode { --bar: 52px; }
 
 body.popup-mode {
   background: var(--white);
-  height: 100vh;
+  height: 100vh;        /* fallback cho trình duyệt cũ */
+  height: 100dvh;       /* iOS Safari: trừ đúng thanh địa chỉ */
   overflow: hidden;
   margin: 0; padding: 0;
 }
 
 body.popup-mode .modal-card {
   position: fixed !important;
-  inset: 0 !important;
+  top: 0 !important; left: 0 !important; right: 0 !important;
+  bottom: auto !important;            /* bỏ neo bottom để height dvh quyết định */
   width: 100% !important;
   max-width: 100% !important;
   height: 100vh !important;
+  height: 100dvh !important;
   margin: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -747,15 +750,15 @@ body.popup-mode .detail-header {
   margin-bottom: 0;
 }
 
-/* Footer: absolute bottom, height = --bar */
+/* Footer: absolute bottom, height = --bar + vùng an toàn dưới (thanh home) */
 body.popup-mode .detail-actions {
   position: absolute;
   bottom: 0; left: 0; right: 0;
-  height: var(--bar);
+  height: calc(var(--bar) + env(safe-area-inset-bottom, 0px));
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  padding: 0 24px;
+  padding: 0 24px env(safe-area-inset-bottom, 0px);
   border-top: 1px solid #eaedf2;
   background: var(--white);
   gap: 10px;
@@ -766,7 +769,7 @@ body.popup-mode .detail-actions {
 body.popup-mode .popup-body {
   position: absolute;
   top: var(--bar);
-  bottom: var(--bar);
+  bottom: calc(var(--bar) + env(safe-area-inset-bottom, 0px));
   left: 0; right: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -839,8 +842,9 @@ body.popup-mode .detail-wrap--wide .popup-right::-webkit-scrollbar-thumb { backg
 }
 
 /* Popup mode: footer có cả 2 nút thì space-between */
-body.popup-mode .detail-actions:has(.btn-prev-random) {
-  justify-content: space-between;
+/* Popup mode: nút "Câu trước" tách sang trái, phần còn lại dồn sát phải */
+body.popup-mode .detail-actions .btn-prev-random {
+  margin-right: auto;
 }
 .lazy-sentinel {
   height: 1px;
@@ -916,4 +920,48 @@ body.popup-mode .detail-actions:has(.btn-prev-random) {
   padding: 3px 10px;
   min-width: 32px;
   text-align: center;
+}
+
+/* ══ MOBILE: header màn quản lý gọn lại ══════════════════════════
+   - Ẩn phụ đề "Question Bank"
+   - Tiêu đề 1 dòng (cắt gọn nếu hẹp), số câu 1 dòng
+   - Nút "Đồng bộ" / "Ôn tập ngẫu nhiên" → nút tròn chỉ-icon
+   ════════════════════════════════════════════════════════════════ */
+@media (max-width: 600px) {
+  .mgr-header { padding: 0 12px; }
+
+  .mgr-header-inner { gap: 10px; }
+
+  /* Logo chiếm phần còn lại và co được để nhường chỗ cho actions */
+  .mgr-logo { flex: 1; min-width: 0; gap: 10px; }
+  .mgr-logo > div { min-width: 0; }
+  .mgr-logo-icon { font-size: 24px; flex-shrink: 0; }
+  .mgr-title {
+    font-size: 18px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mgr-subtitle { display: none; }
+
+  /* Cụm nút không bao giờ bị nén/cắt */
+  .mgr-header-actions { gap: 8px; flex-shrink: 0; }
+  .mgr-count { flex-shrink: 0; white-space: nowrap; font-size: 11px; }
+
+  /* "Đồng bộ" + "Ôn tập ngẫu nhiên": ẩn chữ (font-size:0), giữ icon SVG */
+  .mgr-header-actions .btn-primary {
+    font-size: 0;
+    gap: 0;
+    padding: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+}
+
+/* Màn rất hẹp (≤360px): ẩn luôn số câu cho thoáng */
+@media (max-width: 360px) {
+  .mgr-count { display: none; }
 }

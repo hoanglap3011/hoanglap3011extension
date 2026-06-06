@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: 'Quản lý từ vựng',
             keywords: 'quan ly tuvung',
             action: async () => {
-                chrome.tabs.create({ url: chrome.runtime.getURL('tuvung.html') })
+                await chrome.tabs.create({ url: chrome.runtime.getURL('tuvung.html') });
             }
         },
         {
@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: 'Quản lý Toeic',
             keywords: 'quan ly toeic',
             action: async () => {
-                chrome.tabs.create({ url: chrome.runtime.getURL('toeic.html') })
+                await chrome.tabs.create({ url: chrome.runtime.getURL('toeic.html') })
             }
         },
         {
@@ -158,6 +158,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const commandList = document.getElementById('commandList');
     let filteredCommands = [...ALL_COMMANDS];
     let selectedIndex = 0;
+    let isExecuting = false;
+
 
     // --- 3. HÀM RENDER DANH SÁCH ---
     function renderList(commands) {
@@ -204,14 +206,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 5. HÀM THỰC THI LỆNH ---
-    async function executeCommand(command, event) {
-        if (command) {
-            await command.action(event);   // ← chờ action xong
-            if (!command.keepOpen) {
-                window.close();            // ← sau đó mới đóng
-            }
-        }
+async function executeCommand(command, event) {
+    if (!command || isExecuting) return;   // đã chạy rồi thì bỏ qua
+    isExecuting = true;
+    try {
+        await command.action(event);
+        if (!command.keepOpen) window.close();
+    } finally {
+        isExecuting = false;
     }
+}
 
     // --- 6. GÁN CÁC EVENT LISTENER ---
 
@@ -232,26 +236,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Xử lý phím (Mũi tên, Enter, Escape)
     searchInput.addEventListener('keydown', (e) => {
+        // Bỏ qua Enter phát sinh từ việc xác nhận bộ gõ tiếng Việt
+        if (e.isComposing || e.keyCode === 229) return;
+
         switch (e.key) {
             case 'ArrowDown':
-                e.preventDefault(); // Ngăn con trỏ di chuyển trong input
+                e.preventDefault();
                 selectedIndex = (selectedIndex + 1) % filteredCommands.length;
                 updateSelection();
                 break;
-
             case 'ArrowUp':
-                e.preventDefault(); // Ngăn con trỏ di chuyển trong input
+                e.preventDefault();
                 selectedIndex = (selectedIndex - 1 + filteredCommands.length) % filteredCommands.length;
                 updateSelection();
                 break;
-
             case 'Enter':
                 e.preventDefault();
                 executeCommand(filteredCommands[selectedIndex]);
                 break;
-
             case 'Escape':
-                window.close(); // Đóng popup nếu nhấn Escape
+                window.close();
                 break;
         }
     });

@@ -392,16 +392,19 @@
   }
 
   // Handle media item click (focus tab)
-  function handleMediaItemClick(e) {
-    if (e.target.closest('.control-btn, .volume-slider, .progress-bar')) return;
-    
-    const tabId = parseInt(this.dataset.tabId);
-    chrome.runtime.sendMessage({
-      action: 'focusTab',
-      tabId: tabId
-    });
-  }
+// Handle media item click (focus tab)
+function handleMediaItemClick(e) {
+  if (e.target.closest('.control-btn, .volume-slider, .progress-bar')) return;
 
+  const tabId = parseInt(this.dataset.tabId);
+  chrome.runtime.sendMessage({
+    action: 'focusTab',
+    tabId: tabId
+  }, () => {
+    // Đã focus xong → đóng Media Hub
+    window.close();
+  });
+}
   // Load media data from all tabs
   function loadMediaData() {
     console.log('[Media Hub] Loading media data...');

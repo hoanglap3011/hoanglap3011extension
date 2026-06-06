@@ -15,9 +15,12 @@ export const ToeicModule = (() => {
   const PAGE_SIZE      = 40;
   const TIMER_DEFAULTS = { autoCloseSec: 30, timerMinSec: 10, timerMaxSec: 60 };
 
-  // ── chrome.storage.local helpers (chỉ dùng cho settings nhỏ) ──
-  const _get = (key) => new Promise(res => chrome.storage.local.get([key], r => res(r[key] ?? null)));
-  const _set = (key, val) => new Promise(res => chrome.storage.local.set({ [key]: val }, res));
+  // ── Phát hiện môi trường: extension hay web thường ──
+  const IS_EXT = StorageModule.isExtensionEnv();
+
+  // ── Storage helpers (settings nhỏ) — đi qua StorageModule để chạy cả 2 môi trường ──
+  const _get = (key) => new Promise(res => StorageModule.get([key], r => res(r[key] ?? null)));
+  const _set = (key, val) => new Promise(res => StorageModule.set({ [key]: val }, res));
 
   // ── IndexedDB — lưu câu hỏi (không giới hạn quota) ────────────
   const DB_NAME    = 'toeic_db';
@@ -365,6 +368,12 @@ export const ToeicModule = (() => {
   const _initManager = () => {
     const $id = (id) => document.getElementById(id);
 
+    // Web thường: không có chrome.alarms / cửa sổ background → ẩn khối "Popup tự động".
+    // Vẫn giữ "Part của popup" vì getRandomFiltered dùng PARTS_KEY để lọc câu ngẫu nhiên.
+    if (!IS_EXT) {
+      $id('toeicEnableAutoPopup')?.closest('.form-group')?.classList.add('d-none');
+    }
+
     const listEl        = $id('questionList');
     const searchInput   = $id('searchInput');
     const emptyState    = $id('emptyState');
@@ -452,15 +461,19 @@ export const ToeicModule = (() => {
       mountDetail(modalCont, q, closeDetail);
     };
 
-    // ── Click câu → mở popup window (giống manual) ──
-    listEl.addEventListener('click', (e) => {
+    // ── Click câu → mở trang chi tiết ──
+    listEl.addEventListener('click', async (e) => {
       const row = e.target.closest('.question-row');
       if (!row) return;
       const q = _filtered[+row.dataset.idx];
       if (!q) return;
-      _set(PENDING_KEY, q).then(() =>
-        chrome.runtime.sendMessage({ action: 'showToeicPopupEntry' })
-      );
+      await _set(PENDING_KEY, q);
+      if (IS_EXT) {
+        chrome.runtime.sendMessage({ action: 'showToeicPopupEntry' });
+      } else {
+        // Web: điều hướng cùng tab tới trang chi tiết (không bị popup-blocker trên mobile)
+        location.href = 'toeic.html?mode=popup&source=entry';
+      }
     });
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDetail(); });
 
@@ -506,9 +519,18 @@ export const ToeicModule = (() => {
       });
     });
 
-    $id('btnRandom').addEventListener('click', () => {
+    $id('btnRandom').addEventListener('click', async () => {
       if (!_all.length) { alert('Chưa có dữ liệu. Hãy đồng bộ trước!'); return; }
-      chrome.runtime.sendMessage({ action: 'showToeicPopup' });
+      if (IS_EXT) {
+        chrome.runtime.sendMessage({ action: 'showToeicPopup' });
+        return;
+      }
+      // Web: bốc 1 câu ngẫu nhiên làm câu đầu, mở trang manual (có nút "Câu tiếp theo")
+      sessionReset();
+      const first = await getRandomFiltered();
+      if (!first) return;
+      await _set(PENDING_KEY, first);
+      location.href = 'toeic.html?mode=popup&source=manual';
     });
 
     // ── Settings ──
@@ -530,7 +552,7 @@ export const ToeicModule = (() => {
     };
 
     $id('btnSettings').addEventListener('click', () => {
-      chrome.storage.local.get([SETTINGS_KEY, TIMER_KEY, PARTS_KEY], (data) => {
+      StorageModule.get([SETTINGS_KEY, TIMER_KEY, PARTS_KEY], (data) => {
         const s       = data[SETTINGS_KEY] || {};
         const tv      = { ...TIMER_DEFAULTS, ...(data[TIMER_KEY] || {}) };
         const enabled = s.toeicEnableAutoPopup ?? false;
@@ -562,15 +584,15 @@ export const ToeicModule = (() => {
         const timerMaxSec  = Math.max(timerMinSec, parseInt(ix?.value) || TIMER_DEFAULTS.timerMaxSec);
         const selParts     = [...document.querySelectorAll('#settingsPartFilter .chip--active')]
                                .map(c => c.dataset.part).filter(Boolean);
-        chrome.storage.local.get([SETTINGS_KEY], (data) => {
-          chrome.storage.local.set({
+        StorageModule.get([SETTINGS_KEY], (data) => {
+          StorageModule.set({
             [SETTINGS_KEY]: { ...(data[SETTINGS_KEY] || {}), toeicEnableAutoPopup: chk?.checked ?? false },
             [TIMER_KEY]:    { autoCloseSec, timerMinSec, timerMaxSec },
             [PARTS_KEY]:    selParts,
           }, () => {
             const st = $id('settingsStatus');
             if (st) { st.textContent = '✓ Đã lưu'; st.style.opacity = '1'; setTimeout(() => st.style.opacity = '0', 1800); }
-            chrome.runtime.sendMessage({ action: 'toeicTimerUpdated', enabled: chk?.checked ?? false });
+            if (IS_EXT) chrome.runtime.sendMessage({ action: 'toeicTimerUpdated', enabled: chk?.checked ?? false });
           });
         });
       }, 500);
@@ -631,7 +653,12 @@ export const ToeicModule = (() => {
         },
       } : null;
 
-      mountDetail(card, question, () => window.close(), true, nav);
+      mountDetail(card, question, () => {
+        if (IS_EXT) { window.close(); return; }
+        // Web: quay lại danh sách (nút Back tự nhiên trên mobile)
+        if (history.length > 1) history.back();
+        else location.href = 'toeic.html';
+      }, true, nav);
     };
 
     renderCurrent();
