@@ -8,7 +8,37 @@ const DEFAULT_SETTINGS = {
 
 // ── Helper dùng chung ────────────────────────────────────────────
 
-// Mở popup window căn giữa màn hình tham chiếu
+// Theo dõi cửa sổ popup đang mở (lưu winId vào storage để sống sót qua các lần
+// service worker bị Chrome ngủ/đánh thức — không thể dựa vào biến trong RAM).
+const _POPUP_WIN_KEY = (key) => `popup_win_${key}`;
+
+async function _setPopupWin(key, winId)  { await chrome.storage.local.set({ [_POPUP_WIN_KEY(key)]: winId }); }
+async function _clearPopupWin(key)       { await chrome.storage.local.remove(_POPUP_WIN_KEY(key)); }
+
+// Popup của feature `key` có đang mở không? Xác minh thật bằng chrome.windows.get
+async function _hasOpenPopup(key) {
+    const data  = await chrome.storage.local.get([_POPUP_WIN_KEY(key)]);
+    const winId = data[_POPUP_WIN_KEY(key)];
+    if (winId == null) return false;
+    try {
+        await chrome.windows.get(winId);   // còn tồn tại → đang mở
+        return true;
+    } catch {
+        await _clearPopupWin(key);          // id cũ đã đóng → dọn rác
+        return false;
+    }
+}
+
+// Chỉ đặt alarm nếu chưa có (tránh tạo alarm thừa mỗi lần SW thức dậy).
+// Trả về true nếu alarm đã tồn tại sẵn.
+async function _ensureAlarm(alarmName, scheduleFn) {
+    const existing = await chrome.alarms.get(alarmName);
+    if (!existing) scheduleFn();
+    return !!existing;
+}
+
+// Mở popup window căn giữa màn hình tham chiếu.
+// opts.popupKey: nếu có, lưu winId để chống mở popup chồng nhau.
 function _openPopupWindow(url, opts = {}) {
     return new Promise((resolve) => {
         chrome.windows.getAll({ windowTypes: ['normal'] }, (windows) => {
@@ -22,7 +52,13 @@ function _openPopupWindow(url, opts = {}) {
             const left = (ref.left || 0) + Math.round((screenW - w) / 2);
             const top  = opts.fullHeight ? (ref.top || 0) : ((ref.top || 0) + Math.round((screenH - h) / 2));
             chrome.windows.create({ url, type: 'popup', width: w, height: h, left, top },
-                (win) => resolve(win?.id ?? null));
+                (win) => {
+                    const id = win?.id ?? null;
+                    if (id != null && opts.popupKey) {
+                        chrome.storage.local.set({ [_POPUP_WIN_KEY(opts.popupKey)]: id });
+                    }
+                    resolve(id);
+                });
         });
     });
 }
@@ -55,7 +91,8 @@ async function showTuvungPopup(source = 'auto') {
     if (!list.length) { console.log('⚠️ [TV] Chưa có từ vựng.'); return null; }
     const entry = list[Math.floor(Math.random() * list.length)];
     await chrome.storage.local.set({ [TV_PENDING_KEY]: entry });
-    return _openPopupWindow(chrome.runtime.getURL(`tuvung.html?mode=popup&source=${source}`));
+    return _openPopupWindow(chrome.runtime.getURL(`tuvung.html?mode=popup&source=${source}`),
+        { popupKey: 'tv' });
 }
 
 const scheduleTvAlarm    = () => _scheduleAlarm(TV_ALARM_NAME, TV_TIMER_KEY, TV_TIMER_DEFS);
@@ -109,17 +146,23 @@ async function showToeicPopup(source = 'auto') {
     await chrome.storage.local.set({ [TOEIC_PENDING_KEY]: q });
 
     return _openPopupWindow(chrome.runtime.getURL(`toeic.html?mode=popup&source=${source}`),
-        { fullHeight: true }); // TOEIC dùng full height
+        { fullHeight: true, popupKey: 'toeic' }); // TOEIC dùng full height
 }
 
 const scheduleToeicAlarm = () => _scheduleAlarm(TOEIC_ALARM_NAME, TOEIC_TIMER_KEY, TOEIC_TIMER_DEFS);
 const _isToeicEnabled    = () => _isEnabled('toeicEnableAutoPopup');
 
 // ── Khởi động ─────────────────────────────────────────────────────
-chrome.storage.local.get(SETTINGS_KEY, (data) => {
+chrome.storage.local.get(SETTINGS_KEY, async (data) => {
     const settings = { ...DEFAULT_SETTINGS, ...(data[SETTINGS_KEY] || {}) };
-    if (settings.tvEnableAutoPopup)    { scheduleTvAlarm();    console.log('🚀 [Background] Đã bật timer Từ Vựng.'); }
-    if (settings.toeicEnableAutoPopup) { scheduleToeicAlarm(); console.log('🚀 [Background] Đã bật timer TOEIC.'); }
+    if (settings.tvEnableAutoPopup) {
+        const had = await _ensureAlarm(TV_ALARM_NAME, scheduleTvAlarm);
+        console.log(had ? '♻️ [Background] Timer Từ Vựng đã có sẵn.' : '🚀 [Background] Đã bật timer Từ Vựng.');
+    }
+    if (settings.toeicEnableAutoPopup) {
+        const had = await _ensureAlarm(TOEIC_ALARM_NAME, scheduleToeicAlarm);
+        console.log(had ? '♻️ [Background] Timer TOEIC đã có sẵn.' : '🚀 [Background] Đã bật timer TOEIC.');
+    }
 });
 
 // ── Lắng nghe thay đổi settings ──────────────────────────────────
@@ -138,14 +181,24 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 });
 
 // ── Alarm listener ────────────────────────────────────────────────
-// Xử lý alarm chung: show popup → chờ đóng → schedule tiếp
-async function _handleAlarm(isEnabledFn, showFn, scheduleFn, tag) {
+// Xử lý alarm chung: nếu popup cũ còn mở thì bỏ qua (hẹn lại); ngược lại
+// show popup → chờ đóng → schedule tiếp (đếm khoảng cách TỪ LÚC ĐÓNG).
+async function _handleAlarm(isEnabledFn, showFn, scheduleFn, popupKey) {
     if (!(await isEnabledFn())) return;
-    const winId = await showFn();
+
+    // Popup trước còn mở → không mở chồng, chỉ hẹn lại lần sau
+    if (await _hasOpenPopup(popupKey)) {
+        console.log(`⏭ [${popupKey}] Popup cũ còn mở, bỏ qua lần này.`);
+        if (await isEnabledFn()) scheduleFn();
+        return;
+    }
+
+    const winId = await showFn();   // showFn đã tự lưu winId qua popupKey
     if (winId) {
         const onRemoved = async (id) => {
             if (id !== winId) return;
             chrome.windows.onRemoved.removeListener(onRemoved);
+            await _clearPopupWin(popupKey);
             if (await isEnabledFn()) scheduleFn();
         };
         chrome.windows.onRemoved.addListener(onRemoved);
@@ -223,7 +276,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     if (request.action === "showTuvungPopupEntry") {
         // Pending đã được set từ tuvung.js; chỉ cần mở cửa sổ
-        _openPopupWindow(chrome.runtime.getURL('tuvung.html?mode=popup&source=manual'))
+        _openPopupWindow(chrome.runtime.getURL('tuvung.html?mode=popup&source=manual'), { popupKey: 'tv' })
             .then(() => sendResponse({ ok: true }));
         return true;
     }
@@ -237,7 +290,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     if (request.action === "showToeicPopupEntry") {
         // Pending đã được set từ toeic.js; chỉ cần mở cửa sổ
-        _openPopupWindow(chrome.runtime.getURL('toeic.html?mode=popup&source=entry'), { fullHeight: true })
+        _openPopupWindow(chrome.runtime.getURL('toeic.html?mode=popup&source=entry'), { fullHeight: true, popupKey: 'toeic' })
             .then(() => sendResponse({ ok: true }));
         return true;
     }
