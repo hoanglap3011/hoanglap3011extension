@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neo — cấu hình</title>
+  <link rel="stylesheet" href="neo_anchor.css" />
+  <style>
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .num { display: flex; align-items: center; gap: 8px; }
+    .num input { width: 90px; }
+    input[type="number"] {
+      background: var(--ink); border: 1px solid var(--line); border-radius: 7px;
+      color: var(--paper); padding: 10px 12px; font: inherit;
+    }
+    input[type="number"]:focus { outline: 2px solid var(--amber); outline-offset: 1px; border-color: transparent; }
+    .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .check { display: flex; align-items: center; gap: 9px; background: var(--ink);
+      border: 1px solid var(--line); border-radius: 7px; padding: 10px 12px; cursor: pointer; }
+    .check input { accent-color: var(--amber); width: 15px; height: 15px; }
+    .section-title { font-size: 13px; letter-spacing: .14em; text-transform: uppercase;
+      color: var(--amber); margin: 34px 0 14px; }
+    .section-title:first-of-type { margin-top: 0; }
+    #saveBar { position: sticky; bottom: 0; padding: 14px 0 4px; background: var(--ink); }
+    #savedMsg { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 8px; min-height: 1em; }
+    .ghost.small { width: auto; padding: 9px 14px; font-size: 13px; margin-top: 10px; }
+    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .switch-row > div { flex: 1; }
+    .switch-name { display: block; font-size: 14px; color: var(--paper); }
+    .switch-desc { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; }
+    .switch { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; inset: 0; background: var(--line); border-radius: 20px; transition: .2s; }
+    .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px;
+      background: white; border-radius: 50%; transition: .2s; }
+    .switch input:checked + .slider { background: var(--amber); }
+    .switch input:checked + .slider:before { transform: translateX(18px); }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="masthead">
+      <div class="eyebrow">NEO · CẤU HÌNH</div>
+      <h1>Tinh chỉnh lời nhắc của bạn</h1>
+    </header>
+
+    <section class="card">
+      <div class="section-title">Câu nhắc</div>
+
+      <label class="field">
+        <span class="label">Câu nhắc trên cửa sổ nổi (mỗi dòng một câu)</span>
+        <textarea id="asksPip" rows="5" spellcheck="false"></textarea>
+      </label>
+
+      <div class="section-title">Tự làm mới (chống "mù banner")</div>
+
+      <div class="field">
+        <span class="label">Chu kỳ đổi diện mạo — ngẫu nhiên trong khoảng (phút)</span>
+        <div class="grid2">
+          <div class="num"><span>Từ</span><input id="refreshMin" type="number" min="0.17" step="any" /></div>
+          <div class="num"><span>Đến</span><input id="refreshMax" type="number" min="0.17" step="any" /></div>
+        </div>
+        <span class="hint">Quá dày sẽ biến lời nhắc thành nguồn xao nhãng mới. 3–7 phút là điểm khởi đầu tốt. Tối thiểu 0.17 phút (~10 giây) — mức này chỉ nên dùng khi test.</span>
+      </div>
+
+
+      <div class="field switch-row">
+        <div>
+          <span class="switch-name">Xoay vòng bảng màu</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="themesOn" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="field switch-row">
+        <div>
+          <span class="switch-name">Gây chú ý mạnh</span>
+          <span class="switch-desc">Khi làm mới: nháy đỏ–vàng và hiện giữa màn hình</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="alertOn" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="field switch-row">
+        <div>
+          <span class="switch-name">Hiển thị lời nhắc phản tư</span>
+          <span class="switch-desc">Câu hỏi xoay vòng ở góc phải cửa sổ nổi</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="askOn" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+
+      <div class="section-title">Phiên làm việc</div>
+
+      <label class="field">
+        <span class="label">Thời lượng mặc định (phút)</span>
+        <input id="durationMin" type="number" min="5" max="240" step="5" />
+      </label>
+
+      <div id="saveBar">
+        <button id="saveBtn" class="primary">Lưu cấu hình</button>
+        <div id="savedMsg"></div>
+      </div>
+      <button id="resetBtn" class="ghost small">Khôi phục mặc định</button>
+    </section>
+  </main>
+
+  <script src="neo_shared.js"></script>
+  <script src="neo_options.js"></script>
+</body>
+</html>

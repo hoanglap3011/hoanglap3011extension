@@ -150,7 +150,37 @@ document.addEventListener('DOMContentLoaded', () => {
             action: async () => {
                 chrome.runtime.sendMessage({ action: 'showToeicPopup' });
             }
-        },    
+        },
+        {
+            id: 'open_neo',
+            name: 'Neo — màn hình tập trung',
+            keywords: 'neo tap trung focus phien lam viec pip noi',
+            action: async () => {
+                const url = chrome.runtime.getURL('neo_anchor.html');
+                const tabs = await chrome.tabs.query({ url });
+                if (tabs.length) {
+                    await chrome.tabs.update(tabs[0].id, { active: true });
+                    chrome.windows.update(tabs[0].windowId, { focused: true });
+                } else {
+                    chrome.tabs.create({ url, pinned: true });
+                }
+            }
+        },
+        {
+            id: 'open_standup',
+            name: 'Standup — nhắc nhở đứng dậy',
+            keywords: 'standup dung day di chuyen ngoi lau nhac nho suc khoe',
+            action: async () => {
+                const url = chrome.runtime.getURL('standup.html');
+                const tabs = await chrome.tabs.query({ url });
+                if (tabs.length) {
+                    await chrome.tabs.update(tabs[0].id, { active: true });
+                    chrome.windows.update(tabs[0].windowId, { focused: true });
+                } else {
+                    chrome.tabs.create({ url, pinned: true });
+                }
+            }
+        },
     ];
 
     // --- 2. CACHE DOM VÀ TRẠNG THÁI ---

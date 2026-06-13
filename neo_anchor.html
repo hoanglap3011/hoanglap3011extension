@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neo — phiên tập trung</title>
+  <link rel="stylesheet" href="neo_anchor.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="masthead">
+      <div class="eyebrow">NEO · TAB GHIM — ĐỪNG ĐÓNG TAB NÀY KHI ĐANG TRONG PHIÊN</div>
+      <h1>Một phiên. Một việc.</h1>
+    </header>
+
+    <section id="setup" class="card" hidden>
+      <label class="field">
+        <span class="label">Việc chính của phiên này</span>
+        <input id="goalInput" type="text" placeholder="vd: Hoàn thành chức năng đăng nhập (việc A)" autocomplete="off" />
+        <span class="hint">Viết bằng lời của bạn — lời nhắc do chính mình viết có sức nặng hơn.</span>
+      </label>
+
+      <label class="field">
+        <span class="label">Thời lượng</span>
+        <div class="durations" id="durations">
+          <button type="button" data-min="25">25 phút</button>
+          <button type="button" data-min="50" class="on">50 phút</button>
+          <button type="button" data-min="90">90 phút</button>
+        </div>
+        <div class="custom-time">
+          <input id="customMin" type="number" min="1" max="480" placeholder="Tùy chỉnh (phút)" />
+        </div>
+      </label>
+
+      <button id="startBtn" class="primary">Bắt đầu phiên &amp; mở cửa sổ nổi</button>
+      <p class="hint center">Cửa sổ nổi sẽ nằm trên mọi ứng dụng — kể cả VS Code, IntelliJ.</p>
+      <p class="hint center"><a id="optionsLink" href="neo_options.html">⚙ Cấu hình: câu nhắc, chu kỳ làm mới, trang la cà...</a></p>
+    </section>
+
+    <section id="running" class="card" hidden>
+      <div class="eyebrow">ĐANG TẬP TRUNG</div>
+      <p id="goalShow" class="goal"></p>
+      <div id="clock" class="clock">--:--</div>
+      <div class="tide"><div id="tideFill" class="tide-fill"></div></div>
+      <div class="row">
+        <button id="reopenPip" class="primary">Mở lại cửa sổ nổi</button>
+        <button id="stopBtn" class="ghost">Kết thúc phiên</button>
+      </div>
+      <p class="hint center">Cửa sổ nổi đã tự ẩn tab này — vào đây khi cần dừng phiên.</p>
+    </section>
+
+    <section id="pipUnsupported" class="card warn" hidden>
+      Trình duyệt này chưa hỗ trợ Document Picture-in-Picture (cần Chrome/Edge bản mới trên desktop).
+      Thanh nhắc trên các trang web vẫn hoạt động bình thường.
+    </section>
+  </main>
+
+  <script src="neo_shared.js"></script>
+  <script src="neo_anchor.js"></script>
+</body>
+</html>

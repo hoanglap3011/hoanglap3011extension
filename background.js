@@ -157,6 +157,37 @@ async function _handleAlarm(isEnabledFn, showFn, scheduleFn, tag) {
 chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === TV_ALARM_NAME)    _handleAlarm(_isTvEnabled,    showTuvungPopup, scheduleTvAlarm,    'TV');
     if (alarm.name === TOEIC_ALARM_NAME) _handleAlarm(_isToeicEnabled, showToeicPopup,  scheduleToeicAlarm, 'TOEIC');
+    if (alarm.name === 'standup-sitting') handleStandupAlarm();
+});
+
+async function handleStandupAlarm() {
+    console.log('[Standup] alarm fired at', new Date().toLocaleTimeString());
+    chrome.notifications.create('standup-alert', {
+        type: 'basic',
+        iconUrl: 'image/icon.png',
+        title: 'Đứng dậy đi!',
+        message: 'Bạn đã ngồi quá lâu rồi. Di chuyển một chút nhé.',
+        priority: 2,
+        requireInteraction: true,
+    });
+    // Báo cho standup tab cập nhật UI
+    const { standupTabId } = await chrome.storage.local.get('standupTabId');
+    if (standupTabId) {
+        chrome.tabs.sendMessage(standupTabId, { type: 'standup-alert' }).catch(() => {});
+    }
+}
+
+chrome.notifications.onClicked.addListener(async (id) => {
+    if (id !== 'standup-alert') return;
+    chrome.notifications.clear('standup-alert');
+    const { standupTabId } = await chrome.storage.local.get('standupTabId');
+    if (standupTabId) {
+        const tab = await chrome.tabs.get(standupTabId).catch(() => null);
+        if (tab) {
+            chrome.windows.update(tab.windowId, { focused: true });
+            chrome.tabs.update(standupTabId, { active: true });
+        }
+    }
 });
 
 let cachedTokens = { at: null, bl: null, timestamp: 0 };
