@@ -1,5 +1,16 @@
 import { initSCChecker } from './selfcontrol_bg.js';
 
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.storage.local.remove([
+    'neoTasks', 'neoPhase', 'neoCurrentTask',
+    'neoWorkEndsAt', 'neoBreakEndsAt', 'neoAnchorTabId', 'neoPipWindowId',
+    'neoShutdownTime',
+  ]);
+  chrome.alarms.clear('neo-work-end');
+  chrome.alarms.clear('neo-break-end');
+  chrome.storage.sync.clear();
+});
+
 const SETTINGS_KEY = 'LapsExtensionSettings';
 const DEFAULT_SETTINGS = {
   tvEnableAutoPopup: true,
@@ -211,7 +222,16 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === TV_ALARM_NAME)    _handleAlarm(_isTvEnabled,    showTuvungPopup, scheduleTvAlarm,    'TV');
     if (alarm.name === TOEIC_ALARM_NAME) _handleAlarm(_isToeicEnabled, showToeicPopup,  scheduleToeicAlarm, 'TOEIC');
     if (alarm.name === 'standup-sitting') handleStandupAlarm();
+    if (alarm.name === 'neo-work-end')  handleNeoAlarm('neo-work-end');
+    if (alarm.name === 'neo-break-end') handleNeoAlarm('neo-break-end');
 });
+
+async function handleNeoAlarm(type) {
+    const { neoAnchorTabId } = await chrome.storage.local.get('neoAnchorTabId');
+    if (neoAnchorTabId) {
+        chrome.tabs.sendMessage(neoAnchorTabId, { type }).catch(() => {});
+    }
+}
 
 async function handleStandupAlarm() {
     console.log('[Standup] alarm fired at', new Date().toLocaleTimeString());
@@ -230,17 +250,45 @@ async function handleStandupAlarm() {
     }
 }
 
-chrome.notifications.onClicked.addListener(async (id) => {
-    if (id !== 'standup-alert') return;
-    chrome.notifications.clear('standup-alert');
+async function openOrFocusStandupTab() {
     const { standupTabId } = await chrome.storage.local.get('standupTabId');
+    let opened = false;
     if (standupTabId) {
         const tab = await chrome.tabs.get(standupTabId).catch(() => null);
         if (tab) {
             chrome.windows.update(tab.windowId, { focused: true });
             chrome.tabs.update(standupTabId, { active: true });
+            opened = true;
         }
     }
+    if (!opened) {
+        const tab = await chrome.tabs.create({ url: chrome.runtime.getURL('standup.html') });
+        chrome.storage.local.set({ standupTabId: tab.id });
+    }
+}
+
+chrome.notifications.onClicked.addListener(async (id) => {
+    if (id === 'standup-alert') {
+        chrome.notifications.clear('standup-alert');
+        openOrFocusStandupTab();
+        return;
+    }
+    if (id === 'neo-work-done' || id === 'neo-break-done') {
+        chrome.notifications.clear(id);
+        const data = await chrome.storage.local.get('neoAnchorTabId');
+        const tabId = data.neoAnchorTabId;
+        if (!tabId) return;
+        const tab = await chrome.tabs.get(tabId).catch(() => null);
+        if (tab) {
+            chrome.windows.update(tab.windowId, { focused: true });
+            chrome.tabs.update(tabId, { active: true });
+        }
+    }
+});
+
+chrome.notifications.onClosed.addListener((id, byUser) => {
+    if (id !== 'standup-alert' || !byUser) return;
+    openOrFocusStandupTab();
 });
 
 let cachedTokens = { at: null, bl: null, timestamp: 0 };
@@ -265,6 +313,14 @@ chrome.commands.onCommand.addListener((command) => {
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+
+    if (request.type === 'neo-notify') {
+        chrome.notifications.create(request.id, {
+            type: 'basic', iconUrl: 'image/icon.png',
+            title: request.title, message: request.message, priority: 2,
+        });
+        return;
+    }
 
     // ── Popup bất kỳ từ Hub (tránh gọi chrome.windows từ hub context) ──
     if (request.action === "showTuvungPopup") {

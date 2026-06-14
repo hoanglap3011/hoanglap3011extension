@@ -15,6 +15,7 @@ init();
 async function init() {
   const data = await chrome.storage.local.get('standupCfg');
   cfg = { maxSec: 2700, ...data.standupCfg };
+  if (cfg.maxSec < 60) { cfg.maxSec = 2700; await saveCfg(); }
   $('maxSec').value = cfg.maxSec;
   updateHint();
 

@@ -1,9 +1,6 @@
 // shared.js — dùng chung cho anchor/popup/options (content script tự chứa)
 
 const DEFAULTS = {
-  // Đồng bộ qua tài khoản Google (chrome.storage.sync)
-  goal: "",
-  durationMin: 50,
   // Câu nhắc trên cửa sổ nổi PiP
   asksPip: [
     "Mình đang làm đúng việc này chứ?",
@@ -18,6 +15,9 @@ const DEFAULTS = {
     "Cái khó nhất của việc này là gì — mình đang làm nó chưa?",
   ],
 
+  // Thời gian làm mặc định (phút)
+  defaultWorkMin: 5,
+
   // Chu kỳ tự làm mới (phút) — ngẫu nhiên trong khoảng [min, max]
   refreshMin: 3,
   refreshMax: 7,
@@ -25,8 +25,8 @@ const DEFAULTS = {
   // Có xoay vòng bảng màu không
   themesOn: true,
 
-  // Hiệu ứng nháy mạnh khi làm mới
-  alertOn: true,
+  // Thời lượng nháy mạnh (giây); null = không nháy
+  alertDuration: null,
 
   // Hiển thị lời nhắc phản tư trong cửa sổ nổi
   askOn: true,
@@ -36,15 +36,6 @@ const DEFAULTS = {
 async function getSync() {
   const data = await chrome.storage.sync.get(null);
   return { ...DEFAULTS, ...data };
-}
-
-async function getSession() {
-  const { session } = await chrome.storage.sync.get("session");
-  return session || null;
-}
-
-async function setSession(session) {
-  await chrome.storage.sync.set({ session });
 }
 
 function fmtRemaining(ms) {
