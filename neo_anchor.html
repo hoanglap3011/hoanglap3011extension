@@ -18,6 +18,10 @@
           <div class="neo-subtitle" id="statusLabel">· Chờ bắt đầu</div>
         </div>
       </div>
+      <div class="neo-header-center">
+        <span class="neo-header-center-label">Kết thúc lúc</span>
+        <input type="time" id="shutdownTime" value="22:00" class="shutdown-input shutdown-input-header" />
+      </div>
       <div class="neo-header-actions" id="topControls">
         <button class="btn-ghost-neo" id="pipToggleBtn" style="display:none">Mở PiP</button>
         <button class="btn-primary-neo" id="startBtn">Bắt đầu</button>
@@ -41,25 +45,94 @@
     ⚡ Hết task rồi! Thêm task mới bên dưới rồi nhấn <strong>Tiếp tục</strong> để tiếp tục phiên làm việc.
   </div>
 
+  <!-- Toast notification -->
+  <div id="neoToast" class="neo-toast" aria-live="polite"></div>
+
   <!-- Main content -->
   <main class="neo-main">
     <div class="neo-columns">
 
-      <!-- LEFT: shutdown time + add task -->
-      <div class="neo-card">
+      <!-- LEFT column -->
+      <div class="neo-left-col">
 
-        <div class="neo-section-title">Thời gian kết thúc</div>
-        <div style="margin-bottom:24px">
-          <input type="time" id="shutdownTime" value="22:00" class="shutdown-input" />
+        <!-- Standup reminder -->
+        <div class="neo-card standup-card">
+          <div class="neo-section-title">Nhắc nhở đứng dậy</div>
+          <div id="standupIdleRow" class="standup-row">
+            <input type="number" id="standupMin" class="standup-min-input" min="1" max="120" step="5" value="45" />
+            <span class="standup-unit">phút</span>
+            <button type="button" id="standupStartBtn" class="btn-standup-primary">▶ Bắt đầu</button>
+          </div>
+          <div id="standupTrackRow" class="standup-row" style="display:none">
+            <span class="standup-clock" id="standupClock">--:--</span>
+            <button type="button" id="standupStopBtn" class="btn-standup-ghost">■ Dừng</button>
+          </div>
+          <div id="standupAlertRow" class="standup-alert-row" style="display:none">
+            <span class="standup-alert-msg">🔔 Đứng dậy đi!</span>
+            <div class="standup-checkin-row">
+              <input type="text" id="standupCheckinInput" class="standup-checkin-input" placeholder="gõ 'đã đứng dậy'" autocomplete="off" spellcheck="false" />
+              <button type="button" id="standupStopAlertBtn" class="btn-standup-ghost">■ Dừng</button>
+            </div>
+          </div>
         </div>
 
-        <div class="add-task-area">
-          <div class="neo-section-title" style="margin-bottom:10px">Thêm task</div>
+        <!-- Music Working -->
+        <div class="neo-card music-card">
+          <div class="neo-section-title">Music Working</div>
+
+          <div id="musicAction">
+            <button type="button" id="musicPickBtn" class="btn-ghost-neo" style="width:100%">Chọn thư mục nhạc</button>
+            <button type="button" id="musicPermBtn" class="btn-ghost-neo" style="width:100%;display:none">Cho phép truy cập thư mục</button>
+            <div id="musicEmptyMsg" class="music-empty" style="display:none">Không có file .mp3 nào trong thư mục.</div>
+          </div>
+
+          <div id="musicPlayerUI" style="display:none">
+            <div id="musicTrackName" class="music-track-name">—</div>
+            <div class="music-progress-wrap">
+              <div class="music-progress-bar" id="musicProgressBar">
+                <div class="music-progress-fill" id="musicProgressFill"></div>
+              </div>
+              <div class="music-time-row">
+                <span id="musicCurTime">0:00</span>
+                <span id="musicDurTime">0:00</span>
+              </div>
+            </div>
+            <div class="music-controls">
+              <button type="button" id="musicPrev" class="music-ctrl-btn" title="Bài trước">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+              </button>
+              <button type="button" id="musicPlayPause" class="music-ctrl-btn music-ctrl-main" title="Play / Pause (Space)">
+                <svg id="iconPlay"  viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <svg id="iconPause" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style="display:none"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg>
+              </button>
+              <button type="button" id="musicNext" class="music-ctrl-btn" title="Bài tiếp">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6z"/></svg>
+              </button>
+              <button type="button" id="musicRepeat" class="music-ctrl-btn music-ctrl-repeat" title="Lặp lại">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+              </button>
+              <div class="music-vol-wrap">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" class="music-vol-icon"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+                <input type="range" id="musicVolume" class="music-vol-slider" min="0" max="100" value="80" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /neo-left-col -->
+
+      <!-- RIGHT column -->
+      <div class="neo-right-col">
+
+        <!-- Add task card -->
+        <div class="neo-card add-task-card">
+          <div class="neo-section-title">Thêm task</div>
+          <form id="addTaskForm">
           <div class="preset-row" id="presetRow">
-            <button class="preset-btn" data-work="5" data-break="0.5">5&#x2032; &ndash; 30&#x2033;</button>
-            <button class="preset-btn" data-work="25" data-break="5">25&#x2032; &ndash; 5&#x2032;</button>
-            <button class="preset-btn" data-work="52" data-break="17">52&#x2032; &ndash; 17&#x2032;</button>
-            <button class="preset-btn" data-work="90" data-break="20">90&#x2032; &ndash; 20&#x2032;</button>
+            <button type="button" class="preset-btn" data-work="5" data-break="0.5">5&#x2032; &ndash; 30&#x2033;</button>
+            <button type="button" class="preset-btn" data-work="25" data-break="5">25&#x2032; &ndash; 5&#x2032;</button>
+            <button type="button" class="preset-btn" data-work="52" data-break="17">52&#x2032; &ndash; 17&#x2032;</button>
+            <button type="button" class="preset-btn" data-work="90" data-break="20">90&#x2032; &ndash; 20&#x2032;</button>
             <div class="custom-row" id="customRow">
               <input id="customWork" type="number" min="1" max="480" placeholder="Phút" />
               <span class="break-hint" id="breakHint"></span>
@@ -67,33 +140,34 @@
           </div>
           <div class="name-row">
             <input id="taskNameInput" type="text" placeholder="Tên task" autocomplete="off" />
-            <button class="btn-primary-neo" id="addTaskBtn">Thêm</button>
+            <button type="submit" class="btn-primary-neo" id="addTaskBtn">Thêm</button>
+          </div>
+          </form>
+        </div>
+
+        <!-- Task list card -->
+        <div class="neo-card task-list-card">
+          <div class="neo-section-title">Danh sách task</div>
+          <div class="task-table-wrap">
+            <table class="task-table" id="taskTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Task</th>
+                  <th>Pha</th>
+                  <th>Thời gian</th>
+                  <th>Trạng thái</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="taskBody">
+                <tr id="taskEmpty"><td colspan="6" class="task-empty">Chưa có task nào. Thêm ở trên.</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-      </div>
-
-      <!-- RIGHT: task list -->
-      <div class="neo-card">
-        <div class="neo-section-title">Danh sách công việc</div>
-        <div class="task-table-wrap">
-          <table class="task-table" id="taskTable">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Task</th>
-                <th>Pha</th>
-                <th>Thời gian</th>
-                <th>Trạng thái</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="taskBody">
-              <tr id="taskEmpty"><td colspan="6" class="task-empty">Chưa có task nào. Thêm bên trái.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      </div><!-- /neo-right-col -->
 
     </div>
   </main>
@@ -114,7 +188,7 @@
       <div class="neo-modal-body">
 
         <div class="settings-group">
-          <div class="settings-group-label">Thời gian mặc định</div>
+          <div class="settings-group-label">Thời gian task mặc định</div>
           <div class="num">
             <input id="defaultWorkMin" type="number" min="1" max="480" placeholder="—" />
             <span>phút làm (để trống = không đặt)</span>
@@ -122,32 +196,38 @@
         </div>
 
         <div class="settings-group">
-          <div class="settings-group-label">Câu nhắc phản tư</div>
-          <textarea id="asksPip" rows="5" spellcheck="false"></textarea>
-        </div>
-
-        <div class="settings-group">
-          <div class="settings-group-label">Tự làm mới (phút)</div>
-          <div class="grid2">
-            <div class="num"><span>Từ</span><input id="refreshMin" type="number" min="0.17" step="any" /></div>
-            <div class="num"><span>Đến</span><input id="refreshMax" type="number" min="0.17" step="any" /></div>
-          </div>
-        </div>
-
-        <div class="settings-group">
-          <div class="switch-row">
-            <span class="switch-name">Xoay vòng bảng màu</span>
-            <label class="switch"><input type="checkbox" id="themesOn" /><span class="slider"></span></label>
-          </div>
-          <div class="switch-row">
-            <span class="switch-name">Gây chú ý mạnh (giây)</span>
-            <div class="num" style="flex-shrink:0">
-              <input id="alertDuration" type="number" min="1" max="60" placeholder="—" style="width:72px" />
+          <div class="settings-group-label">Tự làm mới PiP</div>
+          <div class="range-slider-wrap">
+            <div class="range-slider-track" id="refreshTrack">
+              <div class="range-slider-fill" id="refreshFill"></div>
+              <input type="range" id="refreshMin" class="range-input range-input-min"
+                min="10" max="600" step="5" value="180" />
+              <input type="range" id="refreshMax" class="range-input range-input-max"
+                min="10" max="600" step="5" value="420" />
+            </div>
+            <div class="range-labels">
+              <span class="range-label-edge">10 giây</span>
+              <span id="refreshRangeDisplay" class="range-label-val"></span>
+              <span class="range-label-edge">10 phút</span>
             </div>
           </div>
-          <div class="switch-row">
-            <span class="switch-name">Hiển thị lời nhắc phản tư</span>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-group-label-row">
+            <span class="settings-group-label" style="margin-bottom:0">Text cùng task</span>
             <label class="switch"><input type="checkbox" id="askOn" /><span class="slider"></span></label>
+          </div>
+          <div id="asksPipWrap">
+            <textarea id="asksPip" rows="5" spellcheck="false"></textarea>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-group-label">Gây chú ý mạnh</div>
+          <div class="num">
+            <input id="alertDuration" type="number" min="1" max="60" placeholder="—" style="width:72px" />
+            <span>giây</span>
           </div>
         </div>
 

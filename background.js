@@ -262,7 +262,7 @@ async function openOrFocusStandupTab() {
         }
     }
     if (!opened) {
-        const tab = await chrome.tabs.create({ url: chrome.runtime.getURL('standup.html') });
+        const tab = await chrome.tabs.create({ url: chrome.runtime.getURL('neo_anchor.html') });
         chrome.storage.local.set({ standupTabId: tab.id });
     }
 }

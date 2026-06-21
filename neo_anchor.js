@@ -26,7 +26,11 @@ let pipRefreshTimer = null;
 let pipLastTheme = -1, pipLastAsk = -1;
 let selectedWork = null, selectedBreak = null;
 let pipAtCenter = false;
+let pipWinId = null;
 let alertFlashTimer = null;
+let standupPipActive = false;
+
+const PIP_SECTIONS = ['s-working','s-breaking','s-alert-add','s-alert-shutdown','s-standup-alert'];
 
 // ── PiP themes (same as before) ──
 const PIP_THEMES = [
@@ -45,15 +49,16 @@ init();
 async function init() {
   if (!pipSupported) $('pipWarn').style.display = 'block';
 
-  // Register this tab
-  const tab = await chrome.tabs.getCurrent();
-  if (tab) await chrome.storage.local.set({ [KEY_TAB]: tab.id });
-
-  // Load persisted state
-  const local = await chrome.storage.local.get([
-    KEY_TASKS, KEY_PHASE, KEY_CUR_TASK,
-    KEY_WORK_END, KEY_BREAK_END, KEY_SHUTDOWN,
+  // Register this tab + load all persisted state in one batch
+  const [tab, local] = await Promise.all([
+    chrome.tabs.getCurrent(),
+    chrome.storage.local.get([
+      KEY_TASKS, KEY_PHASE, KEY_CUR_TASK,
+      KEY_WORK_END, KEY_BREAK_END, KEY_SHUTDOWN,
+      'standupCfg', 'standupEndsAt',
+    ]),
   ]);
+  if (tab) await chrome.storage.local.set({ [KEY_TAB]: tab.id, standupTabId: tab.id });
   tasks       = local[KEY_TASKS]     || [];
   phase       = local[KEY_PHASE]     || 'idle';
   curTaskId   = local[KEY_CUR_TASK]  || null;
@@ -115,11 +120,14 @@ async function init() {
 
   wireAddTask();
   wireSettings();
+  initMusic();
+  initStandup(local);
 
   // Phase transition messages from background service worker
   chrome.runtime.onMessage.addListener((msg) => {
-    if (msg.type === 'neo-work-end')  onWorkEnd();
-    if (msg.type === 'neo-break-end') onBreakEnd();
+    if (msg.type === 'neo-work-end')   onWorkEnd();
+    if (msg.type === 'neo-break-end')  onBreakEnd();
+    if (msg.type === 'standup-alert')  showStandupAlert();
   });
 
   // Storage change (another tab modified tasks)
@@ -201,9 +209,11 @@ function wireAddTask() {
     }
   });
 
-  $('customWork').addEventListener('keydown', e => { if (e.key === 'Enter') $('taskNameInput').focus(); });
-  $('taskNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
-  $('addTaskBtn').addEventListener('click', addTask);
+  $('customWork').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); $('taskNameInput').focus(); return; }
+    blockNonDigit(e);
+  });
+  $('addTaskForm').addEventListener('submit', (e) => { e.preventDefault(); addTask(); });
 }
 
 function formatBreakLabel(min) {
@@ -213,8 +223,12 @@ function formatBreakLabel(min) {
 
 function addTask() {
   const name = $('taskNameInput').value.trim();
-  if (!name) { $('taskNameInput').focus(); return; }
-  if (!selectedWork) { alert('Chọn thời gian làm trước.'); return; }
+  if (!selectedWork) {
+    showToast('Chọn thời gian làm trước.');
+    $('customWork').focus();
+    return;
+  }
+  if (!name) { showToast('Nhập tên task trước.'); $('taskNameInput').focus(); return; }
 
   const task = {
     id: Date.now().toString(),
@@ -260,9 +274,9 @@ async function onMainBtn() {
   } else {
     const pending = tasks.filter(t => t.status === 'pending');
     if (pending.length === 0) {
-      alert(phase === 'alert_add'
+      showToast(phase === 'alert_add'
         ? 'Thêm task trước khi tiếp tục.'
-        : 'Chưa có task nào. Thêm ít nhất một task trước khi bắt đầu.');
+        : 'Thêm ít nhất một task trước khi bắt đầu.');
       applyDefaultTime();
       $('taskNameInput').focus();
       return;
@@ -271,7 +285,7 @@ async function onMainBtn() {
       const [hh, mm] = ($('shutdownTime').value || '22:00').split(':').map(Number);
       const shutdown = new Date(); shutdown.setHours(hh, mm, 0, 0);
       if (new Date() >= shutdown) {
-        alert('Thời gian kết thúc phải sau thời điểm hiện tại. Hãy cập nhật lại trong phần Cài đặt.');
+        showToast('Thời gian kết thúc phải sau thời điểm hiện tại.');
         $('shutdownTime').focus();
         return;
       }
@@ -386,15 +400,12 @@ async function onBreakEnd() {
   clearInterval(tickTimer);
   clearTimeout(pipRefreshTimer);
 
-  const doneTask = tasks.find(t => t.id === curTaskId);
-  const nextPendingCheck = tasks.find(t => t.status === 'pending' && t.id !== curTaskId);
-  chrome.runtime.sendMessage({ type: 'neo-notify', id: `neo-break-done-${Date.now()}`, title: 'Hết giờ nghỉ!', message: nextPendingCheck ? `${doneTask?.name ?? ''} xong — bắt đầu task tiếp theo.` : 'Tất cả task đã hoàn thành.' }).catch(() => {});
+  const doneTask   = tasks.find(t => t.id === curTaskId);
+  const nextPending = tasks.find(t => t.status === 'pending' && t.id !== curTaskId);
+  chrome.runtime.sendMessage({ type: 'neo-notify', id: `neo-break-done-${Date.now()}`, title: 'Hết giờ nghỉ!', message: nextPending ? `${doneTask?.name ?? ''} xong — bắt đầu task tiếp theo.` : 'Tất cả task đã hoàn thành.' }).catch(() => {});
 
-  // Mark current task done
   tasks = tasks.map(t => t.id === curTaskId ? { ...t, status: 'done' } : t);
   await saveTasks();
-
-  const nextPending = tasks.find(t => t.status === 'pending');
 
   if (nextPending) {
     await startWorkPhase(nextPending.id, true);
@@ -476,6 +487,7 @@ async function openPip() {
   const after  = await chrome.windows.getAll();
   const newWin = after.find(w => !before.has(w.id));
   if (newWin) {
+    pipWinId = newWin.id;
     await chrome.storage.local.set({ [KEY_PIP_WIN]: newWin.id });
     await pipRegistryAdd('neo', newWin.id);
   }
@@ -494,6 +506,7 @@ async function openPip() {
   startPipRefresh();
 
   pipWindow.document.body.addEventListener('mouseenter', (e) => {
+    if (standupPipActive) return;
     if (phase === 'alert_add' || phase === 'breaking') return;
     const fromTop = e.clientY < 8 && e.clientX > 5 && e.clientX < pipWindow.innerWidth - 5;
     if (!fromTop) movePip(pipAtCenter ? 'random-corner' : 'opposite-corner');
@@ -503,6 +516,7 @@ async function openPip() {
     chrome.storage.local.remove(KEY_PIP_WIN);
     pipRegistryRemove('neo');
     pipWindow = null;
+    pipWinId = null;
     renderStatus();
   });
 
@@ -512,6 +526,7 @@ function closePip() {
   clearTimeout(pipRefreshTimer);
   if (pipWindow && !pipWindow.closed) pipWindow.close();
   pipWindow = null;
+  pipWinId = null;
   chrome.storage.local.remove(KEY_PIP_WIN);
   pipRegistryRemove('neo');
 }
@@ -592,26 +607,38 @@ function setupPipContent() {
         <span class="pip-msg">Đã đến giờ nghỉ! Tắt máy thôi.</span>
       </div>
     </div>
+    <!-- alert: standup -->
+    <div id="s-standup-alert" class="pip-wrap hidden">
+      <div class="pip-row">
+        <span class="pip-msg">🧍 Đứng dậy đi!</span>
+        <button class="pip-btn" id="p-go-standup">Vào điểm danh</button>
+      </div>
+    </div>
   `;
 
-  // "Vào thiết lập" focuses anchor tab
-  doc.getElementById('p-go-setup').addEventListener('click', async () => {
-    const tab = await chrome.tabs.getCurrent();
-    if (tab) {
-      chrome.windows.update(tab.windowId, { focused: true });
-      chrome.tabs.update(tab.id, { active: true });
-    }
+  doc.getElementById('p-go-setup').addEventListener('click', () => {
+    focusAnchorTab();
     applyDefaultTime();
     $('taskNameInput').focus();
   });
+
+  doc.getElementById('p-go-standup').addEventListener('click', focusAnchorTab);
+}
+
+async function focusAnchorTab() {
+  const tab = await chrome.tabs.getCurrent();
+  if (tab) {
+    chrome.windows.update(tab.windowId, { focused: true });
+    chrome.tabs.update(tab.id, { active: true });
+  }
 }
 
 function setPipPhase(p) {
   if (!pipWindow || pipWindow.closed) return;
+  if (standupPipActive) return;
   const doc = pipWindow.document;
-  ['s-working','s-breaking','s-alert-add','s-alert-shutdown'].forEach(id => {
-    doc.getElementById(id)?.classList.toggle('hidden', id !== `s-${p.replace('_','-')}`);
-  });
+  const target = `s-${p.replace('_', '-')}`;
+  PIP_SECTIONS.forEach(id => doc.getElementById(id)?.classList.toggle('hidden', id !== target));
 }
 
 function updatePipWorking(task, remMs) {
@@ -642,19 +669,22 @@ function updatePipBreaking(remMs) {
 }
 
 // ── Alert flash ──
-function triggerBlink() {
+function flashPip(infinite = false) {
   if (!pipWindow || pipWindow.closed) return;
-  const dur = cfg?.alertDuration;
-  if (!(dur > 0)) return;
+  if (standupPipActive) return;
+  clearTimeout(alertFlashTimer);
   const body = pipWindow.document.body;
   body.classList.remove('neo-alert', 'neo-soft', 'neo-alert-loop');
   void body.offsetWidth;
   body.classList.add('neo-alert-loop');
-  clearTimeout(alertFlashTimer);
-  alertFlashTimer = setTimeout(stopAlertFlash, dur * 1000);
+  if (!infinite) {
+    const dur = cfg?.alertDuration;
+    if (!(dur > 0)) { body.classList.remove('neo-alert-loop'); return; }
+    alertFlashTimer = setTimeout(stopAlertFlash, dur * 1000);
+  }
 }
-
-function startAlertFlash() { triggerBlink(); }
+const triggerBlink    = () => flashPip(false);
+const startAlertFlash = () => flashPip(true);
 
 function stopAlertFlash() {
   clearTimeout(alertFlashTimer);
@@ -686,14 +716,14 @@ function schedulePipRefresh() {
 
 function applyPipLook(blink) {
   if (!pipWindow || pipWindow.closed) return;
+  if (standupPipActive) return;
   const pick = (arr, last) => {
     let i;
     do { i = Math.floor(Math.random() * arr.length); } while (arr.length > 1 && i === last);
     return i;
   };
   const body = pipWindow.document.body;
-  if (cfg?.themesOn !== false) pipLastTheme = pick(PIP_THEMES, pipLastTheme);
-  else pipLastTheme = 0;
+  pipLastTheme = pick(PIP_THEMES, pipLastTheme);
   const t = PIP_THEMES[pipLastTheme];
   body.style.setProperty('--neo-bg',     t.bg);
   body.style.setProperty('--neo-fg',     t.fg);
@@ -717,9 +747,9 @@ function applyPipLook(blink) {
 }
 
 // mode: 'center' | 'random-corner' | 'opposite-corner'
-async function movePip(mode) {
-  const data = await chrome.storage.local.get(KEY_PIP_WIN);
-  const id   = data[KEY_PIP_WIN];
+async function movePip(mode, { force = false } = {}) {
+  if (!force && standupPipActive) return;
+  const id = pipWinId;
   if (!id) return;
   let pip;
   try { pip = await chrome.windows.get(id); } catch (_) { return; }
@@ -846,7 +876,8 @@ function renderStatus() {
   $('pipToggleBtn').style.display = sessionActive ? '' : 'none';
   $('alertAddBox').style.display = phase === 'alert_add' ? '' : 'none';
   const lockAdd = phase === 'alert_shutdown';
-  document.querySelector('.add-task-area').style.display = lockAdd ? 'none' : '';
+  const addCard = document.querySelector('.add-task-card');
+  if (addCard) addCard.style.display = lockAdd ? 'none' : '';
   $('addTaskBtn').disabled = lockAdd;
   $('taskNameInput').disabled = lockAdd;
   $('customWork').disabled = lockAdd;
@@ -863,11 +894,17 @@ function escHtml(s) {
 function fillSettings(c) {
   $('defaultWorkMin').value = c.defaultWorkMin ?? '';
   $('asksPip').value        = (c.asksPip || []).join('\n');
-  $('refreshMin').value     = c.refreshMin ?? 3;
-  $('refreshMax').value     = c.refreshMax ?? 7;
-  $('themesOn').checked       = c.themesOn      ?? true;
-  $('alertDuration').value    = (c.alertDuration > 0) ? c.alertDuration : '';
-  $('askOn').checked          = c.askOn         ?? true;
+  $('refreshMin').value = Math.round((c.refreshMin ?? 3) * 60);
+  $('refreshMax').value = Math.round((c.refreshMax ?? 7) * 60);
+  updateRefreshSlider();
+  $('alertDuration').value = (c.alertDuration > 0) ? c.alertDuration : '';
+  $('askOn').checked       = c.askOn ?? false;
+  updateAskOnUI();
+}
+
+function updateAskOnUI() {
+  const on = $('askOn').checked;
+  $('asksPipWrap').classList.toggle('disabled', !on);
 }
 
 function wireSettings() {
@@ -880,31 +917,66 @@ function wireSettings() {
     debounceTimer = setTimeout(saveSettings, 800);
   });
 
-  // Numbers: save on blur
-  ['defaultWorkMin', 'refreshMin', 'refreshMax'].forEach(id =>
-    $(id).addEventListener('change', saveSettings));
+  ['defaultWorkMin', 'alertDuration'].forEach(id => $(id).addEventListener('keydown', blockNonDigit));
 
-  // Switches: save immediately on toggle
-  ['themesOn', 'askOn'].forEach(id =>
-    $(id).addEventListener('change', saveSettings));
+  // Dual-handle refresh slider — debounce writes to avoid sync quota exhaustion
+  let sliderDebounce = null;
+  ['refreshMin', 'refreshMax'].forEach(id =>
+    $(id).addEventListener('input', () => {
+      updateRefreshSlider();
+      clearTimeout(sliderDebounce);
+      sliderDebounce = setTimeout(saveSettings, 300);
+    }));
+
+  // Numbers: save on blur
+  $('defaultWorkMin').addEventListener('change', saveSettings);
+
+  $('askOn').addEventListener('change', () => { updateAskOnUI(); saveSettings(); });
   $('alertDuration').addEventListener('change', saveSettings);
 }
 
 const lines = v => v.split('\n').map(s => s.trim()).filter(Boolean);
 const clamp = (v, min, max, fb) => { const n = Number(v); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fb; };
 
+function blockNonDigit(e) {
+  const nav = ['Backspace','Delete','Tab','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
+  if (!e.ctrlKey && !e.metaKey && !nav.includes(e.key) && !/^\d$/.test(e.key)) e.preventDefault();
+}
+
+function fmtSeconds(s) {
+  if (s < 60) return `${s} giây`;
+  const m = Math.floor(s / 60), r = s % 60;
+  return r ? `${m} phút ${r} giây` : `${m} phút`;
+}
+
+function updateRefreshSlider() {
+  let lo = parseInt($('refreshMin').value);
+  let hi = parseInt($('refreshMax').value);
+  // Enforce lo ≤ hi
+  if (lo > hi) { $('refreshMin').value = hi; lo = hi; }
+  const MIN = 10, MAX = 600;
+  const fillLeft  = ((lo - MIN) / (MAX - MIN)) * 100;
+  const fillRight = ((hi - MIN) / (MAX - MIN)) * 100;
+  $('refreshFill').style.left  = `${fillLeft}%`;
+  $('refreshFill').style.width = `${fillRight - fillLeft}%`;
+  $('refreshRangeDisplay').textContent = lo === hi
+    ? fmtSeconds(lo)
+    : `${fmtSeconds(lo)} – ${fmtSeconds(hi)}`;
+}
+
 async function saveSettings() {
   const asksPip = lines($('asksPip').value);
-  let refreshMin = clamp($('refreshMin').value, 10/60, 120, DEFAULTS.refreshMin);
-  let refreshMax = clamp($('refreshMax').value, 10/60, 120, DEFAULTS.refreshMax);
-  if (refreshMax < refreshMin) [refreshMin, refreshMax] = [refreshMax, refreshMin];
+  // Slider values are in seconds → convert to minutes for storage
+  const loSec = parseInt($('refreshMin').value) || Math.round(DEFAULTS.refreshMin * 60);
+  const hiSec = parseInt($('refreshMax').value) || Math.round(DEFAULTS.refreshMax * 60);
+  const refreshMin = loSec / 60;
+  const refreshMax = hiSec / 60;
 
   const dwRaw = parseFloat($('defaultWorkMin').value);
   cfg = {
     defaultWorkMin: (dwRaw > 0) ? dwRaw : null,
     asksPip:    asksPip.length ? asksPip : DEFAULTS.asksPip,
     refreshMin, refreshMax,
-    themesOn:      $('themesOn').checked,
     alertDuration: parseInt($('alertDuration').value) || null,
     askOn:         $('askOn').checked,
   };
@@ -934,4 +1006,351 @@ function flashSaved() {
   el.textContent = 'Đã lưu cài đặt';
   clearTimeout(savedMsgTimer);
   savedMsgTimer = setTimeout(() => { el.textContent = ''; }, 2000);
+}
+
+// ══════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════
+let toastTimer = null;
+function showToast(msg) {
+  const el = $('neoToast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+// ══════════════════════════════════════════════
+//  MUSIC PLAYER  (File System Access API)
+// ══════════════════════════════════════════════
+let musicTracks    = []; // [{ name, handle }]
+let musicIdx       = 0;
+let musicAudio     = new Audio();
+let musicPlaying   = false;
+let musicObjUrl    = null;
+let musicDirHandle = null;
+let repeatMode     = 'none'; // 'none' | 'all' | 'one'
+let musicDurKnown  = false;
+
+// ── IndexedDB helpers ──
+function _idb(mode, fn) {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('neo-music-db', 1);
+    r.onupgradeneeded = e => e.target.result.createObjectStore('kv');
+    r.onsuccess = e => {
+      const db = e.target.result;
+      const tx = db.transaction('kv', mode);
+      fn(tx.objectStore('kv'), res, rej);
+      tx.onerror = () => rej(tx.error);
+    };
+    r.onerror = () => rej(r.error);
+  });
+}
+const idbGet = (k)    => _idb('readonly',  (s,res,rej) => { const r = s.get(k); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const idbSet = (k, v) => _idb('readwrite', (s,res,rej) => { const r = s.put(v, k); r.onsuccess = () => res(); r.onerror = () => rej(r.error); });
+
+async function initMusic() {
+  musicAudio.volume = 0.8;
+
+  // Audio events
+  musicAudio.addEventListener('timeupdate', onMusicTick);
+  musicAudio.addEventListener('ended', onMusicEnded);
+  musicAudio.addEventListener('play',  () => { musicPlaying = true;  updatePlayBtn(); });
+  musicAudio.addEventListener('pause', () => { musicPlaying = false; updatePlayBtn(); });
+
+  // Controls
+  $('musicPickBtn').addEventListener('click', pickMusicDir);
+  $('musicPermBtn').addEventListener('click', grantMusicPerm);
+  $('musicPlayPause').addEventListener('click', togglePlay);
+  $('musicPrev').addEventListener('click', () => musicStep(-1, true));
+  $('musicNext').addEventListener('click', () => musicStep(+1, true));
+  $('musicRepeat').addEventListener('click', toggleRepeat);
+  $('musicVolume').addEventListener('input', () => { musicAudio.volume = $('musicVolume').value / 100; });
+  $('musicProgressBar').addEventListener('click', (e) => {
+    if (!musicAudio.duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    musicAudio.currentTime = ((e.clientX - rect.left) / rect.width) * musicAudio.duration;
+  });
+
+  // Space bar = play/pause (global, skip when typing in inputs)
+  document.addEventListener('keydown', (e) => {
+    if (e.code !== 'Space') return;
+    if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+    if (musicTracks.length === 0) return;
+    e.preventDefault();
+    togglePlay();
+  });
+
+  // Restore saved dir handle
+  try { musicDirHandle = await idbGet('musicDir'); } catch (_) {}
+  if (!musicDirHandle) { showMusicState('pick'); return; }
+
+  const perm = await musicDirHandle.queryPermission({ mode: 'read' });
+  if (perm === 'granted') await loadMusicFiles();
+  else showMusicState('perm');
+}
+
+async function pickMusicDir() {
+  try {
+    musicDirHandle = await window.showDirectoryPicker({ mode: 'read' });
+    await idbSet('musicDir', musicDirHandle);
+    await loadMusicFiles();
+  } catch (e) {
+    if (e.name !== 'AbortError') console.warn('[Music]', e);
+  }
+}
+
+async function grantMusicPerm() {
+  const perm = await musicDirHandle.requestPermission({ mode: 'read' });
+  if (perm === 'granted') await loadMusicFiles();
+}
+
+async function loadMusicFiles() {
+  musicTracks = [];
+  try {
+    for await (const [name, handle] of musicDirHandle.entries()) {
+      if (handle.kind === 'file' && name.toLowerCase().endsWith('.mp3'))
+        musicTracks.push({ name, handle });
+    }
+  } catch (_) { showMusicState('pick'); return; }
+
+  musicTracks.sort((a, b) => a.name.localeCompare(b.name));
+  if (musicTracks.length === 0) { showMusicState('empty'); return; }
+
+  showMusicState('player');
+  await loadTrack(0, false);
+}
+
+async function loadTrack(idx, autoplay) {
+  musicIdx = idx;
+  const { name, handle } = musicTracks[idx];
+
+  musicAudio.pause();
+  if (musicObjUrl) { URL.revokeObjectURL(musicObjUrl); musicObjUrl = null; }
+
+  const file = await handle.getFile();
+  musicObjUrl = URL.createObjectURL(file);
+  musicAudio.src = musicObjUrl;
+
+  $('musicTrackName').textContent = name.replace(/\.mp3$/i, '');
+  $('musicProgressFill').style.width = '0%';
+  $('musicCurTime').textContent = '0:00';
+  $('musicDurTime').textContent = '0:00';
+  musicDurKnown = false;
+
+  if (autoplay) musicAudio.play().catch(() => {});
+}
+
+function musicStep(dir, autoplay) {
+  if (musicTracks.length === 0) return;
+  const next = ((musicIdx + dir) % musicTracks.length + musicTracks.length) % musicTracks.length;
+  loadTrack(next, autoplay);
+}
+
+function onMusicEnded() {
+  if (repeatMode === 'one') {
+    musicAudio.currentTime = 0;
+    musicAudio.play().catch(() => {});
+  } else if (repeatMode === 'all') {
+    musicStep(+1, true);
+  } else {
+    // 'none': advance if not last track
+    if (musicIdx < musicTracks.length - 1) musicStep(+1, true);
+    // else stop (audio already ended naturally)
+  }
+}
+
+function toggleRepeat() {
+  const cycle = { none: 'all', all: 'one', one: 'none' };
+  repeatMode = cycle[repeatMode];
+  updateRepeatBtn();
+}
+
+function updateRepeatBtn() {
+  const btn = $('musicRepeat');
+  btn.classList.toggle('on', repeatMode !== 'none');
+  btn.title = repeatMode === 'one' ? 'Lặp lại: 1 bài'
+            : repeatMode === 'all' ? 'Lặp lại: tất cả'
+            : 'Lặp lại: tắt';
+  // Swap icon to show "1" badge when repeat-one
+  btn.querySelector('svg').style.opacity = repeatMode === 'none' ? '0.4' : '1';
+  // Show "1" text overlay for repeat-one
+  let badge = btn.querySelector('.repeat-badge');
+  if (repeatMode === 'one') {
+    if (!badge) { badge = document.createElement('span'); badge.className = 'repeat-badge'; btn.appendChild(badge); }
+    badge.textContent = '1';
+  } else {
+    badge?.remove();
+  }
+}
+
+function togglePlay() {
+  if (musicPlaying) musicAudio.pause();
+  else musicAudio.play().catch(() => {});
+}
+
+function updatePlayBtn() {
+  $('iconPlay').style.display  = musicPlaying ? 'none' : '';
+  $('iconPause').style.display = musicPlaying ? '' : 'none';
+}
+
+function onMusicTick() {
+  const dur = musicAudio.duration || 0;
+  const cur = musicAudio.currentTime || 0;
+  $('musicProgressFill').style.width = dur ? `${(cur / dur) * 100}%` : '0%';
+  $('musicCurTime').textContent = fmtSec(cur);
+  if (!musicDurKnown && dur > 0) {
+    $('musicDurTime').textContent = fmtSec(dur);
+    musicDurKnown = true;
+  }
+}
+
+function fmtSec(s) {
+  if (!isFinite(s) || s < 0) return '0:00';
+  const m = Math.floor(s / 60);
+  return `${m}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+}
+
+
+// 'pick' | 'perm' | 'empty' | 'player'
+const MUSIC_STATE_ELS = { pick: 'musicPickBtn', perm: 'musicPermBtn', empty: 'musicEmptyMsg', player: 'musicPlayerUI' };
+function showMusicState(state) {
+  $('musicAction').style.display = state === 'player' ? 'none' : '';
+  Object.entries(MUSIC_STATE_ELS).forEach(([s, id]) => $(id).style.display = s === state ? '' : 'none');
+}
+
+
+// ══════════════════════════════════════════════
+//  STANDUP — Nhắc nhở đứng dậy
+// ══════════════════════════════════════════════
+
+const STANDUP_ALARM = 'standup-sitting';
+const STANDUP_NOTIF = 'standup-alert';
+
+let standupState = 'idle'; // idle | tracking | alerting
+let standupEndsAt = null;
+let standupCfg = { maxSec: 2700 };
+let standupTickTimer = null;
+
+function initStandup(local) {
+  standupCfg = { maxSec: 2700, ...local.standupCfg };
+
+  $('standupMin').value = Math.round(standupCfg.maxSec / 60);
+
+  $('standupMin').addEventListener('change', async () => {
+    const v = parseInt($('standupMin').value, 10);
+    if (v >= 1) { standupCfg.maxSec = v * 60; await chrome.storage.local.set({ standupCfg }); }
+  });
+  $('standupMin').addEventListener('keydown', blockNonDigit);
+
+  $('standupStartBtn').addEventListener('click', onStandupStart);
+  $('standupStopBtn').addEventListener('click', onStandupStop);
+  $('standupStopAlertBtn').addEventListener('click', onStandupStop);
+  $('standupCheckinInput').addEventListener('input', (e) => {
+    if (e.target.value.trim().toLowerCase() === 'đã đứng dậy') {
+      e.target.value = '';
+      onStandupDone();
+    }
+  });
+
+  // Restore state on reload
+  if (local.standupEndsAt) {
+    standupEndsAt = local.standupEndsAt;
+    if (Date.now() >= standupEndsAt) showStandupAlert();
+    else { setStandupState('tracking'); startStandupTick(); }
+  } else {
+    setStandupState('idle');
+  }
+}
+
+async function onStandupStart() {
+  standupEndsAt = Date.now() + standupCfg.maxSec * 1000;
+  await chrome.storage.local.set({ standupEndsAt });
+  chrome.alarms.create(STANDUP_ALARM, { when: standupEndsAt });
+  setStandupState('tracking');
+  startStandupTick();
+}
+
+async function onStandupStop() {
+  chrome.alarms.clear(STANDUP_ALARM);
+  chrome.notifications.clear(STANDUP_NOTIF);
+  clearInterval(standupTickTimer);
+  standupEndsAt = null;
+  await chrome.storage.local.remove('standupEndsAt');
+  if (standupPipActive) deactivateStandupPip();
+  setStandupState('idle');
+}
+
+async function onStandupDone() {
+  chrome.notifications.clear(STANDUP_NOTIF);
+  if (standupPipActive) deactivateStandupPip();
+  standupEndsAt = Date.now() + standupCfg.maxSec * 1000;
+  await chrome.storage.local.set({ standupEndsAt });
+  chrome.alarms.create(STANDUP_ALARM, { when: standupEndsAt });
+  setStandupState('tracking');
+  startStandupTick();
+}
+
+function showStandupAlert() {
+  clearInterval(standupTickTimer);
+  standupEndsAt = null;
+  chrome.storage.local.remove('standupEndsAt');
+  setStandupState('alerting');
+  activateStandupPip();
+}
+
+function activateStandupPip() {
+  if (!pipWindow || pipWindow.closed) return;
+  standupPipActive = true;
+  stopAlertFlash();
+  const doc = pipWindow.document;
+  PIP_SECTIONS.forEach(id => doc.getElementById(id)?.classList.toggle('hidden', id !== 's-standup-alert'));
+  // Infinite flash (bypass guard since flag is already set)
+  const body = doc.body;
+  body.classList.remove('neo-alert', 'neo-soft', 'neo-alert-loop');
+  void body.offsetWidth;
+  body.classList.add('neo-alert-loop');
+  movePip('center', { force: true });
+}
+
+function deactivateStandupPip() {
+  standupPipActive = false;
+  if (!pipWindow || pipWindow.closed) return;
+  stopAlertFlash();
+  const doc = pipWindow.document;
+  const target = `s-${phase.replace('_', '-')}`;
+  PIP_SECTIONS.forEach(id => doc.getElementById(id)?.classList.toggle('hidden', id !== target));
+  if (phase === 'alert_add') startAlertFlash();
+  else if (phase === 'working') { applyPipLook(false); startPipRefresh(); }
+}
+
+function startStandupTick() {
+  clearInterval(standupTickTimer);
+  standupTick();
+  standupTickTimer = setInterval(standupTick, 1000);
+}
+
+function standupTick() {
+  if (!standupEndsAt) return;
+  const remaining = standupEndsAt - Date.now();
+  if (remaining <= 0) { clearInterval(standupTickTimer); return; }
+  $('standupClock').textContent = fmtRemaining(remaining);
+}
+
+
+function setStandupState(s) {
+  standupState = s;
+  const isTracking = s === 'tracking';
+  const isAlerting = s === 'alerting';
+
+  $('standupClock').textContent       = isTracking && standupEndsAt ? fmtRemaining(standupEndsAt - Date.now()) : '--:--';
+  $('standupIdleRow').style.display   = (!isTracking && !isAlerting) ? '' : 'none';
+  $('standupTrackRow').style.display  = isTracking ? '' : 'none';
+  $('standupAlertRow').style.display  = isAlerting ? '' : 'none';
+  if (isAlerting) {
+    const inp = $('standupCheckinInput');
+    inp.value = '';
+    setTimeout(() => inp.focus(), 50);
+  }
 }

@@ -171,6 +171,15 @@
       "matches": [
         "<all_urls>"
       ]
+    },
+    {
+      "resources": [
+        "music-working/index.json",
+        "music-working/*.mp3"
+      ],
+      "matches": [
+        "chrome-extension://*/*"
+      ]
     }
   ],
   "commands": {
