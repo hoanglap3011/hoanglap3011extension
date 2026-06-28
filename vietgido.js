@@ -47,7 +47,6 @@ const VietGidoApp = {
       chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // Kiểm tra action
         if (request.action === "autofillNotebookLink") {
-          console.log("🔗 [VietGido] Nhận được link NotebookLM:", request.notebookUrl);
 
           // 1. Tìm tất cả các trường đang hiển thị
           const allFields = document.querySelectorAll('.vg-field');
@@ -75,14 +74,12 @@ const VietGidoApp = {
               targetInput.style.backgroundColor = originalBg;
             }, 1000);
           } else {
-              console.warn("⚠️ Không tìm thấy trường nhập liệu nào có tên chứa 'notebook'");
           }
           
           sendResponse({ received: true });
         }
       });
     } else {
-      console.log("ℹ️ [VietGido] Không ở trong môi trường Extension. Bỏ qua lắng nghe tin nhắn.");
     }
   },
 
@@ -369,7 +366,6 @@ const VietGidoApp = {
       } catch (err) {
         // Mặc dù updateCategoriesFromAPI đã tự xử lý lỗi,
         // chúng ta vẫn log ở đây để đề phòng
-        console.error("Lỗi trong quá trình updateCategories:", err);
         success = false;
       } finally {
         LoadingModule.hide();

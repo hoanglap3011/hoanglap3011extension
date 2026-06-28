@@ -3,7 +3,6 @@
 
     const ICON_URL = chrome.runtime.getURL("image/add.png");
     if (!ICON_URL) {
-        console.warn("⚠️ [Ext] Không thể lấy URL của add.png");
         return;
     }
 
@@ -74,7 +73,6 @@
     const insertButtonTicketbox = (block, btn) => {
         const addressEl = block.querySelector('#address');
         if (!addressEl) {
-            console.warn("⚠️ [Ext] Không tìm thấy #address để chèn nút. Chèn tạm vào cuối.");
             block.appendChild(btn); // Fallback
             return;
         }
@@ -124,7 +122,6 @@
         if (!titleEl || !dateText || !venueEl || !addressEl) {
             // Log này chỉ để bạn biết nó đang chờ (có thể xóa đi)
             if (titleEl && venueEl && addressEl && !dateText) {
-                 console.log("ℹ️ [Ext] Đang chờ nội dung ngày giờ (dateText)...");
             }
             return null; 
         }
@@ -139,7 +136,6 @@
 
         const times = parseTicketboxDateTime(dateText);
         if (!times) {
-            console.warn("⚠️ [Ext] Không thể parse chuỗi ngày giờ (sau khi đã tìm thấy):", `"${dateText}"`);
             return null;
         }
 
@@ -170,7 +166,6 @@
                 /(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2}),\s*(\d{1,2})\s*tháng\s*(\d{1,2}),\s*(\d{4})/i
             );
             if (!match) {
-                 console.warn(`⚠️ [Ext] Regex không khớp với chuỗi đã dọn dẹp: "${cleanText}"`);
                 return null;
             }
 
@@ -188,7 +183,6 @@
 
             return { startDate, endDate };
         } catch (e) {
-            console.error("⚠️ [Ext] Lỗi parse ngày giờ Ticketbox:", e);
             return null;
         }
     };

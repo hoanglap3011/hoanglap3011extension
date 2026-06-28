@@ -10,7 +10,6 @@
         const res = await fetch(TEAMS_URL);
         teamsArray = await res.json();
     } catch (e) {
-        console.warn("⚠️ Không thể load football-teams.json:", e);
     }
 
     // Tạo map để tra nhanh theo id hoặc name
@@ -186,14 +185,12 @@
             const dtString = block.querySelector(".imso_mh__lr-dt-ds")?.innerText?.trim();
             
             if (!dtString) { 
-                 console.warn("⚠️ Không thể parse header: không tìm thấy chuỗi ngày giờ .imso_mh__lr-dt-ds");
                  return null;
             }
             
             const d = parseDateTime(dtString, dtString, block);
 
             if (!team1 || !team2 || !d) {
-                console.warn(`⚠️ Không thể parse header. Chi tiết: team1=${team1}, team2=${team2}, dateFound=${d}, rawDateString='${dtString}'`);
                 return null;
             }
 
@@ -216,7 +213,6 @@
                 datetime_local: d.toLocaleString(),
             };
         } catch (e) {
-            console.error("Lỗi khi parseMainHeaderBlock:", e);
             return null;
         }
     };

@@ -35,6 +35,7 @@
       ],
       "js": [
         "config.js",
+        "PasswordModule.js",
         "summaryBox.js"
       ],
       "run_at": "document_end"
@@ -78,6 +79,7 @@
         "*://youtube.com/*"
       ],
       "js": [
+        "PasswordModule.js",
         "youtube.js"
       ],
       "run_at": "document_idle"

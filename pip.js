@@ -96,7 +96,7 @@
 
       // Click-based resize (requires a user gesture). Not all environments allow programmatic resize; catch failures.
       d.getElementById('snap').onclick = () => {
-        try { pip.resizeTo(320, 200); } catch (e) { console.warn('Resize not allowed:', e); }
+        try { pip.resizeTo(320, 200); } catch (e) {}
       };
 
       d.getElementById('close').onclick = () => pip.close();
@@ -105,7 +105,6 @@
       try { pip.focus(); } catch {}
     } catch (err) {
       alert('Failed to open PiP: ' + (err?.message || err));
-      console.error(err);
     }
   }, { once: true });
 })();

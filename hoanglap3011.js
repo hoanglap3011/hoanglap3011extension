@@ -1,6 +1,5 @@
 import { TodolistModule } from './TodolistModule.js';
 import { DateModule } from './DateModule.js';
-import { PasswordModule } from './PasswordModule.js';
 import { DatePickerModule } from './DatePickerModule.js';
 
 let hitThoIndex = 0;

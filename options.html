@@ -362,36 +362,6 @@ ở trang chủ youtube.com.">
                     </label>
                 </div>
                 <div class="setting-row">
-                    <label for="ytEnableSummaryBox" class="switchLabel" data-tooltip='Hiển thị Box "Tóm Tắt", "Quotes",
-"Key" bên cạnh video YouTube.'>
-                        <strong>Bật Box Tóm Tắt</strong>
-                    </label>
-                    <label class="switch">
-                        <input type="checkbox" id="ytEnableSummaryBox">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div class="setting-row">
-                    <label for="ytEnableAutoSummarize" class="switchLabel" data-tooltip="Tự động chạy tóm tắt khi vào video
-mà không cần bấm nút.">
-                        <strong>Tự động Tóm Tắt</strong>
-                    </label>
-                    <label class="switch">
-                        <input type="checkbox" id="ytEnableAutoSummarize">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div class="setting-row">
-                    <label for="ytEnableAutoCloseNotebook" class="switchLabel" data-tooltip="Sau khi tạo xong "Tài liệu tóm tắt",
-tự động đóng tab NotebookLM.">
-                        <strong>Tự động đóng Tab NotebookLM</strong>
-                    </label>
-                    <label class="switch">
-                        <input type="checkbox" id="ytEnableAutoCloseNotebook">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div class="setting-row">
                     <label for="ytEnableHideRelated" class="switchLabel" data-tooltip="Ẩn danh sách video gợi ý
 bên cạnh video đang xem.">
                         <strong>Ẩn Video Gợi Ý (Sidebar)</strong>
@@ -426,8 +396,25 @@ bên cạnh video đang xem.">
                         <span class="slider"></span>
                     </label>
                 </div>
+                <div class="setting-sub-row">
+                    <label for="summarySitesList" class="switchLabel" data-tooltip="Mỗi dòng một domain. Box tóm tắt chỉ hiển thị trên các trang này.">
+                        <strong>Trang được phép hiển thị</strong>
+                        <span class="description">Mỗi dòng một domain (ví dụ: youtube.com, dantri.com.vn).</span>
+                    </label>
+                    <textarea id="summarySitesList" rows="5" placeholder="youtube.com&#10;dantri.com.vn"></textarea>
+                </div>
+                <div class="setting-sub-row">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0">
+                        <span class="switchLabel" style="margin:0">
+                            <strong>Đồng bộ dữ liệu từ server</strong>
+                            <span class="description">Tải toàn bộ dữ liệu tóm tắt về bộ nhớ local để tra cứu nhanh.</span>
+                        </span>
+                        <button id="btn-sync-summary" style="padding:6px 14px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap;flex-shrink:0">Đồng bộ</button>
+                    </div>
+                    <div id="sync-summary-status" style="font-size:12px;color:#888;min-height:16px"></div>
+                </div>
             </div>
-        </div>     
+        </div>
 
         <!-- ============================= -->
         <!-- SECTION: KIỂM TRA SELFCONTROL -->

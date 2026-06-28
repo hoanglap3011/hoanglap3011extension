@@ -81,11 +81,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!data.read_book) {
             data.read_book = "false";
         }
-        console.log('Dữ liệu gửi đi:', data);
 
         // ----- GIẢ LẬP GỌI API -----
         setTimeout(() => {
-            console.log('Giả lập lưu thành công');
             saveButton.innerText = 'Đã lưu!';
             setTimeout(() => {
                 window.close();

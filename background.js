@@ -86,7 +86,6 @@ async function _scheduleAlarm(alarmName, timerKey, defaults) {
     const tv   = { ...defaults, ...(data[timerKey] || {}) };
     const delaySec = tv.timerMinSec + Math.random() * (tv.timerMaxSec - tv.timerMinSec);
     chrome.alarms.create(alarmName, { delayInMinutes: delaySec / 60 });
-    console.log(`⏱ [${alarmName}] Alarm tiếp theo sau ${Math.round(delaySec)}s`);
 }
 
 // ── TỪ VỰNG ──────────────────────────────────────────────────────
@@ -99,7 +98,7 @@ const TV_TIMER_DEFS  = { timerMinSec: 300, timerMaxSec: 600 };
 async function showTuvungPopup(source = 'auto') {
     const data = await chrome.storage.local.get([TV_STORAGE_KEY]);
     const list = (data[TV_STORAGE_KEY] || []).filter(e => e.isActive !== false);
-    if (!list.length) { console.log('⚠️ [TV] Chưa có từ vựng.'); return null; }
+    if (!list.length) {return null; }
     const entry = list[Math.floor(Math.random() * list.length)];
     await chrome.storage.local.set({ [TV_PENDING_KEY]: entry });
     return _openPopupWindow(chrome.runtime.getURL(`tuvung.html?mode=popup&source=${source}`),
@@ -145,7 +144,7 @@ async function _toeicGetAll() {
 
 async function showToeicPopup(source = 'auto') {
     const list = await _toeicGetAll();   // ← đọc IndexedDB thay vì chrome.storage.local
-    if (!list.length) { console.log('⚠️ [TOEIC] Chưa có dữ liệu câu hỏi.'); return null; }
+    if (!list.length) {return null; }
 
     const partsData = await chrome.storage.local.get(['toeicPopupParts']);
     const parts = partsData.toeicPopupParts;
@@ -168,11 +167,9 @@ chrome.storage.local.get(SETTINGS_KEY, async (data) => {
     const settings = { ...DEFAULT_SETTINGS, ...(data[SETTINGS_KEY] || {}) };
     if (settings.tvEnableAutoPopup) {
         const had = await _ensureAlarm(TV_ALARM_NAME, scheduleTvAlarm);
-        console.log(had ? '♻️ [Background] Timer Từ Vựng đã có sẵn.' : '🚀 [Background] Đã bật timer Từ Vựng.');
     }
     if (settings.toeicEnableAutoPopup) {
         const had = await _ensureAlarm(TOEIC_ALARM_NAME, scheduleToeicAlarm);
-        console.log(had ? '♻️ [Background] Timer TOEIC đã có sẵn.' : '🚀 [Background] Đã bật timer TOEIC.');
     }
 });
 
@@ -183,11 +180,11 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         const oldS = changes[SETTINGS_KEY].oldValue;
         if (!newS || !oldS) return;
 
-        if (newS.tvEnableAutoPopup && !oldS.tvEnableAutoPopup)    { scheduleTvAlarm();                         console.log('🚀 [Background] Bật timer từ vựng.'); }
-        else if (!newS.tvEnableAutoPopup && oldS.tvEnableAutoPopup) { chrome.alarms.clear(TV_ALARM_NAME);        console.log('🛑 [Background] Tắt timer từ vựng.'); }
+        if (newS.tvEnableAutoPopup && !oldS.tvEnableAutoPopup)    { scheduleTvAlarm();}
+        else if (!newS.tvEnableAutoPopup && oldS.tvEnableAutoPopup) { chrome.alarms.clear(TV_ALARM_NAME);}
 
-        if (newS.toeicEnableAutoPopup && !oldS.toeicEnableAutoPopup)    { scheduleToeicAlarm(); console.log('🚀 [Background] Bật timer TOEIC.'); }
-        else if (!newS.toeicEnableAutoPopup && oldS.toeicEnableAutoPopup) { chrome.alarms.clear(TOEIC_ALARM_NAME); console.log('🛑 [Background] Tắt timer TOEIC.'); }
+        if (newS.toeicEnableAutoPopup && !oldS.toeicEnableAutoPopup)    { scheduleToeicAlarm();}
+        else if (!newS.toeicEnableAutoPopup && oldS.toeicEnableAutoPopup) { chrome.alarms.clear(TOEIC_ALARM_NAME);}
     }
 });
 
@@ -199,7 +196,6 @@ async function _handleAlarm(isEnabledFn, showFn, scheduleFn, popupKey) {
 
     // Popup trước còn mở → không mở chồng, chỉ hẹn lại lần sau
     if (await _hasOpenPopup(popupKey)) {
-        console.log(`⏭ [${popupKey}] Popup cũ còn mở, bỏ qua lần này.`);
         if (await isEnabledFn()) scheduleFn();
         return;
     }
@@ -234,7 +230,6 @@ async function handleNeoAlarm(type) {
 }
 
 async function handleStandupAlarm() {
-    console.log('[Standup] alarm fired at', new Date().toLocaleTimeString());
     chrome.notifications.create('standup-alert', {
         type: 'basic',
         iconUrl: 'image/icon.png',
@@ -293,7 +288,47 @@ chrome.notifications.onClosed.addListener((id, byUser) => {
 
 let cachedTokens = { at: null, bl: null, timestamp: 0 };
 let vietgidoTabId = null;
-let shouldAutoRunAll = false;
+
+const WATCHED_TABS_KEY = 'watchedNotebookTabs';
+
+async function getWatchedTabs() {
+    const r = await chrome.storage.session.get(WATCHED_TABS_KEY);
+    return r[WATCHED_TABS_KEY] || {};
+}
+async function setWatchedTabs(map) {
+    await chrome.storage.session.set({ [WATCHED_TABS_KEY]: map });
+}
+
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    if (changeInfo.status !== 'complete') return;
+    const watched = await getWatchedTabs();
+    if (!watched[tabId]) return;
+    const url = tab.url || '';
+    if (url.startsWith('https://notebooklm.google.com/notebook/')) {
+        watched[tabId].seenNotebookAt = Date.now();
+        await setWatchedTabs(watched);
+    } else if (url === 'https://notebooklm.google.com/' || url === 'https://notebooklm.google.com') {
+        const entry = watched[tabId];
+        delete watched[tabId];
+        await setWatchedTabs(watched);
+        // Nếu notebook đã load > 5 giây trước → user tự navigate, không phải redirect tự động
+        if (entry.seenNotebookAt && Date.now() - entry.seenNotebookAt > 5000) return;
+        handleNotebookFlow(entry.sourceUrl, true)
+            .then(newNotebookId => {
+                const newUrl = `https://notebooklm.google.com/notebook/${newNotebookId}`;
+                chrome.tabs.update(tabId, { url: newUrl });
+                chrome.storage.local.set({ notebookRecreated: { sourceUrl: entry.sourceUrl, newNotebookId, ts: Date.now() } });
+            })
+            .catch(() => {});
+    }
+});
+
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+    const watched = await getWatchedTabs();
+    if (!watched[tabId]) return;
+    delete watched[tabId];
+    await setWatchedTabs(watched);
+});
 
 chrome.commands.onCommand.addListener((command) => {
   if (command === "open_command_hub") {
@@ -351,28 +386,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
-    if (request.action === "create_notebook_from_youtube") {
-        console.log("[Background] Nhận yêu cầu tạo NotebookLM cho:", request.url);
+    if (request.action === "open_notebook") {
+        chrome.tabs.create({ url: request.notebookUrl }, async (tab) => {
+            const watched = await getWatchedTabs();
+            watched[tab.id] = { sourceUrl: request.sourceUrl, seenNotebook: false };
+            await setWatchedTabs(watched);
+        });
+        return;
+    }
+
+    if (request.action === "create_notebook" || request.action === "create_notebook_from_youtube") {
         handleNotebookFlow(request.url)
             .then((notebookId) => {
-                chrome.tabs.create({ url: `https://notebooklm.google.com/notebook/${notebookId}` });
                 sendResponse({ success: true, notebookId });
             })
-            .catch((err) => { console.error("[Background] Lỗi:", err); sendResponse({ success: false, error: err.message }); });
+            .catch((err) => { sendResponse({ success: false, error: err.message }); });
         return true;
     }
 
-    if (request.action === "expectAutoFeatures") {
-        shouldAutoRunAll = true;
-        setTimeout(() => { shouldAutoRunAll = false; }, 60000);
-        sendResponse({ received: true });
-        return true;
-    }
-
-    if (request.action === "closeThisTab") {
-        if (sender.tab?.id) chrome.tabs.remove(sender.tab.id);
-        return true;
-    }
 
     if (request.action === "openVietGidoTab" && request.data) {
         const params = new URLSearchParams();
@@ -454,25 +485,21 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
             chrome.tabs.sendMessage(vietgidoTabId, { action: "autofillNotebookLink", notebookUrl: tab.url })
                 .catch(() => { vietgidoTabId = null; });
         }
-        if (shouldAutoRunAll) {
-            chrome.tabs.sendMessage(tabId, { action: "activateAll" }, (response) => {
-                if (chrome.runtime.lastError) setTimeout(() => chrome.tabs.sendMessage(tabId, { action: "activateAll" }), 1000);
-            });
-            shouldAutoRunAll = false;
-        }
+
     }
 });
 
 // ── NotebookLM ────────────────────────────────────────────────────
-async function handleNotebookFlow(targetUrl) {
+async function handleNotebookFlow(targetUrl, awaitSource = false) {
     const tokens = await getFreshGoogleTokens();
     const newId  = await buoc1_TaoSoTay(tokens);
-    await buoc2_ThemNguon(newId, targetUrl, tokens);
+    if (awaitSource) await buoc2_ThemNguon(newId, targetUrl, tokens);
+    else buoc2_ThemNguon(newId, targetUrl, tokens);
     return newId;
 }
 
 async function buoc1_TaoSoTay(tokens) {
-    console.log("1️⃣ [Background] Đang tạo sổ tay mới...");
+    console.log("[buoc1] tokens:", { at: tokens.at?.slice(0,10)+'...', bl: tokens.bl?.slice(0,10)+'...' });
     const apiUrl = `https://notebooklm.google.com/_/LabsTailwindUi/data/batchexecute?rpcids=CCqFvf&source-path=%2F&bl=${tokens.bl}&hl=vi&_reqid=${Math.floor(Math.random()*999999)}&rt=c`;
     const response = await fetch(apiUrl, {
         headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8", "x-same-domain": "1" },
@@ -481,26 +508,38 @@ async function buoc1_TaoSoTay(tokens) {
     });
     const text  = await response.text();
     const match = text.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/);
-    if (match) { console.log("✅ [Background] ID sổ tay:", match[0]); return match[0]; }
-    console.error("Debug Text:", text.substring(0, 500));
-    throw new Error("Không tìm thấy ID sổ tay");
+    if (match) return match[0];
+    throw new Error("Không tạo được sổ tay. Có thể đã đạt giới hạn số lượng — hãy xoá bớt sổ cũ trên NotebookLM rồi thử lại.");
 }
 
 async function buoc2_ThemNguon(notebookId, url, tokens) {
-    console.log("2️⃣ [Background] Đang thêm nguồn...");
-    const apiUrl  = `https://notebooklm.google.com/_/LabsTailwindUi/data/batchexecute?rpcids=izAoDd&source-path=%2Fnotebook%2F${notebookId}&bl=${tokens.bl}&hl=vi&_reqid=${Math.floor(Math.random()*999999)}&rt=c`;
-    const reqBody = `f.req=%5B%5B%5B%22izAoDd%22%2C%22%5B%5B%5Bnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C%5B%5C%22${url}%5C%22%5D%2Cnull%2Cnull%2C1%5D%5D%2C%5C%22${notebookId}%5C%22%2C%5B2%5D%2C%5B1%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C%5B1%5D%5D%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&at=${tokens.at}&`;
+    const apiUrl = `https://notebooklm.google.com/_/LabsTailwindUi/data/batchexecute?rpcids=izAoDd&source-path=%2Fnotebook%2F${notebookId}&bl=${tokens.bl}&hl=vi&_reqid=${Math.floor(Math.random()*999999)}&rt=c`;
+
+    const isYoutube = url.includes('youtu.be') || url.includes('youtube.com');
+
+    let innerPayload;
+    if (isYoutube) {
+        // YouTube: URL ở index 7, options tách 2 phần tử riêng
+        const sourceArr = [null, null, null, null, null, null, null, [url], null, null, 1];
+        innerPayload = [[sourceArr], notebookId, [2], [1, null, null, null, null, null, null, null, null, null, [1]]];
+    } else {
+        // Web URL: URL ở index 2, options gộp vào 1 phần tử
+        const sourceArr = [null, null, [url], null, null, null, null, null, null, null, 1];
+        innerPayload = [[sourceArr], notebookId, [2, null, null, [1, null, null, null, null, null, null, null, null, null, [1]]]];
+    }
+
+    const outerPayload = [[["izAoDd", JSON.stringify(innerPayload), null, "generic"]]];
+    const reqBody = `f.req=${encodeURIComponent(JSON.stringify(outerPayload))}&at=${tokens.at}&`;
+
     const response = await fetch(apiUrl, {
         headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8", "x-same-domain": "1", "x-goog-ext-353267353-jspb": "[null,null,null,276544]" },
         body: reqBody, method: "POST"
     });
-    if (response.ok) console.log("✅ [Background] Thêm nguồn thành công!");
-    else throw new Error("API thêm nguồn thất bại: " + response.status);
+    if (!response.ok) throw new Error("API thêm nguồn thất bại: " + response.status);
 }
 
 async function getFreshGoogleTokens() {
     if (cachedTokens.at && (Date.now() - cachedTokens.timestamp < 10 * 60 * 1000)) {
-        console.log("♻️ [Token] Dùng lại token từ cache.");
         return cachedTokens;
     }
     try {
@@ -509,9 +548,8 @@ async function getFreshGoogleTokens() {
         const blMatch  = html.match(/"cfb2h":"([^"]+)"/);
         if (!atMatch || !blMatch) throw new Error("Không tìm thấy token bảo mật.");
         cachedTokens = { at: atMatch[1], bl: blMatch[1], timestamp: Date.now() };
-        console.log("✅ [Token] Đã cập nhật token mới.");
         return cachedTokens;
-    } catch (e) { console.error("❌ [Token] Lỗi:", e); throw e; }
+    } catch (e) {throw e; }
 }
 
 initSCChecker();

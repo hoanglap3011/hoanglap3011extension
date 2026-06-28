@@ -60,6 +60,5 @@
       (document.documentElement || document.head || document.body).appendChild(s);
     }
   } catch (err) {
-    console.error("Lỗi khi kiểm tra alias hoặc từ khóa:", err);
   }
 })();

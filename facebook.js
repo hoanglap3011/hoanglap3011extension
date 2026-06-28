@@ -20,9 +20,7 @@
     });
 })();
 
-
 function initializeFacebookHandler(settings) {
-    console.log("🚀 [Ext] Facebook script loaded. Settings:", settings);
 
     const PROXY_URL = (typeof API !== 'undefined' && API) ? API : "PROXY_URL_NOT_FOUND";
     const MIN_LENGTH = (typeof MIN_SUMMARY_LENGTH !== 'undefined') ? MIN_SUMMARY_LENGTH : 100;
@@ -113,10 +111,10 @@ function initializeFacebookHandler(settings) {
                     const defaultRaw = DEFAULT_FB_KEYWORDS.join('\n');
                     chrome.storage.local.set({ [CONFIG.KEYWORDS_STORAGE_KEY]: defaultRaw });
                     g_blockList = [...DEFAULT_FB_KEYWORDS];
-                    console.log("[Ext] Blocklist: dùng default, đã seed vào storage.");
+
                 } else {
                     g_blockList = raw.split('\n').map(s => s.trim()).filter(s => s.length > 0);
-                    console.log("[Ext] Blocklist loaded from storage:", g_blockList);
+
                 }
                 resolve();
             });
@@ -132,7 +130,7 @@ function initializeFacebookHandler(settings) {
             const headerText = (module.innerText || '').substring(0, CONFIG.HEADER_SCAN_LENGTH);
             if (g_blockList.some(kw => headerText.includes(kw))) {
                 module.style.display = 'none';
-                console.log("[Ext] Ẩn khối:", headerText.substring(0, 60).replace(/\n/g, " "));
+
             }
         });
     }
@@ -283,11 +281,11 @@ function initializeFacebookHandler(settings) {
                 const len = el.innerText?.trim().length || 0;
                 if (len > maxLen && len > 50) { maxLen = len; messageBlock = el; }
             });
-            if (messageBlock) console.log("[Ext] Dùng heuristic content block — cân nhắc cập nhật CONTENT_SELECTORS.");
+            if (messageBlock) {}
         }
 
         if (!messageBlock) {
-            console.warn("[Ext] ⚠️ Không tìm thấy content block.");
+
             return "Lỗi: Không tìm thấy nội dung bài viết.";
         }
 
@@ -321,7 +319,7 @@ function initializeFacebookHandler(settings) {
                 return result[CACHE_PASS];
             }
         } catch (e) {
-            console.error(`[Ext] Lỗi khi đọc '${CACHE_PASS}' từ storage:`, e);
+
         }
         return null;
     };
@@ -356,7 +354,7 @@ function initializeFacebookHandler(settings) {
             const { POPUP_WIDTH: w, POPUP_HEIGHT: h } = CONFIG;
             const popup = window.open("", "summaryPopup",
                 `width=${w},height=${h},top=${(screen.height-h)/2},left=${(screen.width-w)/2},scrollbars=yes,resizable=yes`);
-            if (!popup) { console.warn("[Ext] Popup bị chặn."); return; }
+            if (!popup) { return; }
 
             const meta = `<p style="border-bottom:1px solid #ddd;padding-bottom:5px;margin-bottom:10px;">
                 <strong>Tác giả:</strong> ${postInfo.authorName} ${postInfo.authorUrl ? `(<a href="${postInfo.authorUrl}" target="_blank">Link</a>)` : ''}<br>
@@ -384,7 +382,7 @@ function initializeFacebookHandler(settings) {
             </body></html>`);
             popup.document.close();
             popup.focus();
-        } catch (e) { console.warn("[Ext] Lỗi popup:", e); }
+        } catch (e) {}
     };
 
     // === INITIALIZATION ===

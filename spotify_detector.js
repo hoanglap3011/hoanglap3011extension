@@ -2,7 +2,6 @@
 (function() {
   'use strict';
 
-  console.log('[Spotify Detector] Script loaded');
 
   let lastState = null;
 
@@ -12,7 +11,6 @@
       // Kiểm tra có đang phát không
       const playButton = document.querySelector('[data-testid="control-button-playpause"]');
       if (!playButton) {
-        console.log('[Spotify Detector] Play button not found');
         return { hasMedia: false };
       }
 
@@ -78,7 +76,6 @@
       // Spotify không expose volume qua UI một cách đáng tin cậy
       // Chỉ đọc được trạng thái mute/unmute
       
-      console.log('[Spotify Detector] Volume:', volume, 'Muted:', isMuted, 'Aria label:', volumeAriaLabel);
 
       // Kiểm tra next/previous buttons
       const nextButton = document.querySelector('[data-testid="control-button-skip-forward"]');
@@ -101,11 +98,9 @@
         isSpotify: true
       };
 
-      console.log('[Spotify Detector] State:', state);
       return state;
 
     } catch (error) {
-      console.error('[Spotify Detector] Error getting state:', error);
       return { hasMedia: false };
     }
   }
@@ -126,7 +121,6 @@
   // Điều khiển Spotify
   function controlSpotify(command, value) {
     try {
-      console.log('[Spotify Detector] Control command:', command, value);
 
       switch (command) {
         case 'play':
@@ -210,7 +204,6 @@
         case 'volume': {
           // Spotify Web Player không hỗ trợ set volume qua code
           // Chỉ có thể điều khiển qua UI thủ công hoặc Spotify Desktop app
-          console.log('[Spotify Detector] Volume control not supported for Spotify Web');
           return { success: false, error: 'Volume control not supported for Spotify Web' };
         }
       }
@@ -218,14 +211,12 @@
       return { success: false, error: 'Command not supported or element not found' };
 
     } catch (error) {
-      console.error('[Spotify Detector] Control error:', error);
       return { success: false, error: error.message };
     }
   }
 
   // Lắng nghe tin nhắn
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log('[Spotify Detector] Received message:', request.action);
 
     if (request.action === "getMediaState") {
       const state = getSpotifyState();
@@ -242,6 +233,5 @@
     return false;
   });
 
-  console.log('[Spotify Detector] Ready');
 
 })();

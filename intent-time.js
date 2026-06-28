@@ -51,7 +51,6 @@ function parseDataArray(input) {
         
         return Array.isArray(data) ? data : [];
     } catch (e) {
-        console.error("Lỗi khi parse danh sách thói quen:", e);
         return [];
     }
 }
@@ -137,7 +136,6 @@ function openModal(habit) {
         const inputVal = document.getElementById('habit-value');
         if (inputVal) inputVal.focus();
     } else {
-        console.error("Không tìm thấy các thành phần của Modal trong HTML");
     }
 }
 

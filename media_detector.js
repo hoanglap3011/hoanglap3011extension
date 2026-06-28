@@ -6,7 +6,6 @@
   let mediaObserver = null;
   let isReady = false;
 
-  console.log('[Media Detector] Script loaded on:', window.location.href);
 
   // Hàm tìm tất cả media elements trong trang
   function findMediaElements() {
@@ -15,11 +14,9 @@
     
     // Spotify Web Player - có nhiều cách khác nhau để tìm
     if (window.location.hostname.includes('spotify.com')) {
-      console.log('[Media Detector] Searching for Spotify audio...');
       
       // Cách 1: Tìm tất cả audio trong document
       const allAudios = document.getElementsByTagName('audio');
-      console.log('[Media Detector] Found audio tags:', allAudios.length);
       audios.push(...Array.from(allAudios));
       
       // Cách 2: Tìm trong iframes
@@ -30,14 +27,12 @@
             const iframeAudios = iframe.contentDocument?.querySelectorAll('audio');
             if (iframeAudios) {
               audios.push(...Array.from(iframeAudios));
-              console.log('[Media Detector] Found audio in iframe:', iframeAudios.length);
             }
           } catch (e) {
             // Cross-origin iframe
           }
         });
       } catch (e) {
-        console.log('[Media Detector] Cannot access iframes:', e);
       }
       
       // Cách 3: Tìm trong Shadow DOM
@@ -48,15 +43,12 @@
             const shadowAudios = el.shadowRoot.querySelectorAll('audio');
             if (shadowAudios.length > 0) {
               audios.push(...Array.from(shadowAudios));
-              console.log('[Media Detector] Found audio in shadow DOM:', shadowAudios.length);
             }
           }
         });
       } catch (e) {
-        console.log('[Media Detector] Cannot access shadow DOM:', e);
       }
       
-      console.log('[Media Detector] Total Spotify audios found:', audios.length);
     }
     
     return [...videos, ...audios];
@@ -93,7 +85,6 @@
           thumbnail = canvas.toDataURL();
         } catch (e) {
           // CORS issue, không thể lấy thumbnail
-          console.log('[Media Detector] Cannot capture thumbnail:', e.message);
         }
       }
     }
@@ -206,14 +197,12 @@
   function findPrimaryMedia() {
     const mediaElements = findMediaElements();
     
-    console.log('[Media Detector] Found media elements:', mediaElements.length);
     
     if (mediaElements.length === 0) return null;
 
     // Ưu tiên media đang phát
     const playing = mediaElements.find(m => !m.paused && !m.ended);
     if (playing) {
-      console.log('[Media Detector] Found playing media');
       return playing;
     }
 
@@ -225,12 +214,10 @@
         if (!prev) return current;
         return (current.duration > prev.duration) ? current : prev;
       }, null);
-      console.log('[Media Detector] Found media with duration:', selected.duration);
       return selected;
     }
 
     // Fallback: lấy media đầu tiên
-    console.log('[Media Detector] Using first media element');
     return mediaElements[0];
   }
 
@@ -238,11 +225,9 @@
   function controlMedia(command, value) {
     currentMedia = findPrimaryMedia();
     if (!currentMedia) {
-      console.log('[Media Detector] No media found for control');
       return { success: false, error: 'No media found' };
     }
 
-    console.log('[Media Detector] Control command:', command);
 
     try {
       switch (command) {
@@ -302,30 +287,25 @@
       }
       return { success: true };
     } catch (error) {
-      console.error('[Media Detector] Control error:', error);
       return { success: false, error: error.message };
     }
   }
 
   // Lắng nghe tin nhắn từ background script
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log('[Media Detector] Received message:', request.action);
 
     if (request.action === "getMediaState") {
       currentMedia = findPrimaryMedia();
       const mediaInfo = currentMedia ? getMediaInfo(currentMedia) : { hasMedia: false };
-      console.log('[Media Detector] Media info:', mediaInfo);
       sendResponse(mediaInfo);
       return true;
     }
 
     // Reset cache và quét lại DOM từ đầu, trả về kết quả mới
     if (request.action === "rescanMedia") {
-      console.log('[Media Detector] Rescanning media from scratch...');
       currentMedia = null; // xoá cache cũ
       currentMedia = findPrimaryMedia();
       const mediaInfo = currentMedia ? getMediaInfo(currentMedia) : { hasMedia: false };
-      console.log('[Media Detector] Rescan result:', mediaInfo);
       sendResponse(mediaInfo);
       return true;
     }
@@ -341,7 +321,6 @@
 
   // Theo dõi sự thay đổi của DOM để phát hiện media mới
   function startObserving() {
-    console.log('[Media Detector] Starting observation');
     
     if (mediaObserver) mediaObserver.disconnect();
 
@@ -349,7 +328,6 @@
       const newMedia = findPrimaryMedia();
       if (newMedia !== currentMedia) {
         currentMedia = newMedia;
-        console.log('[Media Detector] Media changed');
       }
     });
 
@@ -363,7 +341,6 @@
 
   // Khởi tạo khi trang load xong
   function initialize() {
-    console.log('[Media Detector] Initializing...');
     
     // Đợi một chút để đảm bảo media elements đã load
     setTimeout(() => {
@@ -371,9 +348,7 @@
       currentMedia = findPrimaryMedia();
       
       if (currentMedia) {
-        console.log('[Media Detector] Initial media found:', currentMedia.tagName);
       } else {
-        console.log('[Media Detector] No initial media found');
       }
     }, 1000);
   }

@@ -47,7 +47,6 @@ export const DatePickerModule = (function () {
                     script.src = src;
                     script.onload = checkDone;
                     script.onerror = () => {
-                        console.error(`Không thể tải ${src}`);
                         checkDone(); 
                     };
                     document.body.appendChild(script);

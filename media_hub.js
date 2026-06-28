@@ -25,7 +25,6 @@
 
   // Create media item HTML
   function createMediaItem(media) {
-    console.log('[Media Hub] Creating item for:', media.title, 'isSpotify:', media.isSpotify);
     
     const statusText = media.isPlaying ? 'Đang phát' : 'Tạm dừng';
     const statusClass = media.isPlaying ? 'playing' : '';
@@ -407,15 +406,11 @@ function handleMediaItemClick(e) {
 }
   // Load media data from all tabs
   function loadMediaData() {
-    console.log('[Media Hub] Loading media data...');
     chrome.runtime.sendMessage({ action: 'getMediaInfo' }, (response) => {
-      console.log('[Media Hub] Response:', response);
       if (response && response.mediaInfos) {
         mediaData = response.mediaInfos;
-        console.log('[Media Hub] Media data:', mediaData);
         renderMediaList();
       } else {
-        console.log('[Media Hub] No response or empty mediaInfos');
         mediaData = [];
         renderMediaList();
       }
@@ -424,7 +419,6 @@ function handleMediaItemClick(e) {
 
   // Force rescan tất cả content scripts, sau đó mới load data
   function forceRescanAndLoad() {
-    console.log('[Media Hub] Force rescan all tabs...');
 
     // Hiện loading ngay lập tức
     const container = document.getElementById('mediaContainer');
@@ -470,7 +464,6 @@ function handleMediaItemClick(e) {
 
   // Initialize
   document.addEventListener('DOMContentLoaded', () => {
-    console.log('[Media Hub] Initializing...');
     
     // Mỗi lần mở Media Hub: luôn quét lại từ đầu
     setTimeout(() => {
@@ -480,7 +473,6 @@ function handleMediaItemClick(e) {
 
     // Refresh button: quét lại toàn bộ, không dùng cache
     document.getElementById('refreshBtn').addEventListener('click', () => {
-      console.log('[Media Hub] Manual refresh (force rescan)');
       stopAutoRefresh();
       forceRescanAndLoad();
       // Khởi động lại auto refresh sau khi rescan xong

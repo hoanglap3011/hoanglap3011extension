@@ -74,10 +74,8 @@ async function runCheck() {
         return;
     }
 
-    console.log('[SC Checker] Đang kiểm tra:', sites);
     const results       = await Promise.all(sites.map(checkOneSite));
     const unblockedSites = results.filter(r => !r.blocked).map(r => r.hostname);
-    console.log('[SC Checker] Kết quả:', results);
 
     if (unblockedSites.length > 0) {
         // Còn site chưa bị chặn → hiện overlay
@@ -97,7 +95,6 @@ function startAlarm() {
     chrome.alarms.get(SC_ALARM_NAME, (existing) => {
         if (!existing) {
             chrome.alarms.create(SC_ALARM_NAME, { periodInMinutes: SC_ALARM_PERIOD });
-            console.log(`[SC Checker] Alarm đặt mỗi ${SC_ALARM_PERIOD} phút.`);
         }
     });
 }
@@ -188,7 +185,6 @@ export function initSCChecker() {
     // Alarm định kỳ → trigger runCheck
     chrome.alarms.onAlarm.addListener((alarm) => {
         if (alarm.name === SC_ALARM_NAME) {
-            console.log('[SC Checker] ⏰ Alarm fired — đang check...');
             runCheck();
         }
     });

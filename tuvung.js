@@ -1,6 +1,5 @@
 import { LoadingModule } from './LoadingModule.js';
 import { StorageModule } from './StorageModule.js';
-import { PasswordModule } from './PasswordModule.js';
 
 export const TuVungModule = (() => {
 
@@ -123,7 +122,7 @@ export const TuVungModule = (() => {
               title: 'Đồng bộ thành công', message: `Đã xóa vĩnh viễn từ "${entry.word}" khỏi server.`
             });
           }
-        }).catch(err => console.warn('[TuVung] Lỗi xóa ngầm:', err));
+        }).catch(() => {});
     }
     return list;
   };

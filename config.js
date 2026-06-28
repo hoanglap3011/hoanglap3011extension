@@ -3,6 +3,7 @@ const API =
 "https://script.google.com/macros/s/AKfycbwv3RCl6kyDGcfMn6MyijSUZiIQFP30z7rTKs1rDPf1A_lE1KsXmllKSEhIFLd15JK5/exec"
 ;
 
+const API_ACTION_GET_ALL_SUMMARY = "getAllSummary";
 const API_ACTION_GET_SUMMARY_BY_CODE = "getSummaryByCode";
 const API_ACTION_GET_SUMMARY_BY_CATEGORY = "getSummariesByCategory";
 const API_ACTION_GET_QUOTES = "getQuotes";
@@ -35,6 +36,11 @@ const CACHE_HABIT_LIST = 'habitList';
 
 // recap
 const CACHE_DATA_RECAP = 'dataRecap';
+
+// summary box
+const CACHE_SUMMARY_DATA = 'summaryData';
+const SUMMARY_SITES_KEY = 'summarySitesList';
+const DEFAULT_SUMMARY_SITES = `youtube.com\ndantri.com.vn`;
 
 // facebook
 const MIN_SUMMARY_LENGTH = 1000;
@@ -79,13 +85,9 @@ const DEFAULT_SETTINGS = {
     
     // YouTube
     ytEnableHomepageHider: true,
-    ytEnableSummaryBox: true,
     ytEnableHideRelated: true,
-    ytEnableAutoSummarize: false,
-    ytEnableAutoCloseNotebook: false,
-
     // box tóm tắt toàn cầu
-    sbEnable: true,
+    sbEnable: false,
 
     
 };

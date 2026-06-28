@@ -1,6 +1,5 @@
 import { LoadingModule } from './LoadingModule.js';
 import { StorageModule } from './StorageModule.js';
-import { PasswordModule } from './PasswordModule.js';
 export const TodolistModule = {
 
     fetchLinkToDoListWeek(dayStr, callback) {

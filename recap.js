@@ -95,7 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // <<< THÊM MỚI: Lưu vào cache sau khi fetch thành công >>>
             StorageModule.set({ [CACHE_DATA_RECAP]: data }, () => {
-                console.log("Đã lưu dữ liệu API vào cache.");
             });
     
         })
@@ -118,14 +117,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Nếu có cache và cache là một mảng
             if (cachedData && Array.isArray(cachedData) && cachedData.length > 0) {
-                console.log("Đã tải dữ liệu từ cache.");
                 allCommands = cachedData;
                 filteredCommands = [...allCommands];
                 renderList(filteredCommands);
                 LoadingModule.hide(); // Tắt loading
             } else {
                 // Nếu không có cache, gọi API
-                console.log("Cache rỗng. Đang tải từ API...");
                 fetchData(); // Hàm này sẽ tự xử lý loading, render và lưu cache
             }
         });

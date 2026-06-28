@@ -153,7 +153,6 @@ async function init() {
   }
 }
 
-
 async function stopAll() {
   chrome.alarms.clear('neo-work-end');
   chrome.alarms.clear('neo-break-end');
@@ -358,7 +357,6 @@ async function startBreakPhase(taskId) {
   tasks = tasks.map(t => t.id === taskId ? { ...t, status: 'breaking' } : t);
   await saveTasks();
 
-
   const ms     = task.breakMin * 60 * 1000;
   breakEndsAt  = Date.now() + ms;
   phase        = 'breaking';
@@ -445,7 +443,6 @@ async function enterAlertShutdown() {
   applyPipLook(true);
   movePip('center');
 
-
   renderAll();
 }
 
@@ -480,7 +477,7 @@ async function openPip() {
   try {
     pipWindow = await documentPictureInPicture.requestWindow({ width: 360, height: 90 });
   } catch (e) {
-    console.warn('[Neo PiP]', e);
+
     return;
   }
 
@@ -1097,7 +1094,7 @@ async function pickMusicDir() {
     await idbSet('musicDir', musicDirHandle);
     await loadMusicFiles();
   } catch (e) {
-    if (e.name !== 'AbortError') console.warn('[Music]', e);
+    if (e.name !== 'AbortError') {}
   }
 }
 
@@ -1212,14 +1209,12 @@ function fmtSec(s) {
   return `${m}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 }
 
-
 // 'pick' | 'perm' | 'empty' | 'player'
 const MUSIC_STATE_ELS = { pick: 'musicPickBtn', perm: 'musicPermBtn', empty: 'musicEmptyMsg', player: 'musicPlayerUI' };
 function showMusicState(state) {
   $('musicAction').style.display = state === 'player' ? 'none' : '';
   Object.entries(MUSIC_STATE_ELS).forEach(([s, id]) => $(id).style.display = s === state ? '' : 'none');
 }
-
 
 // ══════════════════════════════════════════════
 //  STANDUP — Nhắc nhở đứng dậy
@@ -1337,7 +1332,6 @@ function standupTick() {
   if (remaining <= 0) { clearInterval(standupTickTimer); return; }
   $('standupClock').textContent = fmtRemaining(remaining);
 }
-
 
 function setStandupState(s) {
   standupState = s;
