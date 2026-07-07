@@ -130,7 +130,10 @@ def run_download(job_id, url):
     # ra file riêng (luôn UTF-8) để không phụ thuộc stdout
     path_file = Path(tempfile.gettempdir()) / f"ytdl-{job_id}.path"
     cmd += ["--print-to-file", "after_move:filepath", str(path_file)]
-    popen_kwargs = {"env": {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}}
+    # PYTHONUNBUFFERED: yt-dlp bị pipe sẽ buffer stdout theo khối → các dòng
+    # tiến trình dồn cục đến cuối mới tới, % đứng ở 0 rồi nhảy thẳng 100
+    popen_kwargs = {"env": {**os.environ, "PYTHONIOENCODING": "utf-8",
+                            "PYTHONUTF8": "1", "PYTHONUNBUFFERED": "1"}}
     if SYSTEM == "Windows":
         # server chạy bằng pythonw (không console) — không có cờ này thì
         # mỗi lần tải sẽ bật cửa sổ console đen của yt-dlp

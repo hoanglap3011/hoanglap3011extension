@@ -358,15 +358,17 @@ async function initializeYouTubeHandler(settings) {
 
 /**
  * ===================================================================
- * NÚT "TẢI VIDEO" (bật/tắt bằng setting ytEnableDownloadButton)
- * Luồng: nút → background.js → helper local (ytdl-helper/ytdl_server.py) → yt-dlp.
- * Helper chưa cài: hiện bảng hướng dẫn, tự tải bộ cài đúng hệ điều hành về Downloads.
+ * BOX "TẢI VIDEO" (bật/tắt bằng setting ytEnableDownloadButton)
+ * Luồng: box → background.js → helper local (ytdl-helper/ytdl_server.py) → yt-dlp.
+ * UI là popup cùng kiểu Box Tóm Tắt (summaryBox.js): kéo-thả, co giãn,
+ * thu nhỏ, nhớ vị trí — mọi trạng thái (hướng dẫn cài, tiến trình, kết quả)
+ * đều hiển thị trong nội dung box thay vì các bảng nổi rời rạc.
  * ===================================================================
  */
 function initializeDownloadButton() {
-    const BUTTON_ID = 'my-ext-download-btn';
-    const PANEL_ID = 'my-ext-download-panel';
-    const LABEL_DEFAULT = '⬇️ Tải video';
+    const CONTAINER_ID = 'lp-download-box-container';
+    if (document.getElementById(CONTAINER_ID)) return;
+
     let pollTimer = null;
     let currentJobId = null;
 
@@ -386,152 +388,361 @@ function initializeDownloadButton() {
         windows: 'python "$env:USERPROFILE\\Downloads\\ytdl_server.py" install',
     };
 
-    // ==================== Nút ====================
+    // ==================== Dựng box (cùng kiểu Box Tóm Tắt) ====================
 
-    function ensureButton() {
-        const existing = document.getElementById(BUTTON_ID);
-        if (location.pathname !== '/watch') {
-            existing?.remove();
-            closePanel();
-            return;
+    const container = document.createElement('div');
+    container.id = CONTAINER_ID;
+    document.body.appendChild(container);
+    const shadow = container.attachShadow({ mode: 'open' });
+
+    const style = document.createElement('style');
+    style.textContent = `
+        #lp-box {
+            position: fixed; z-index: 2147483647;
+            background: white; border: 1px solid #ccc;
+            border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex; flex-direction: column; overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            min-width: 200px; min-height: 100px;
         }
-        if (existing) return;
+        .header {
+            background: #f8f9fa; padding: 8px 12px; cursor: move;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #eee; user-select: none;
+        }
+        .title { font-weight: 600; font-size: 13px; color: #444; }
+        .btns button {
+            border: none; background: none; cursor: pointer;
+            padding: 0 5px; font-size: 16px; color: #888;
+        }
+        .btns button:hover { color: #000; }
+        #content {
+            padding: 12px; flex: 1; overflow-y: auto;
+            font-size: 14px; color: #333;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        /* Thu nhỏ neo cạnh Box Tóm Tắt (box đó nằm ở góc phải dưới cùng) */
+        #lp-box.minimized {
+            width: 220px !important; height: 38px !important;
+            bottom: 10px !important; right: 240px !important;
+            top: auto !important; left: auto !important;
+        }
+        #lp-box.minimized #content,
+        #lp-box.minimized .footer,
+        #lp-box.minimized .rz { display: none; }
+        /* Tay nắm co giãn ở 4 cạnh + 4 góc */
+        .rz { position: absolute; z-index: 10; }
+        .rz-n  { top: 0; left: 12px; right: 12px; height: 5px; cursor: ns-resize; }
+        .rz-s  { bottom: 0; left: 12px; right: 12px; height: 5px; cursor: ns-resize; }
+        .rz-e  { right: 0; top: 12px; bottom: 12px; width: 5px; cursor: ew-resize; }
+        .rz-w  { left: 0; top: 12px; bottom: 12px; width: 5px; cursor: ew-resize; }
+        .rz-ne { top: 0; right: 0; width: 12px; height: 12px; cursor: nesw-resize; }
+        .rz-nw { top: 0; left: 0; width: 12px; height: 12px; cursor: nwse-resize; }
+        .rz-sw { bottom: 0; left: 0; width: 12px; height: 12px; cursor: nesw-resize; }
+        .rz-se {
+            bottom: 0; right: 0; width: 12px; height: 12px; cursor: nwse-resize;
+            background: linear-gradient(135deg, transparent 50%, #ccc 50%);
+        }
+        .footer {
+            padding: 8px 12px; border-top: 1px solid #eee;
+            display: flex; gap: 8px; flex-shrink: 0;
+        }
+        .btn-action {
+            padding: 6px 14px; border: none; background: #065fd4;
+            color: white; border-radius: 16px; cursor: pointer;
+            font-size: 13px; font-weight: 500;
+        }
+        .btn-action:hover:not(:disabled) { background: #0552b0; }
+        .btn-action:disabled { background: #9e9e9e; cursor: not-allowed; }
+        .loader {
+            display: inline-block; border: 2px solid rgba(255,255,255,0.3);
+            border-top: 2px solid #fff; border-radius: 50%;
+            width: 12px; height: 12px;
+            animation: spin 0.8s linear infinite; vertical-align: middle;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        a.yt-link {
+            color: #065fd4; text-decoration: none; font-weight: 500;
+            display: block; padding: 4px 0;
+            border-bottom: 1px dashed #eee;
+        }
+        a.yt-link:hover { text-decoration: underline; }
+        .file-path { word-break: break-all; color: #555; font-size: 13px; }
+        .bar {
+            height: 8px; background: #eee; border-radius: 4px; overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%; width: 0; background: #065fd4;
+            transition: width 0.4s ease;
+        }
+        .pct-label { color: #888; font-style: italic; font-size: 13px; }
+        .setup-guide { white-space: pre-wrap; word-break: break-word; font-size: 13px; }
+        .setup-cmd {
+            display: block; background: #f1f3f4; border-radius: 6px;
+            padding: 6px 8px; margin: 4px 0; font-size: 12px;
+            word-break: break-all; user-select: all;
+        }
+    `;
+    shadow.appendChild(style);
 
-        const btn = document.createElement('button');
-        btn.id = BUTTON_ID;
-        btn.textContent = LABEL_DEFAULT;
-        Object.assign(btn.style, {
-            position: 'fixed', bottom: '20px', right: '20px', zIndex: '9999',
-            padding: '8px 16px', border: 'none', borderRadius: '18px',
-            background: '#065fd4', color: 'white',
-            fontSize: '14px', fontWeight: '500', cursor: 'pointer',
-        });
-        btn.addEventListener('click', onDownloadClick);
-        document.body.appendChild(btn);
-        if (currentJobId) setButton('⏳ Đang tải...', true);
+    const lpBox = document.createElement('div');
+    lpBox.id = 'lp-box';
+
+    chrome.storage.local.get(['downloadBoxState'], (res) => {
+        const s = res.downloadBoxState || { top: '80px', right: '20px', width: '320px', height: '210px' };
+        Object.assign(lpBox.style, { top: s.top, right: s.right, left: s.left, width: s.width, height: s.height });
+        if (s.isMin) lpBox.classList.add('minimized');
+    });
+
+    lpBox.innerHTML = `
+        <div class="header">
+            <span class="title">⬇️ Tải video</span>
+            <div class="btns">
+                <button id="btn-min" title="Thu nhỏ">_</button>
+                <button id="btn-max" title="Phóng to" style="display:none">▢</button>
+                <button id="btn-close" title="Đóng">×</button>
+            </div>
+        </div>
+        <div id="content"></div>
+        <div class="footer">
+            <button class="btn-action" id="btn-download">⬇️ Tải video</button>
+        </div>
+    `;
+    shadow.appendChild(lpBox);
+
+    const saveBoxState = () => {
+        chrome.storage.local.set({ downloadBoxState: {
+            top: lpBox.style.top, right: lpBox.style.right, left: lpBox.style.left,
+            width: lpBox.style.width, height: lpBox.style.height,
+            isMin: lpBox.classList.contains('minimized')
+        }});
+    };
+
+    const btnMin   = lpBox.querySelector('#btn-min');
+    const btnMax   = lpBox.querySelector('#btn-max');
+    const btnClose = lpBox.querySelector('#btn-close');
+
+    btnMin.onclick = () => { lpBox.classList.add('minimized'); btnMin.style.display = 'none'; btnMax.style.display = 'inline'; saveBoxState(); };
+    btnMax.onclick = () => { lpBox.classList.remove('minimized'); btnMin.style.display = 'inline'; btnMax.style.display = 'none'; saveBoxState(); };
+    btnClose.onclick = () => { clearInterval(pollTimer); container.remove(); };
+
+    lpBox.querySelector('.header').onmousedown = (e) => {
+        if (lpBox.classList.contains('minimized')) return;
+        let startX = e.clientX, startY = e.clientY;
+        let startLeft = lpBox.offsetLeft, startTop = lpBox.offsetTop;
+        const onMove = (ev) => {
+            lpBox.style.left = (startLeft + ev.clientX - startX) + 'px';
+            lpBox.style.top  = (startTop  + ev.clientY - startY) + 'px';
+            lpBox.style.right = 'auto';
+        };
+        document.onmousemove = onMove;
+        document.onmouseup = () => { document.onmousemove = null; saveBoxState(); };
+    };
+
+    // Co giãn từ cạnh/góc bất kỳ; kéo cạnh trái/trên thì bù vị trí để mép đối diện đứng yên
+    const startResize = (e, dirs) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const startX = e.clientX, startY = e.clientY;
+        const startW = lpBox.offsetWidth, startH = lpBox.offsetHeight;
+        const startL = lpBox.offsetLeft,  startT = lpBox.offsetTop;
+        const MIN_W = 200, MIN_H = 100;
+        lpBox.style.left = startL + 'px'; lpBox.style.top = startT + 'px'; lpBox.style.right = 'auto';
+        document.onmousemove = (ev) => {
+            const dx = ev.clientX - startX, dy = ev.clientY - startY;
+            if (dirs.includes('e')) lpBox.style.width  = Math.max(MIN_W, startW + dx) + 'px';
+            if (dirs.includes('s')) lpBox.style.height = Math.max(MIN_H, startH + dy) + 'px';
+            if (dirs.includes('w')) {
+                const w = Math.max(MIN_W, startW - dx);
+                lpBox.style.width = w + 'px';
+                lpBox.style.left  = (startL + startW - w) + 'px';
+            }
+            if (dirs.includes('n')) {
+                const h = Math.max(MIN_H, startH - dy);
+                lpBox.style.height = h + 'px';
+                lpBox.style.top    = (startT + startH - h) + 'px';
+            }
+        };
+        document.onmouseup = () => { document.onmousemove = null; saveBoxState(); };
+    };
+    ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].forEach(dir => {
+        const h = document.createElement('div');
+        h.className = `rz rz-${dir}`;
+        h.onmousedown = (e) => startResize(e, dir);
+        lpBox.appendChild(h);
+    });
+
+    const contentEl = lpBox.querySelector('#content');
+    const btnDownload = lpBox.querySelector('#btn-download');
+
+    // ==================== Các trạng thái hiển thị ====================
+
+    const setStatus = (msg) => { contentEl.innerHTML = `<i style="color:#888">${msg}</i>`; };
+
+    const resetButton = () => {
+        btnDownload.disabled = false;
+        btnDownload.textContent = '⬇️ Tải video';
+    };
+
+    function showIdle() {
+        setStatus("Nhấn 'Tải video' để tải video này về thư mục Downloads.");
+        resetButton();
     }
 
-    function setButton(text, disabled) {
-        const btn = document.getElementById(BUTTON_ID);
-        if (!btn) return;
-        btn.textContent = text;
-        btn.disabled = disabled;
-        btn.style.opacity = disabled ? '0.8' : '1';
+    // Kết quả/lỗi chứa text tùy ý từ yt-dlp → dựng bằng textContent, không innerHTML
+    function showDone(file, id) {
+        contentEl.innerHTML = '';
+        const ok = document.createElement('div');
+        ok.style.color = '#2e7d32';
+        ok.textContent = '✅ Đã tải xong:';
+        const path = document.createElement('div');
+        path.className = 'file-path';
+        path.textContent = file || '';
+        const a = document.createElement('a');
+        a.className = 'yt-link';
+        a.textContent = '📂 Mở thư mục';
+        a.href = '#';
+        a.onclick = (e) => { e.preventDefault(); send({ action: 'ytdlReveal', id }); };
+        contentEl.append(ok, path, a);
     }
+
+    // Thanh tiến trình: dựng 1 lần rồi chỉ cập nhật số + độ rộng,
+    // để CSS transition kéo mượt giữa các lần poll
+    function showProgress(pct) {
+        let wrap = contentEl.querySelector('.dl-progress');
+        if (!wrap) {
+            contentEl.innerHTML = '';
+            wrap = document.createElement('div');
+            wrap.className = 'dl-progress';
+            const label = document.createElement('div');
+            label.className = 'pct-label';
+            const bar = document.createElement('div');
+            bar.className = 'bar';
+            const fill = document.createElement('div');
+            fill.className = 'bar-fill';
+            bar.appendChild(fill);
+            wrap.append(label, bar);
+            contentEl.appendChild(wrap);
+        }
+        wrap.querySelector('.pct-label').textContent = pct >= 100
+            ? 'Đang xử lý (ghép video/âm thanh)...'
+            : `Đang tải... ${pct}%`;
+        wrap.querySelector('.bar-fill').style.width = Math.min(pct, 100) + '%';
+    }
+
+    function showError(msg) {
+        contentEl.innerHTML = '';
+        const head = document.createElement('div');
+        head.style.color = 'red';
+        head.textContent = '❌ Tải lỗi:';
+        const detail = document.createElement('div');
+        detail.className = 'file-path';
+        detail.textContent = msg || 'không rõ nguyên nhân';
+        contentEl.append(head, detail);
+    }
+
+    function actionButton(label, onClick) {
+        const b = document.createElement('button');
+        b.className = 'btn-action';
+        b.textContent = label;
+        b.onclick = onClick;
+        return b;
+    }
+
+    function showSetup() {
+        const os = detectOS();
+        contentEl.innerHTML = '';
+
+        const guide = document.createElement('div');
+        guide.className = 'setup-guide';
+        guide.textContent =
+            '⚠️ Helper tải video chưa chạy trên máy này.\n' +
+            'Trình duyệt không cho phép extension tự cài phần mềm, nên cần chạy bộ cài 1 lần:\n' +
+            '1. Bấm "Tải bộ cài" (1 file về Downloads)\n' +
+            `2. Mở ${os === 'windows' ? 'PowerShell' : 'Terminal'} chạy lệnh:`;
+        const cmd = document.createElement('code');
+        cmd.className = 'setup-cmd';
+        cmd.textContent = SETUP_COMMANDS[os];
+        const step3 = document.createElement('div');
+        step3.className = 'setup-guide';
+        step3.textContent = '3. Xong quay lại đây bấm "Kiểm tra lại"';
+
+        const status = document.createElement('div');
+        status.className = 'setup-guide';
+
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
+        row.appendChild(actionButton('📥 Tải bộ cài', async () => {
+            const r = await send({ action: 'ytdlGetSetup', os });
+            status.textContent = r?.ok ? '✅ Đã tải bộ cài về Downloads' : '❌ Tải bộ cài lỗi';
+        }));
+        row.appendChild(actionButton('🔄 Kiểm tra lại', async () => {
+            const r = await send({ action: 'ytdlPing' });
+            if (r?.ok) showIdle();
+            else status.textContent = '❌ Vẫn chưa thấy helper — kiểm tra bước cài đặt.';
+        }));
+
+        contentEl.append(guide, cmd, step3, row, status);
+    }
+
+    // ==================== Tải + theo dõi tiến trình ====================
 
     async function onDownloadClick() {
-        closePanel();
-        setButton('⏳ Đang gửi...', true);
+        btnDownload.disabled = true;
+        btnDownload.innerHTML = '<span class="loader"></span>';
+        setStatus('Đang gửi yêu cầu...');
         const res = await send({ action: 'ytdlStart', url: location.href });
         if (res?.ok) {
             trackJob(res.id);
         } else if (res?.noHelper) {
-            setButton(LABEL_DEFAULT, false);
-            showSetupPanel();
+            resetButton();
+            showSetup();
         } else {
-            setButton(LABEL_DEFAULT, false);
-            showPanel(`❌ ${res?.error || 'Lỗi không rõ'}`);
+            resetButton();
+            showError(res?.error || 'Lỗi không rõ');
         }
     }
-
-    // ==================== Theo dõi tiến trình ====================
 
     function trackJob(id) {
         currentJobId = id;
         clearInterval(pollTimer);
+        setStatus('Đang phân tích video...');
+        // yt-dlp tải video 0→100% rồi tải audio lại từ 0→100% rồi ghép file —
+        // giữ % không tụt lùi để thanh chạy một mạch; chạm 100% là giai đoạn audio/ghép
+        let shownPct = 0;
         pollTimer = setInterval(async () => {
             const job = await send({ action: 'ytdlStatus', id });
             if (!job) return;
             if (job.status === 'downloading') {
-                setButton(`⏳ ${Math.round(job.percent || 0)}%`, true);
+                // nút giữ nguyên vòng xoay — phần trăm chỉ hiện trong nội dung box
+                shownPct = Math.max(shownPct, Math.round(job.percent || 0));
+                if (shownPct > 0) showProgress(shownPct);
                 return;
             }
             clearInterval(pollTimer);
             currentJobId = null;
-            setButton(LABEL_DEFAULT, false);
-            if (job.status === 'done') {
-                showPanel(`✅ Đã tải xong:\n${job.file}`, { revealId: id });
-            } else {
-                showPanel(`❌ Tải lỗi:\n${job.error || 'không rõ nguyên nhân'}`);
-            }
-        }, 1000);
+            resetButton();
+            if (job.status === 'done') showDone(job.file, id);
+            else showError(job.error);
+        }, 500);
     }
 
-    // ==================== Bảng thông báo / cài đặt ====================
+    btnDownload.onclick = onDownloadClick;
 
-    function closePanel() {
-        document.getElementById(PANEL_ID)?.remove();
-    }
+    // ==================== Điều hướng SPA ====================
 
-    function createPanel() {
-        closePanel();
-        const panel = document.createElement('div');
-        panel.id = PANEL_ID;
-        Object.assign(panel.style, {
-            position: 'fixed', bottom: '64px', right: '20px', zIndex: '9999',
-            maxWidth: '340px', padding: '14px', borderRadius: '10px',
-            background: '#212121', color: '#fff',
-            fontSize: '13px', lineHeight: '1.5', whiteSpace: 'pre-wrap',
-            wordBreak: 'break-all', boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-        });
-        document.body.appendChild(panel);
-        return panel;
-    }
-
-    function panelButton(label, onClick) {
-        const b = document.createElement('button');
-        b.textContent = label;
-        Object.assign(b.style, {
-            margin: '8px 8px 0 0', padding: '6px 12px', border: 'none',
-            borderRadius: '14px', background: '#065fd4', color: 'white',
-            fontSize: '13px', cursor: 'pointer',
-        });
-        b.addEventListener('click', onClick);
-        return b;
-    }
-
-    function showPanel(text, opts = {}) {
-        const panel = createPanel();
-        panel.appendChild(document.createTextNode(text));
-        panel.appendChild(document.createElement('br'));
-        if (opts.revealId) {
-            panel.appendChild(panelButton('📂 Mở thư mục', () =>
-                send({ action: 'ytdlReveal', id: opts.revealId })));
+    // YouTube chuyển trang không reload → chỉ hiện box trên trang xem video;
+    // đang tải dở thì giữ nguyên nội dung để theo dõi tiếp
+    function onNavigate() {
+        if (location.pathname === '/watch') {
+            lpBox.style.display = '';
+            if (!currentJobId) showIdle();
+        } else {
+            lpBox.style.display = 'none';
         }
-        panel.appendChild(panelButton('Đóng', closePanel));
     }
-
-    function showSetupPanel() {
-        const os = detectOS();
-        const panel = createPanel();
-        panel.appendChild(document.createTextNode(
-            '⚠️ Helper tải video chưa chạy trên máy này.\n\n' +
-            'Trình duyệt không cho phép extension tự cài phần mềm, nên cần chạy bộ cài 1 lần:\n' +
-            '1. Bấm "Tải bộ cài" (1 file về Downloads)\n' +
-            `2. Mở ${os === 'windows' ? 'PowerShell' : 'Terminal'} chạy:\n${SETUP_COMMANDS[os]}\n` +
-            '3. Xong quay lại đây bấm "Kiểm tra lại"'
-        ));
-        panel.appendChild(document.createElement('br'));
-
-        const status = document.createElement('div');
-        panel.appendChild(panelButton('📥 Tải bộ cài', async () => {
-            const r = await send({ action: 'ytdlGetSetup', os });
-            status.textContent = r?.ok ? '✅ Đã tải bộ cài về Downloads' : '❌ Tải bộ cài lỗi';
-        }));
-        panel.appendChild(panelButton('🔄 Kiểm tra lại', async () => {
-            const r = await send({ action: 'ytdlPing' });
-            status.textContent = r?.ok
-                ? '✅ Helper đã chạy! Bấm Tải video lại nhé.'
-                : '❌ Vẫn chưa thấy helper — kiểm tra bước cài đặt.';
-        }));
-        panel.appendChild(panelButton('Đóng', closePanel));
-        status.style.marginTop = '8px';
-        panel.appendChild(status);
-    }
-
-    // YouTube là SPA: chuyển trang không reload nên phải nghe event điều hướng
-    window.addEventListener('yt-navigate-finish', ensureButton);
-    ensureButton();
+    window.addEventListener('yt-navigate-finish', onNavigate);
+    onNavigate();
 }
 
 

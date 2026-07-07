@@ -295,33 +295,6 @@ async function ytdlApi(path) {
     return r.json();
 }
 
-// Poll tới khi job xong/lỗi rồi bắn notification — chạy độc lập với tab YouTube,
-// nên đóng tab giữa chừng vẫn được báo khi tải xong.
-function ytdlNotifyWhenFinished(jobId) {
-    setTimeout(async () => {
-        try {
-            const job = await ytdlApi(`/status?id=${jobId}`);
-            if (job.status === 'downloading') return ytdlNotifyWhenFinished(jobId);
-            chrome.notifications.create(`ytdl-${jobId}`, {
-                type: 'basic', iconUrl: 'image/icon.png',
-                title: job.status === 'done' ? '✅ Tải video xong' : '❌ Tải video lỗi',
-                message: job.status === 'done'
-                    ? `${job.file}\n(bấm để mở thư mục)`
-                    : (job.error || 'Lỗi không rõ'),
-                priority: 2, requireInteraction: true,
-            });
-        } catch (e) {
-            // helper rớt giữa chừng — content script sẽ tự báo lỗi trên nút
-        }
-    }, 1000);
-}
-
-chrome.notifications.onClicked.addListener((id) => {
-    if (!id.startsWith('ytdl-')) return;
-    chrome.notifications.clear(id);
-    ytdlApi(`/reveal?id=${id.slice(5)}`).catch(() => {});
-});
-
 let cachedTokens = { at: null, bl: null, timestamp: 0 };
 let vietgidoTabId = null;
 
@@ -433,7 +406,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         ytdlApi(`/download?url=${encodeURIComponent(request.url)}`)
             .then(data => {
                 if (!data.id) return sendResponse({ ok: false, error: data.error });
-                ytdlNotifyWhenFinished(data.id);
                 sendResponse({ ok: true, id: data.id });
             })
             .catch(() => sendResponse({ ok: false, noHelper: true }));
