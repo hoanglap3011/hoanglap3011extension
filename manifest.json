@@ -18,7 +18,8 @@
     "alarms",
     "windows",
     "notifications",
-    "system.display"
+    "system.display",
+    "downloads"
   ],
   "host_permissions": [
     "*://script.google.com/*",
@@ -150,6 +151,15 @@
     }
   ],
   "web_accessible_resources": [
+    {
+      "resources": [
+        "ytdl-helper/ytdl_server.py"
+      ],
+      "matches": [
+        "*://*.youtube.com/*",
+        "*://youtube.com/*"
+      ]
+    },
     {
       "resources": [
         "football-teams.json",

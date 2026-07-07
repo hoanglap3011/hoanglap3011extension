@@ -609,12 +609,14 @@ const getPageTitle = () => {
 
             // Extension tự tải & bóc nội dung từng trang rồi gộp cả thread thành 1 nguồn
             // văn bản (để NotebookLM tự fetch voz hay bị chặn → "URL không hợp lệ").
-            // Thread siêu dài mới phải tách Part để né trần ~500k từ/nguồn của NotebookLM.
+            // Thread siêu dài mới phải tách Part để mỗi nguồn không quá 2MB.
             const threadTitle = (document.querySelector('h1.p-title-value')?.textContent
                 || document.title.replace(/\s*\|\s*Page\s+\d+(\s*\|.*)?$/i, '').replace(/\s*\|\s*[^|]+$/, '')).trim();
-            const MAX_PART_CHARS = 2500000;
+            const MAX_PART_BYTES = 2 * 1024 * 1024; // 2MB/nguồn (đo byte UTF-8, tiếng Việt ~1-3 byte/ký tự)
+            const byteLen = (s) => new TextEncoder().encode(s).length;
             const parts = [];
             let cur = '';
+            let curBytes = 0;
             let threadStartDate = '';
             for (let i = 0; i < urls.length; i++) {
                 setStatus(`Đang tải trang ${i + 1}/${totalPages}...`);
@@ -624,8 +626,10 @@ const getPageTitle = () => {
                 if (i === 0 && firstPostTime) threadStartDate = firstPostTime;
                 if (md) {
                     const chunk = `## Trang ${i + 1}/${totalPages} — ${urls[i]}\n\n${md}`;
-                    if (cur && cur.length + chunk.length > MAX_PART_CHARS) { parts.push(cur); cur = ''; }
+                    const chunkBytes = byteLen(chunk);
+                    if (cur && curBytes + chunkBytes > MAX_PART_BYTES) { parts.push(cur); cur = ''; curBytes = 0; }
                     cur += (cur ? '\n\n' : '') + chunk;
+                    curBytes += chunkBytes + (curBytes ? 2 : 0);
                 }
                 await new Promise(r => setTimeout(r, 300));
             }

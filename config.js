@@ -86,6 +86,7 @@ const DEFAULT_SETTINGS = {
     // YouTube
     ytEnableHomepageHider: true,
     ytEnableHideRelated: true,
+    ytEnableDownloadButton: true,
     // box tóm tắt toàn cầu
     sbEnable: false,
 

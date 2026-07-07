@@ -358,27 +358,205 @@ async function initializeYouTubeHandler(settings) {
 
 /**
  * ===================================================================
- * TRÌNH KHỞI CHẠY (RUNNER) MỚI
- * (Đọc cài đặt và gọi hàm xử lý chính)
+ * NÚT "TẢI VIDEO" (bật/tắt bằng setting ytEnableDownloadButton)
+ * Luồng: nút → background.js → helper local (ytdl-helper/ytdl_server.py) → yt-dlp.
+ * Helper chưa cài: hiện bảng hướng dẫn, tự tải bộ cài đúng hệ điều hành về Downloads.
+ * ===================================================================
+ */
+function initializeDownloadButton() {
+    const BUTTON_ID = 'my-ext-download-btn';
+    const PANEL_ID = 'my-ext-download-panel';
+    const LABEL_DEFAULT = '⬇️ Tải video';
+    let pollTimer = null;
+    let currentJobId = null;
+
+    const send = (msg) => new Promise(resolve =>
+        chrome.runtime.sendMessage(msg, r => resolve(chrome.runtime.lastError ? null : r)));
+
+    function detectOS() {
+        const p = navigator.platform.toLowerCase();
+        if (p.includes('win')) return 'windows';
+        if (p.includes('mac')) return 'mac';
+        return 'linux';
+    }
+
+    const SETUP_COMMANDS = {
+        mac:     'python3 ~/Downloads/ytdl_server.py install',
+        linux:   'python3 ~/Downloads/ytdl_server.py install',
+        windows: 'python "$env:USERPROFILE\\Downloads\\ytdl_server.py" install',
+    };
+
+    // ==================== Nút ====================
+
+    function ensureButton() {
+        const existing = document.getElementById(BUTTON_ID);
+        if (location.pathname !== '/watch') {
+            existing?.remove();
+            closePanel();
+            return;
+        }
+        if (existing) return;
+
+        const btn = document.createElement('button');
+        btn.id = BUTTON_ID;
+        btn.textContent = LABEL_DEFAULT;
+        Object.assign(btn.style, {
+            position: 'fixed', bottom: '20px', right: '20px', zIndex: '9999',
+            padding: '8px 16px', border: 'none', borderRadius: '18px',
+            background: '#065fd4', color: 'white',
+            fontSize: '14px', fontWeight: '500', cursor: 'pointer',
+        });
+        btn.addEventListener('click', onDownloadClick);
+        document.body.appendChild(btn);
+        if (currentJobId) setButton('⏳ Đang tải...', true);
+    }
+
+    function setButton(text, disabled) {
+        const btn = document.getElementById(BUTTON_ID);
+        if (!btn) return;
+        btn.textContent = text;
+        btn.disabled = disabled;
+        btn.style.opacity = disabled ? '0.8' : '1';
+    }
+
+    async function onDownloadClick() {
+        closePanel();
+        setButton('⏳ Đang gửi...', true);
+        const res = await send({ action: 'ytdlStart', url: location.href });
+        if (res?.ok) {
+            trackJob(res.id);
+        } else if (res?.noHelper) {
+            setButton(LABEL_DEFAULT, false);
+            showSetupPanel();
+        } else {
+            setButton(LABEL_DEFAULT, false);
+            showPanel(`❌ ${res?.error || 'Lỗi không rõ'}`);
+        }
+    }
+
+    // ==================== Theo dõi tiến trình ====================
+
+    function trackJob(id) {
+        currentJobId = id;
+        clearInterval(pollTimer);
+        pollTimer = setInterval(async () => {
+            const job = await send({ action: 'ytdlStatus', id });
+            if (!job) return;
+            if (job.status === 'downloading') {
+                setButton(`⏳ ${Math.round(job.percent || 0)}%`, true);
+                return;
+            }
+            clearInterval(pollTimer);
+            currentJobId = null;
+            setButton(LABEL_DEFAULT, false);
+            if (job.status === 'done') {
+                showPanel(`✅ Đã tải xong:\n${job.file}`, { revealId: id });
+            } else {
+                showPanel(`❌ Tải lỗi:\n${job.error || 'không rõ nguyên nhân'}`);
+            }
+        }, 1000);
+    }
+
+    // ==================== Bảng thông báo / cài đặt ====================
+
+    function closePanel() {
+        document.getElementById(PANEL_ID)?.remove();
+    }
+
+    function createPanel() {
+        closePanel();
+        const panel = document.createElement('div');
+        panel.id = PANEL_ID;
+        Object.assign(panel.style, {
+            position: 'fixed', bottom: '64px', right: '20px', zIndex: '9999',
+            maxWidth: '340px', padding: '14px', borderRadius: '10px',
+            background: '#212121', color: '#fff',
+            fontSize: '13px', lineHeight: '1.5', whiteSpace: 'pre-wrap',
+            wordBreak: 'break-all', boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+        });
+        document.body.appendChild(panel);
+        return panel;
+    }
+
+    function panelButton(label, onClick) {
+        const b = document.createElement('button');
+        b.textContent = label;
+        Object.assign(b.style, {
+            margin: '8px 8px 0 0', padding: '6px 12px', border: 'none',
+            borderRadius: '14px', background: '#065fd4', color: 'white',
+            fontSize: '13px', cursor: 'pointer',
+        });
+        b.addEventListener('click', onClick);
+        return b;
+    }
+
+    function showPanel(text, opts = {}) {
+        const panel = createPanel();
+        panel.appendChild(document.createTextNode(text));
+        panel.appendChild(document.createElement('br'));
+        if (opts.revealId) {
+            panel.appendChild(panelButton('📂 Mở thư mục', () =>
+                send({ action: 'ytdlReveal', id: opts.revealId })));
+        }
+        panel.appendChild(panelButton('Đóng', closePanel));
+    }
+
+    function showSetupPanel() {
+        const os = detectOS();
+        const panel = createPanel();
+        panel.appendChild(document.createTextNode(
+            '⚠️ Helper tải video chưa chạy trên máy này.\n\n' +
+            'Trình duyệt không cho phép extension tự cài phần mềm, nên cần chạy bộ cài 1 lần:\n' +
+            '1. Bấm "Tải bộ cài" (1 file về Downloads)\n' +
+            `2. Mở ${os === 'windows' ? 'PowerShell' : 'Terminal'} chạy:\n${SETUP_COMMANDS[os]}\n` +
+            '3. Xong quay lại đây bấm "Kiểm tra lại"'
+        ));
+        panel.appendChild(document.createElement('br'));
+
+        const status = document.createElement('div');
+        panel.appendChild(panelButton('📥 Tải bộ cài', async () => {
+            const r = await send({ action: 'ytdlGetSetup', os });
+            status.textContent = r?.ok ? '✅ Đã tải bộ cài về Downloads' : '❌ Tải bộ cài lỗi';
+        }));
+        panel.appendChild(panelButton('🔄 Kiểm tra lại', async () => {
+            const r = await send({ action: 'ytdlPing' });
+            status.textContent = r?.ok
+                ? '✅ Helper đã chạy! Bấm Tải video lại nhé.'
+                : '❌ Vẫn chưa thấy helper — kiểm tra bước cài đặt.';
+        }));
+        panel.appendChild(panelButton('Đóng', closePanel));
+        status.style.marginTop = '8px';
+        panel.appendChild(status);
+    }
+
+    // YouTube là SPA: chuyển trang không reload nên phải nghe event điều hướng
+    window.addEventListener('yt-navigate-finish', ensureButton);
+    ensureButton();
+}
+
+
+/**
+ * ===================================================================
+ * TRÌNH KHỞI CHẠY (RUNNER)
+ * Đọc cài đặt chung (SETTINGS_KEY + DEFAULT_SETTINGS từ config.js),
+ * mỗi tính năng bật độc lập theo switch riêng trong màn Options.
  * ===================================================================
  */
 (function () {
     if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-        // Dùng SETTINGS_KEY chung từ config.js
         chrome.storage.local.get(SETTINGS_KEY, (data) => {
-            // Dùng DEFAULT_SETTINGS chung từ config.js
             const settings = { ...DEFAULT_SETTINGS, ...(data[SETTINGS_KEY] || {}) };
 
-            // CẬP NHẬT ĐIỀU KIỆN IF: Chạy nếu bất kỳ tính năng nào được bật
             if (settings.ytEnableHomepageHider || settings.ytEnableHideRelated) {
                 initializeYouTubeHandler(settings);
-            } else {
+            }
+            if (settings.ytEnableDownloadButton) {
+                initializeDownloadButton();
             }
         });
     } else {
-        // Fallback: Nếu chạy ngoài môi trường extension,
-        // chạy với cài đặt mặc định (để test)
-        // (Dùng DEFAULT_SETTINGS từ config.js)
+        // Fallback: chạy ngoài môi trường extension thì dùng cài đặt mặc định để test
+        // (bỏ nút tải video vì cần chrome.runtime)
         initializeYouTubeHandler(DEFAULT_SETTINGS);
     }
 })();

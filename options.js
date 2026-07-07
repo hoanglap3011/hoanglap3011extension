@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // YouTube
         ytEnableHomepageHider:     document.getElementById('ytEnableHomepageHider'),
         ytEnableHideRelated:       document.getElementById('ytEnableHideRelated'),
+        ytEnableDownloadButton:    document.getElementById('ytEnableDownloadButton'),
         // Box tóm tắt toàn cầu
         sbEnable: document.getElementById('sbEnable'),
         // SelfControl Checker
@@ -86,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fbOn = settings.fbEnableSummarize || settings.fbEnableBlockByKeyword || settings.fbEnableHideStories;
         updateBadge('badge-facebook', fbOn);
         // YouTube: bật nếu ít nhất 1 tính năng YT đang bật
-        const ytOn = settings.ytEnableHomepageHider || settings.ytEnableHideRelated;
+        const ytOn = settings.ytEnableHomepageHider || settings.ytEnableHideRelated || settings.ytEnableDownloadButton;
         updateBadge('badge-youtube', ytOn);
         // Box Tóm Tắt Toàn Cầu
         updateBadge('badge-summary-box', settings.sbEnable ?? false);
