@@ -16,11 +16,13 @@ Endpoint (chỉ lắng nghe 127.0.0.1):
   GET /reveal?id=     → mở thư mục chứa file đã tải trong Finder/Explorer
 """
 import json
+import os
 import platform
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import uuid
@@ -28,11 +30,19 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+# thông báo có tiếng Việt — nếu console/pipe không phải UTF-8 (vd cp1252)
+# thì in ký tự thay thế chứ đừng crash (pythonw thì stdout là None)
+for _stream in (sys.stdout, sys.stderr):
+    if _stream is not None:
+        try:
+            _stream.reconfigure(errors="replace")
+        except Exception:
+            pass
+
 PORT = 43011
 DOWNLOAD_DIR = Path.home() / "Downloads"
 SYSTEM = platform.system()  # Darwin | Linux | Windows
 if SYSTEM == "Windows":
-    import os
     INSTALL_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "ytdl-helper"
 else:
     INSTALL_DIR = Path.home() / ".ytdl-helper"
@@ -48,12 +58,40 @@ jobs = {}
 jobs_lock = threading.Lock()
 
 
+def _find_winget_tool(name):
+    # winget cài vào %LOCALAPPDATA%\Microsoft\WinGet nhưng PATH mới chỉ có ở
+    # terminal MỚI — tìm thẳng trong đó để process hiện tại cũng thấy được
+    base = Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet"
+    link = base / "Links" / f"{name}.exe"
+    if link.exists():
+        return str(link)
+    pkgs = base / "Packages"
+    if pkgs.is_dir():
+        for p in pkgs.glob(f"**/{name}.exe"):
+            return str(p)
+    return None
+
+
 def find_ytdlp():
     found = shutil.which("yt-dlp")
     if found:
         return found
+    if SYSTEM == "Windows":
+        return _find_winget_tool("yt-dlp")
     for p in ("/opt/homebrew/bin/yt-dlp", "/usr/local/bin/yt-dlp",
               str(Path.home() / ".local/bin/yt-dlp")):
+        if Path(p).exists():
+            return p
+    return None
+
+
+def find_ffmpeg():
+    found = shutil.which("ffmpeg")
+    if found:
+        return found
+    if SYSTEM == "Windows":
+        return _find_winget_tool("ffmpeg")
+    for p in ("/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"):
         if Path(p).exists():
             return p
     return None
@@ -84,9 +122,23 @@ def run_download(job_id, url):
         "-o", str(DOWNLOAD_DIR / "%(title)s [%(id)s].%(ext)s"),
         url,
     ]
+    ffmpeg = find_ffmpeg()
+    if ffmpeg:
+        cmd += ["--ffmpeg-location", ffmpeg]
+    # yt-dlp trên Windows in stdout theo codepage hệ thống (cp1252) khi bị pipe,
+    # làm hỏng đường dẫn có dấu tiếng Việt → ép UTF-8, đồng thời ghi đường dẫn
+    # ra file riêng (luôn UTF-8) để không phụ thuộc stdout
+    path_file = Path(tempfile.gettempdir()) / f"ytdl-{job_id}.path"
+    cmd += ["--print-to-file", "after_move:filepath", str(path_file)]
+    popen_kwargs = {"env": {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}}
+    if SYSTEM == "Windows":
+        # server chạy bằng pythonw (không console) — không có cờ này thì
+        # mỗi lần tải sẽ bật cửa sổ console đen của yt-dlp
+        popen_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                text=True, encoding="utf-8", errors="replace")
+                                text=True, encoding="utf-8", errors="replace",
+                                **popen_kwargs)
     except OSError as e:
         set_job(job_id, status="error", error=f"Không chạy được yt-dlp: {e}")
         return
@@ -106,6 +158,14 @@ def run_download(job_id, url):
             file_path = line
 
     proc.wait()
+    try:
+        if path_file.exists():
+            lines = path_file.read_text(encoding="utf-8").strip().splitlines()
+            if lines and Path(lines[-1].strip()).exists():
+                file_path = lines[-1].strip()
+            path_file.unlink()
+    except OSError:
+        pass
     if proc.returncode == 0 and file_path:
         set_job(job_id, status="done", percent=100, file=file_path)
     else:
@@ -188,7 +248,7 @@ def run_ok(cmd):
 def ensure_tools():
     say("Kiểm tra yt-dlp + ffmpeg...")
     need_ytdlp = find_ytdlp() is None
-    need_ffmpeg = shutil.which("ffmpeg") is None and not Path("/opt/homebrew/bin/ffmpeg").exists()
+    need_ffmpeg = find_ffmpeg() is None
     if not need_ytdlp and not need_ffmpeg:
         return
 
@@ -215,13 +275,18 @@ def ensure_tools():
     elif SYSTEM == "Windows":
         if not shutil.which("winget"):
             die("Máy chưa có winget (App Installer). Cài từ Microsoft Store rồi chạy lại.")
-        if need_ytdlp and not run_ok(["winget", "install", "-e", "--id", "yt-dlp.yt-dlp",
-                                      "--accept-source-agreements", "--accept-package-agreements"]):
-            die("Cài yt-dlp thất bại")
-        if need_ffmpeg and not run_ok(["winget", "install", "-e", "--id", "Gyan.FFmpeg",
-                                       "--accept-source-agreements", "--accept-package-agreements"]):
-            die("Cài ffmpeg thất bại")
-        print("Lưu ý: winget vừa cài xong thì PATH mới chỉ có ở cửa sổ terminal MỚI.")
+        # winget trả mã lỗi cả khi gói đã cài sẵn ("No available upgrade found")
+        # nên không tin mã thoát — kiểm tra lại bằng find_*() sau khi chạy
+        if need_ytdlp:
+            run_ok(["winget", "install", "-e", "--id", "yt-dlp.yt-dlp",
+                    "--accept-source-agreements", "--accept-package-agreements"])
+            if not find_ytdlp():
+                die("Cài yt-dlp thất bại")
+        if need_ffmpeg:
+            run_ok(["winget", "install", "-e", "--id", "Gyan.FFmpeg",
+                    "--accept-source-agreements", "--accept-package-agreements"])
+            if not find_ffmpeg():
+                die("Cài ffmpeg thất bại")
     else:
         die(f"Hệ điều hành {SYSTEM} chưa được hỗ trợ")
 
@@ -281,10 +346,16 @@ WantedBy=default.target
     elif SYSTEM == "Windows":
         pythonw = Path(sys.executable).with_name("pythonw.exe")
         runner = str(pythonw if pythonw.exists() else sys.executable)
-        if not run_ok(["schtasks", "/Create", "/F", "/TN", "ytdl-helper", "/SC", "ONLOGON",
-                       "/TR", f'"{runner}" "{server_path}"']):
-            die("Tạo task tự khởi động thất bại")
-        run_ok(["schtasks", "/Run", "/TN", "ytdl-helper"])
+        # schtasks /SC ONLOGON đòi quyền admin ("Access is denied") —
+        # khóa Run của user (HKCU) thì không cần
+        if not run_ok(["reg", "add", r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run",
+                       "/v", "ytdl-helper", "/t", "REG_SZ",
+                       "/d", f'"{runner}" "{server_path}"', "/f"]):
+            die("Đăng ký tự khởi động thất bại")
+        # khóa Run chỉ chạy lúc đăng nhập — khởi động server ngay bây giờ
+        # (nếu đã có instance cũ giữ port thì process mới tự thoát, không sao)
+        subprocess.Popen([runner, str(server_path)],
+                         creationflags=subprocess.CREATE_NO_WINDOW, close_fds=True)
 
 
 def verify_running():

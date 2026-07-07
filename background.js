@@ -459,14 +459,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return;
     }
 
-    // Tải bộ cài helper (đóng gói sẵn trong extension) về Downloads
+    // Tải bộ cài helper (đóng gói sẵn trong extension) về Downloads.
+    // Chrome không cho downloads API tải thẳng URL chrome-extension:// (NETWORK_FAILED,
+    // hiện thành "Check internet connection") nên phải đọc file rồi tải qua data URL.
     if (request.action === "ytdlGetSetup") {
-        chrome.downloads.download({
-            url: chrome.runtime.getURL('ytdl-helper/ytdl_server.py'),
-            filename: 'ytdl_server.py',
-        })
-            .then(() => sendResponse({ ok: true }))
-            .catch(() => sendResponse({ ok: false }));
+        (async () => {
+            const resp = await fetch(chrome.runtime.getURL('ytdl-helper/ytdl_server.py'));
+            const bytes = new Uint8Array(await resp.arrayBuffer());
+            let bin = '';
+            for (const b of bytes) bin += String.fromCharCode(b);
+            await chrome.downloads.download({
+                url: `data:text/x-python;base64,${btoa(bin)}`,
+                filename: 'ytdl_server.py',
+            });
+            sendResponse({ ok: true });
+        })().catch(() => sendResponse({ ok: false }));
         return true;
     }
 
