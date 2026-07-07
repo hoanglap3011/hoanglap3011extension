@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,7 +12,7 @@
             border: 1px solid #e0e0e0;
             border-radius: 10px;
             margin-bottom: 16px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
         }
 
         /* Header của mỗi section — click để collapse */
@@ -26,24 +27,33 @@
             border-bottom: 1px solid transparent;
             transition: background 0.15s;
         }
-        .section-header:hover { background: #f0f2f5; }
-        .section-header.open { border-bottom-color: #e0e0e0; }
+
+        .section-header:hover {
+            background: #f0f2f5;
+        }
+
+        .section-header.open {
+            border-bottom-color: #e0e0e0;
+        }
 
         .section-header-left {
             display: flex;
             align-items: center;
             gap: 10px;
         }
+
         .section-icon {
             font-size: 18px;
             line-height: 1;
         }
+
         .section-title {
             font-size: 1.05em;
             font-weight: 700;
             color: #1a1a1a;
             margin: 0;
         }
+
         .section-badge {
             font-size: 11px;
             background: #e8f5e9;
@@ -52,6 +62,7 @@
             padding: 2px 8px;
             font-weight: 600;
         }
+
         .section-badge.off {
             background: #fce4ec;
             color: #c62828;
@@ -64,7 +75,10 @@
             transition: transform 0.2s;
             flex-shrink: 0;
         }
-        .section-header.open .collapse-arrow { transform: rotate(180deg); }
+
+        .section-header.open .collapse-arrow {
+            transform: rotate(180deg);
+        }
 
         /* Nội dung section */
         .section-body {
@@ -72,7 +86,10 @@
             padding: 0 20px;
             background: #fff;
         }
-        .section-body.open { display: block; }
+
+        .section-body.open {
+            display: block;
+        }
 
         /* Master switch row (on/off cả section) */
         .master-switch-row {
@@ -82,9 +99,17 @@
             padding: 14px 0;
             border-bottom: 1px solid #eee;
         }
-        .master-switch-label strong { font-size: 1em; color: #333; }
+
+        .master-switch-label strong {
+            font-size: 1em;
+            color: #333;
+        }
+
         .master-switch-label .description {
-            font-size: 0.85em; color: #888; display: block; margin-top: 2px;
+            font-size: 0.85em;
+            color: #888;
+            display: block;
+            margin-top: 2px;
         }
 
         /* Setting rows bên trong section */
@@ -95,24 +120,49 @@
             padding: 14px 0;
             border-bottom: 1px solid #eee;
         }
-        .setting-row:last-child { border-bottom: none; }
 
-        .switchLabel { cursor: pointer; flex-grow: 1; margin-right: 15px; }
-        .switchLabel strong { font-size: 1em; color: #050505; }
-        .switchLabel .description {
-            font-size: 0.88em; color: #555; display: block; margin-top: 3px;
+        .setting-row:last-child {
+            border-bottom: none;
         }
 
-        /* Sub-row (textarea) */
+        .switchLabel {
+            cursor: pointer;
+            flex-grow: 1;
+            margin-right: 15px;
+        }
+
+        .switchLabel strong {
+            font-size: 1em;
+            color: #050505;
+        }
+
+        .switchLabel .description {
+            font-size: 0.88em;
+            color: #555;
+            display: block;
+            margin-top: 3px;
+        }
+
+        /* Sub-row (textarea) — padding dọc bằng .setting-row để các mục thẳng hàng nhau */
         .setting-sub-row {
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            padding: 0 0 14px 0;
+            gap: 8px;
+            padding: 14px 0;
             border-bottom: 1px solid #eee;
         }
-        .setting-sub-row:last-child { border-bottom: none; }
-        .setting-sub-row.hidden { display: none; }
+
+        .setting-sub-row:last-child {
+            border-bottom: none;
+        }
+
+        .setting-sub-row.hidden {
+            display: none;
+        }
+
+        .setting-sub-row .switchLabel {
+            margin-right: 0;
+        }
 
         .setting-sub-row textarea {
             width: 100%;
@@ -127,16 +177,19 @@
             color: #333;
             background: #fafafa;
         }
+
         .setting-sub-row textarea:focus {
             outline: none;
             border-color: #1877f2;
             background: #fff;
         }
+
         .textarea-hint {
             font-size: 11px;
             color: #999;
             line-height: 1.6;
         }
+
         .textarea-hint code {
             background: #f0f0f0;
             padding: 1px 4px;
@@ -147,51 +200,96 @@
 
         /* Switch toggle */
         .switch {
-            position: relative; display: inline-block;
-            width: 40px; height: 22px; flex-shrink: 0;
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+            flex-shrink: 0;
         }
-        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
         .slider {
-            position: absolute; cursor: pointer; inset: 0;
-            background-color: #d1d5db; border-radius: 20px; transition: .2s;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: #d1d5db;
+            border-radius: 20px;
+            transition: .2s;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
         }
+
         .slider:before {
-            position: absolute; content: "";
-            height: 16px; width: 16px; left: 3px; bottom: 3px;
-            background-color: white; border-radius: 50%; transition: .2s;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: .2s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
         }
-        input:checked + .slider { background-color: #22c55e; }
-        input:checked + .slider:before { transform: translateX(18px); }
+
+        input:checked+.slider {
+            background-color: #22c55e;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(18px);
+        }
 
         /* Save status */
         #saveStatus {
-            text-align: center; color: #16a34a; font-weight: bold;
-            margin-top: 12px; opacity: 0; transition: opacity 0.3s;
+            text-align: center;
+            color: #16a34a;
+            font-weight: bold;
+            margin-top: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
         }
 
         code {
-            background: #eee; padding: 2px 4px;
-            border-radius: 4px; font-family: monospace;
+            background: #eee;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: monospace;
         }
 
         /* === TOOLTIP === */
-        .switchLabel { position: relative; }
+        .switchLabel {
+            position: relative;
+        }
+
         .switchLabel::after {
             content: attr(data-tooltip);
             position: absolute;
-            left: 0; top: calc(100% + 6px);
-            background: #333; color: #fff;
-            font-size: 11.5px; line-height: 1.5;
-            padding: 6px 10px; border-radius: 6px;
+            left: 0;
+            top: calc(100% + 6px);
+            background: #333;
+            color: #fff;
+            font-size: 11.5px;
+            line-height: 1.5;
+            padding: 6px 10px;
+            border-radius: 6px;
             white-space: pre-line;
-            width: 260px; z-index: 9999;
-            opacity: 0; pointer-events: none;
+            width: 260px;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
             transition: opacity 0.15s;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
         }
-        .switchLabel:hover::after { opacity: 1; }
+
+        .switchLabel:hover::after {
+            opacity: 1;
+        }
+
         /* Item cuối section: tooltip hiện lên trên thay vì xuống dưới */
         .setting-row:last-child .switchLabel::after {
             top: auto;
@@ -211,28 +309,33 @@
             transition: border-color 0.15s;
             flex-shrink: 0;
         }
+
         .tv-number-input:focus {
             outline: none;
             border-color: #1877f2;
             background: #fff;
         }
+
         .tv-timer-range-row {
             align-items: flex-start;
             padding-top: 16px;
             gap: 12px;
         }
+
         .tv-range-inputs {
             display: flex;
             align-items: center;
             gap: 8px;
             flex-shrink: 0;
         }
+
         .tv-range-field {
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 4px;
         }
+
         .tv-range-label {
             font-size: 11px;
             color: #888;
@@ -240,15 +343,18 @@
             text-transform: uppercase;
             letter-spacing: 0.4px;
         }
+
         .tv-range-unit {
             font-size: 11px;
             color: #aaa;
         }
+
         .tv-range-sep {
             font-size: 18px;
             color: #ccc;
             margin-top: 18px;
         }
+
         .tv-range-hint {
             font-size: 11.5px;
             color: #999;
@@ -258,6 +364,7 @@
         }
     </style>
 </head>
+
 <body>
     <main class="container">
         <h1>Cài đặt Extension</h1>
@@ -276,14 +383,12 @@
             </div>
             <div class="section-body" id="body-blocker">
                 <div class="setting-sub-row">
-                    <label for="websiteBlocklist" class="switchLabel" style="margin-right:0;" data-tooltip="Mỗi dòng một domain. Dòng bắt đầu bằng # là ghi chú.">
-                        <strong>Danh sách website</strong>
-                        <span class="description">Các trang này sẽ bị chặn hoàn toàn. Dùng Safari nếu cần vào.</span>
+                    <label for="websiteBlocklist" class="switchLabel"
+                        data-tooltip="Mỗi dòng một domain. Dòng bắt đầu bằng # là ghi chú.">
+                        <strong>Danh sách bị chặn</strong>
                     </label>
-                    <textarea id="websiteBlocklist" rows="8" placeholder="tiktok.com&#10;voz.vn&#10;vnexpress.net"></textarea>
-                    <div class="textarea-hint">
-                        Mỗi dòng một domain. Dòng bắt đầu bằng <code>#</code> là ghi chú và sẽ bị bỏ qua.
-                    </div>
+                    <textarea id="websiteBlocklist" rows="8"
+                        placeholder="tiktok.com&#10;voz.vn&#10;vnexpress.net"></textarea>
                 </div>
             </div>
         </div>
@@ -302,7 +407,8 @@
             </div>
             <div class="section-body" id="body-facebook">
                 <div class="setting-row">
-                    <label for="fbEnableSummarize" class="switchLabel" data-tooltip="Thêm nút "Tóm Tắt" (AI) vào mỗi bài đăng Facebook.">
+                    <label for="fbEnableSummarize" class="switchLabel" data-tooltip="Thêm nút " Tóm Tắt" (AI) vào
+                        mỗi bài đăng Facebook.">
                         <strong>Bật nút "Tóm Tắt"</strong>
                     </label>
                     <label class="switch">
@@ -311,7 +417,8 @@
                     </label>
                 </div>
                 <div class="setting-row">
-                    <label for="fbEnableBlockByKeyword" class="switchLabel" data-tooltip="Tự động ẩn các khối chứa từ khóa trong danh sách bên dưới.">
+                    <label for="fbEnableBlockByKeyword" class="switchLabel"
+                        data-tooltip="Tự động ẩn các khối chứa từ khóa trong danh sách bên dưới.">
                         <strong>Ẩn khối theo từ khóa</strong>
                     </label>
                     <label class="switch">
@@ -320,14 +427,16 @@
                     </label>
                 </div>
                 <div class="setting-sub-row" id="blockKeywordSection">
-                    <label for="fbBlockKeywords" class="switchLabel" style="margin-right:0;" data-tooltip="Mỗi dòng một từ khóa. Khối nào chứa từ khóa sẽ bị ẩn.">
+                    <label for="fbBlockKeywords" class="switchLabel"
+                        data-tooltip="Mỗi dòng một từ khóa. Khối nào chứa từ khóa sẽ bị ẩn.">
                         <strong>Danh sách từ khóa</strong>
                     </label>
-                    <textarea id="fbBlockKeywords" rows="7" placeholder="Nhập từ khóa, mỗi dòng một từ..."></textarea>
+                    <textarea id="fbBlockKeywords" rows="7"
+                        placeholder="Nhập từ khóa, mỗi dòng một từ..."></textarea>
                 </div>
                 <div class="setting-row">
-                    <label for="fbEnableHideStories" class="switchLabel" data-tooltip="Ẩn toàn bộ khu vực "Tin"
-(Stories) ở đầu trang Facebook.">
+                    <label for="fbEnableHideStories" class="switchLabel" data-tooltip="Ẩn toàn bộ khu vực " Tin"
+                        (Stories) ở đầu trang Facebook.">
                         <strong>Ẩn khối Story (Tin)</strong>
                     </label>
                     <label class="switch">
@@ -384,7 +493,7 @@ bên cạnh video đang xem.">
                     <span class="section-title">Box Tóm Tắt</span>
                     <span class="section-badge" id="badge-summary-box">Bật</span>
                 </div>
-                <span class="arrow">▼</span>
+                <span class="collapse-arrow">▼</span>
             </div>
             <div class="section-body" id="body-summary-box">
                 <div class="setting-row">
@@ -397,19 +506,22 @@ bên cạnh video đang xem.">
                     </label>
                 </div>
                 <div class="setting-sub-row">
-                    <label for="summarySitesList" class="switchLabel" data-tooltip="Mỗi dòng một domain. Box tóm tắt chỉ hiển thị trên các trang này.">
-                        <strong>Trang được phép hiển thị</strong>
-                        <span class="description">Mỗi dòng một domain (ví dụ: youtube.com, dantri.com.vn).</span>
+                    <label for="summarySitesList" class="switchLabel"
+                        data-tooltip="Mỗi dòng một domain. Box tóm tắt sẽ không hiển thị trên các trang này.">
+                        <strong>Trang ngoại lệ</strong>
                     </label>
-                    <textarea id="summarySitesList" rows="5" placeholder="youtube.com&#10;dantri.com.vn"></textarea>
+                    <textarea id="summarySitesList" rows="5" placeholder="google.com&#10;facebook.com"></textarea>
                 </div>
                 <div class="setting-sub-row">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0">
-                        <span class="switchLabel" style="margin:0">
+                        <label for="sbEnable" class="switchLabel"
+                            data-tooltip="Tải toàn bộ dữ liệu tóm tắt về bộ nhớ local để tra cứu nhanh">
                             <strong>Đồng bộ dữ liệu từ server</strong>
-                            <span class="description">Tải toàn bộ dữ liệu tóm tắt về bộ nhớ local để tra cứu nhanh.</span>
-                        </span>
-                        <button id="btn-sync-summary" style="padding:6px 14px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap;flex-shrink:0">Đồng bộ</button>
+                        </label>
+
+                        <button id="btn-sync-summary"
+                            style="padding:6px 14px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap;flex-shrink:0">Đồng
+                            bộ</button>
                     </div>
                     <div id="sync-summary-status" style="font-size:12px;color:#888;min-height:16px"></div>
                 </div>
@@ -441,12 +553,15 @@ bên cạnh video đang xem.">
                     </label>
                 </div>
                 <div class="setting-sub-row">
-                    <label for="scSiteList" class="switchLabel" style="margin-right:0;"
+                    <label for="scSiteList" class="switchLabel"
                         data-tooltip="Mỗi dòng một hostname. TẤT CẢ các site phải bị chặn thì mới coi là SelfControl đang bật.">
                         <strong>Danh sách website cần kiểm tra</strong>
-                        <span class="description" style="font-size:0.85em; color:#888; display:block; margin-top:3px;">Tất cả các site phải bị chặn. Mỗi dòng một hostname.</span>
+                        <span class="description"
+                            style="font-size:0.85em; color:#888; display:block; margin-top:3px;">Tất cả các site phải bị
+                            chặn. Mỗi dòng một hostname.</span>
                     </label>
-                    <textarea id="scSiteList" rows="5" placeholder="facebook.com&#10;youtube.com&#10;vnexpress.net"></textarea>
+                    <textarea id="scSiteList" rows="5"
+                        placeholder="facebook.com&#10;youtube.com&#10;vnexpress.net"></textarea>
                     <div class="textarea-hint">
                         Ví dụ: <code>facebook.com</code>, <code>youtube.com</code>, <code>vnexpress.net</code>
                     </div>
@@ -458,6 +573,8 @@ bên cạnh video đang xem.">
     </main>
 
     <script src="config.js"></script>
+    <script src="PasswordModule.js"></script>
     <script src="options.js"></script>
 </body>
+
 </html>

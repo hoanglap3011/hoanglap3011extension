@@ -99,6 +99,11 @@ document.addEventListener('DOMContentLoaded', () => {
         fbKeywordSection.classList.toggle('hidden', !switches.fbEnableBlockByKeyword.checked);
     }
 
+    function updateSummarySitesState() {
+        summarySitesTextarea.disabled = !switches.sbEnable.checked;
+        summarySitesTextarea.style.opacity = switches.sbEnable.checked ? '' : '0.4';
+    }
+
     // === SAVE ===
     function showSaved() {
         saveStatus.textContent = 'Đã lưu cài đặt!';
@@ -153,6 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 scSiteListTextarea.value = sc.scSiteList;
 
                 updateKeywordSectionVisibility();
+                updateSummarySitesState();
                 refreshBadges(settings, sc);
             }
         );
@@ -173,8 +179,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const passResult = await new Promise(resolve => chrome.storage.local.get(CACHE_PASS, resolve));
                 const pass = passResult[CACHE_PASS] || null;
                 if (!pass) {
-                    syncStatus.textContent = 'Chưa có mật khẩu. Vui lòng cấu hình bảo mật trước.';
-                    syncStatus.style.color = '#c62828';
+                    btnSync.disabled = false;
+                    btnSync.textContent = 'Đồng bộ';
+                    PasswordModule.openPasswordPopup(() => btnSync.click());
                     return;
                 }
                 const res = await fetch(API, {
@@ -208,6 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     switches.fbEnableBlockByKeyword.addEventListener('change', updateKeywordSectionVisibility);
+    switches.sbEnable.addEventListener('change', updateSummarySitesState);
 
     let debounceTimer;
     const onTextareaInput = () => {

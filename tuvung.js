@@ -40,6 +40,8 @@ export const TuVungModule = (() => {
     note: (raw.note || '').trim(),
     ipa: (raw.ipa || '').trim(),
     imageUrl: (raw.imageUrl || '').trim(),
+    synonyms: (raw.synonyms || '').trim(),
+    confusingWords: (raw.confusingWords || '').trim(),
     isActive: raw.isActive !== false,
     partOfSpeech: (raw.partOfSpeech || '').trim(),
   });
@@ -177,6 +179,7 @@ export const TuVungModule = (() => {
         els.word.value = e.word; els.meaning.value = e.meaning;
         els.ipa.value = e.ipa || ''; els.example.value = e.example || '';
         els.exampleMeaning.value = e.exampleMeaning || ''; els.note.value = e.note || '';
+        els.synonyms.value = e.synonyms || ''; els.confusingWords.value = e.confusingWords || '';
         els.imageUrl.value = e.imageUrl || ''; els.isActive.checked = e.isActive;
         setPreview(e.imageUrl);
 
@@ -221,6 +224,7 @@ export const TuVungModule = (() => {
           word: els.word.value, meaning: els.meaning.value, ipa: els.ipa.value,
           example: els.example.value, exampleMeaning: els.exampleMeaning.value,
           note: els.note.value, imageUrl: els.imageUrl.value.trim(), isActive: els.isActive.checked,
+          synonyms: els.synonyms.value, confusingWords: els.confusingWords.value,
           partOfSpeech: checkedPos ? checkedPos.value : '',
         };
 
@@ -331,6 +335,24 @@ export const TuVungModule = (() => {
       _bindToggle('.section-note', noteEl);
     }
 
+    // ── Từ gần nghĩa ──
+    if (entry.synonyms) {
+      const sec = $('.section-synonyms');
+      sec.classList.remove('d-none');
+      const txt = sec.querySelector('.display-synonyms');
+      txt.textContent = entry.synonyms;
+      _bindToggle('.section-synonyms', txt);
+    }
+
+    // ── Từ dễ nhầm lẫn ──
+    if (entry.confusingWords) {
+      const sec = $('.section-confusing');
+      sec.classList.remove('d-none');
+      const txt = sec.querySelector('.display-confusing');
+      txt.textContent = entry.confusingWords;
+      _bindToggle('.section-confusing', txt);
+    }
+
     // ── Nút X + countdown (chỉ auto popup) ──
     const btnClose    = $('.btn-close-display');
     const countdownEl = $('.display-countdown');
@@ -414,9 +436,21 @@ export const TuVungModule = (() => {
     const statusEl2       = document.getElementById('tvSettingsStatus');
 
     const _fmtSec = (s) => s >= 60 ? `${Math.floor(s/60)}p${s%60?` ${s%60}s`:''}` : `${s} giây`;
+    const timerFill = document.getElementById('tvTimerFill');
     const _updateBadges = () => {
       if (autoCloseBadge)  autoCloseBadge.textContent  = _fmtSec(parseInt(inpAutoClose.value));
-      if (timerRangeBadge) timerRangeBadge.textContent = `${_fmtSec(parseInt(inpTimerMin.value))} – ${_fmtSec(parseInt(inpTimerMax.value))}`;
+      if (inpTimerMin && inpTimerMax) {
+        let lo = parseInt(inpTimerMin.value), hi = parseInt(inpTimerMax.value);
+        if (lo > hi) { inpTimerMin.value = hi; lo = hi; }
+        if (timerFill) {
+          const MIN = +inpTimerMin.min, MAX = +inpTimerMin.max;
+          const left  = ((lo - MIN) / (MAX - MIN)) * 100;
+          const right = ((hi - MIN) / (MAX - MIN)) * 100;
+          timerFill.style.left  = `${left}%`;
+          timerFill.style.width = `${right - left}%`;
+        }
+        if (timerRangeBadge) timerRangeBadge.textContent = lo === hi ? _fmtSec(lo) : `${_fmtSec(lo)} – ${_fmtSec(hi)}`;
+      }
     };
 
     const _applyPopupAreaState = (on) => {
@@ -576,6 +610,7 @@ export const TuVungModule = (() => {
           mountForm(card, -1, closeWin, closeWin);
         } else if (mode === 'popup') {
           document.body.classList.add('popup-mode');
+          document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeWin(); });
           const source = params.get('source');
           const tv = await _getTvTimerSettings();
           const autoSec = (source === 'manual') ? 0 : tv.autoCloseMs;

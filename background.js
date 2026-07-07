@@ -289,46 +289,47 @@ chrome.notifications.onClosed.addListener((id, byUser) => {
 let cachedTokens = { at: null, bl: null, timestamp: 0 };
 let vietgidoTabId = null;
 
-const WATCHED_TABS_KEY = 'watchedNotebookTabs';
-
-async function getWatchedTabs() {
-    const r = await chrome.storage.session.get(WATCHED_TABS_KEY);
-    return r[WATCHED_TABS_KEY] || {};
-}
-async function setWatchedTabs(map) {
-    await chrome.storage.session.set({ [WATCHED_TABS_KEY]: map });
-}
-
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    if (changeInfo.status !== 'complete') return;
-    const watched = await getWatchedTabs();
-    if (!watched[tabId]) return;
-    const url = tab.url || '';
-    if (url.startsWith('https://notebooklm.google.com/notebook/')) {
-        watched[tabId].seenNotebookAt = Date.now();
-        await setWatchedTabs(watched);
-    } else if (url === 'https://notebooklm.google.com/' || url === 'https://notebooklm.google.com') {
-        const entry = watched[tabId];
-        delete watched[tabId];
-        await setWatchedTabs(watched);
-        // Nếu notebook đã load > 5 giây trước → user tự navigate, không phải redirect tự động
-        if (entry.seenNotebookAt && Date.now() - entry.seenNotebookAt > 5000) return;
-        handleNotebookFlow(entry.sourceUrl, true)
-            .then(newNotebookId => {
-                const newUrl = `https://notebooklm.google.com/notebook/${newNotebookId}`;
-                chrome.tabs.update(tabId, { url: newUrl });
-                chrome.storage.local.set({ notebookRecreated: { sourceUrl: entry.sourceUrl, newNotebookId, ts: Date.now() } });
-            })
-            .catch(() => {});
+// Lưu kết quả tóm tắt (cache local + Google Sheet) — chạy ở background nên vẫn
+// hoàn tất kể cả khi tab gốc đã điều hướng sang trang khác giữa chừng.
+// meta do content script gửi kèm: { shortUrl, title, pass, category, existedBefore, api }
+const CACHE_SUMMARY_DATA_KEY = 'summaryData';
+async function luuKetQuaTomTat(meta, notebookLink) {
+    if (!meta?.shortUrl) return;
+    try {
+        const r = await chrome.storage.local.get(CACHE_SUMMARY_DATA_KEY);
+        const cache = r[CACHE_SUMMARY_DATA_KEY] || {};
+        cache[meta.shortUrl] = { ...(cache[meta.shortUrl] || {}), notebooklm: notebookLink };
+        await chrome.storage.local.set({ [CACHE_SUMMARY_DATA_KEY]: cache });
+    } catch (e) { console.warn('[luuKetQuaTomTat] cache:', e.message); }
+    if (!meta.api || !meta.pass) return;
+    const post = (payload) => fetch(meta.api, { method: 'POST', body: JSON.stringify(payload) })
+        .then(res => res.json()).then(j => j?.code === 1).catch(() => false);
+    // Hàng đã có trên Sheet → update cột notebooklm; chưa có / update thất bại → thêm hàng mới
+    if (meta.existedBefore) {
+        const ok = await post({ action: 'updateSummaryNotebook', pass: meta.pass, code: meta.shortUrl, notebooklm: notebookLink });
+        if (ok) return;
     }
-});
+    await post({
+        action: 'addSummaryEntry', pass: meta.pass, code: meta.shortUrl,
+        title: meta.title, notebooklm: notebookLink, category: meta.category
+    });
+}
 
-chrome.tabs.onRemoved.addListener(async (tabId) => {
-    const watched = await getWatchedTabs();
-    if (!watched[tabId]) return;
-    delete watched[tabId];
-    await setWatchedTabs(watched);
-});
+// Kiểm tra notebook còn tồn tại không bằng RPC GetProject (rLM1Ne).
+// true = còn; false = đã bị xóa / mất quyền; null = không kết luận được (lỗi mạng, token...)
+async function kiemTraNotebookTonTai(notebookId) {
+    try {
+        const tokens = await getFreshGoogleTokens();
+        const response = await goiNotebookRpc("rLM1Ne", [notebookId], tokens,
+            { sourcePath: `/notebook/${notebookId}` });
+        if (!response.ok) return null;
+        const text = await response.text();
+        // Thành công: hàng wrb.fr chứa dữ liệu project dạng chuỗi JSON; bị xóa: dữ liệu null
+        if (text.includes(`"wrb.fr","rLM1Ne","`)) return true;
+        if (text.includes(`"wrb.fr","rLM1Ne",null`)) return false;
+        return null;
+    } catch (e) { return null; }
+}
 
 chrome.commands.onCommand.addListener((command) => {
   if (command === "open_command_hub") {
@@ -387,18 +388,44 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     if (request.action === "open_notebook") {
-        chrome.tabs.create({ url: request.notebookUrl }, async (tab) => {
-            const watched = await getWatchedTabs();
-            watched[tab.id] = { sourceUrl: request.sourceUrl, seenNotebook: false };
-            await setWatchedTabs(watched);
-        });
+        chrome.tabs.create({ url: request.notebookUrl });
         return;
+    }
+
+    // Kiểm tra ngầm notebook còn sống không (box tóm tắt gọi sau khi render link từ cache)
+    if (request.action === "verify_notebook") {
+        (async () => {
+            const notebookId = (request.notebookUrl.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/) || [])[0];
+            const exists = notebookId ? await kiemTraNotebookTonTai(notebookId) : null;
+            sendResponse({ exists });
+        })();
+        return true;
+    }
+
+    if (request.action === "thread_add_sources") {
+        (async () => {
+            try {
+                const tokens = await getFreshGoogleTokens();
+                const notebookId = await buoc1_TaoSoTay(tokens);
+                await new Promise(r => setTimeout(r, 2000));
+                const added = await buoc2_ThemNhieuNguon(notebookId, request.sources, tokens, sender.tab?.id);
+                const notebookLink = `https://notebooklm.google.com/notebook/${notebookId}`;
+                sendResponse({ success: true, notebookLink, added });
+                // Lưu từ background để vẫn hoàn tất khi tab gốc đã rời trang
+                luuKetQuaTomTat(request.meta, notebookLink);
+            } catch (e) {
+                sendResponse({ success: false, error: e.message });
+            }
+        })();
+        return true;
     }
 
     if (request.action === "create_notebook" || request.action === "create_notebook_from_youtube") {
         handleNotebookFlow(request.url)
             .then((notebookId) => {
                 sendResponse({ success: true, notebookId });
+                // Lưu từ background để vẫn hoàn tất khi tab gốc đã rời trang
+                luuKetQuaTomTat(request.meta, `https://notebooklm.google.com/notebook/${notebookId}`);
             })
             .catch((err) => { sendResponse({ success: false, error: err.message }); });
         return true;
@@ -498,14 +525,23 @@ async function handleNotebookFlow(targetUrl, awaitSource = false) {
     return newId;
 }
 
-async function buoc1_TaoSoTay(tokens) {
-    console.log("[buoc1] tokens:", { at: tokens.at?.slice(0,10)+'...', bl: tokens.bl?.slice(0,10)+'...' });
-    const apiUrl = `https://notebooklm.google.com/_/LabsTailwindUi/data/batchexecute?rpcids=CCqFvf&source-path=%2F&bl=${tokens.bl}&hl=vi&_reqid=${Math.floor(Math.random()*999999)}&rt=c`;
-    const response = await fetch(apiUrl, {
-        headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8", "x-same-domain": "1" },
-        body: `f.req=%5B%5B%5B%22CCqFvf%22%2C%22%5B%5C%22%5C%22%2Cnull%2Cnull%2C%5B2%5D%2C%5B1%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C%5B1%5D%5D%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&at=${tokens.at}&`,
+// Khung gọi chung cho mọi RPC batchexecute của NotebookLM.
+// extHeader: header phụ mà web UI gửi kèm các call thêm nguồn (giữ đúng hành vi từng RPC).
+async function goiNotebookRpc(rpcId, innerPayload, tokens, { sourcePath = '/', extHeader = false } = {}) {
+    const apiUrl = `https://notebooklm.google.com/_/LabsTailwindUi/data/batchexecute?rpcids=${rpcId}&source-path=${encodeURIComponent(sourcePath)}&bl=${tokens.bl}&hl=vi&_reqid=${Math.floor(Math.random()*999999)}&rt=c`;
+    const headers = { "content-type": "application/x-www-form-urlencoded;charset=UTF-8", "x-same-domain": "1" };
+    if (extHeader) headers["x-goog-ext-353267353-jspb"] = "[null,null,null,276544]";
+    const outerPayload = [[[rpcId, JSON.stringify(innerPayload), null, "generic"]]];
+    return fetch(apiUrl, {
+        headers,
+        body: `f.req=${encodeURIComponent(JSON.stringify(outerPayload))}&at=${tokens.at}&`,
         method: "POST"
     });
+}
+
+async function buoc1_TaoSoTay(tokens) {
+    const response = await goiNotebookRpc("CCqFvf",
+        ["", null, null, [2], [1, null, null, null, null, null, null, null, null, null, [1]]], tokens);
     const text  = await response.text();
     const match = text.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/);
     if (match) return match[0];
@@ -513,29 +549,47 @@ async function buoc1_TaoSoTay(tokens) {
 }
 
 async function buoc2_ThemNguon(notebookId, url, tokens) {
-    const apiUrl = `https://notebooklm.google.com/_/LabsTailwindUi/data/batchexecute?rpcids=izAoDd&source-path=%2Fnotebook%2F${notebookId}&bl=${tokens.bl}&hl=vi&_reqid=${Math.floor(Math.random()*999999)}&rt=c`;
-
     const isYoutube = url.includes('youtu.be') || url.includes('youtube.com');
-
-    let innerPayload;
-    if (isYoutube) {
+    const innerPayload = isYoutube
         // YouTube: URL ở index 7, options tách 2 phần tử riêng
-        const sourceArr = [null, null, null, null, null, null, null, [url], null, null, 1];
-        innerPayload = [[sourceArr], notebookId, [2], [1, null, null, null, null, null, null, null, null, null, [1]]];
-    } else {
+        ? [[[null, null, null, null, null, null, null, [url], null, null, 1]], notebookId,
+           [2], [1, null, null, null, null, null, null, null, null, null, [1]]]
         // Web URL: URL ở index 2, options gộp vào 1 phần tử
-        const sourceArr = [null, null, [url], null, null, null, null, null, null, null, 1];
-        innerPayload = [[sourceArr], notebookId, [2, null, null, [1, null, null, null, null, null, null, null, null, null, [1]]]];
-    }
-
-    const outerPayload = [[["izAoDd", JSON.stringify(innerPayload), null, "generic"]]];
-    const reqBody = `f.req=${encodeURIComponent(JSON.stringify(outerPayload))}&at=${tokens.at}&`;
-
-    const response = await fetch(apiUrl, {
-        headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8", "x-same-domain": "1", "x-goog-ext-353267353-jspb": "[null,null,null,276544]" },
-        body: reqBody, method: "POST"
-    });
+        : [[[null, null, [url], null, null, null, null, null, null, null, 1]], notebookId,
+           [2, null, null, [1, null, null, null, null, null, null, null, null, null, [1]]]];
+    const response = await goiNotebookRpc("izAoDd", innerPayload, tokens,
+        { sourcePath: `/notebook/${notebookId}`, extHeader: true });
     if (!response.ok) throw new Error("API thêm nguồn thất bại: " + response.status);
+}
+
+// Nguồn dạng "văn bản dán" (paste text): [null, [title, text], null, 2]
+async function buoc2_ThemNguonText(notebookId, title, text, tokens) {
+    const response = await goiNotebookRpc("izAoDd", [[[null, [title, text], null, 2]], notebookId], tokens,
+        { sourcePath: `/notebook/${notebookId}`, extHeader: true });
+    if (!response.ok) throw new Error("API thêm nguồn thất bại: " + response.status);
+}
+
+async function buoc2_ThemNhieuNguon(notebookId, sources, tokens, tabId) {
+    let added = 0;
+    for (let i = 0; i < sources.length; i++) {
+        const { title, text } = sources[i];
+        if (tabId) chrome.tabs.sendMessage(tabId, { action: 'thread_progress', current: i + 1, total: sources.length }).catch(() => {});
+        try {
+            await buoc2_ThemNguonText(notebookId, title, text, tokens);
+            added++;
+        } catch (e) {
+            // Thử lại 1 lần cho lỗi tạm thời
+            try {
+                await new Promise(r => setTimeout(r, 3000));
+                await buoc2_ThemNguonText(notebookId, title, text, tokens);
+                added++;
+            } catch (e2) {
+                console.warn('[thread] Bỏ qua nguồn lỗi:', title, e2.message);
+            }
+        }
+        if (i < sources.length - 1) await new Promise(r => setTimeout(r, 1000));
+    }
+    return added;
 }
 
 async function getFreshGoogleTokens() {
@@ -551,5 +605,6 @@ async function getFreshGoogleTokens() {
         return cachedTokens;
     } catch (e) {throw e; }
 }
+
 
 initSCChecker();

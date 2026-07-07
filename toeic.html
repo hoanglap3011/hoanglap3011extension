@@ -135,14 +135,13 @@
                 <label class="form-label" style="margin-bottom:0;text-transform:none;color:var(--white);">Khoảng cách giữa các popup</label>
                 <span class="tv-slider-value-badge" id="toeicTimerRangeDisplay">5 – 10 phút</span>
               </div>
-              <div class="tv-range-wrap" style="margin-bottom:8px">
-                <span class="tv-range-min">10s</span>
-                <input type="range" id="toeicTimerMinSec" class="tv-range" min="10" max="1800" value="300" step="10" />
-                <span class="tv-range-max">30p</span>
-              </div>
               <div class="tv-range-wrap">
                 <span class="tv-range-min">10s</span>
-                <input type="range" id="toeicTimerMaxSec" class="tv-range" min="10" max="1800" value="600" step="10" />
+                <div class="tv-dual-range-track">
+                  <div class="tv-dual-range-fill" id="toeicTimerFill"></div>
+                  <input type="range" id="toeicTimerMinSec" class="tv-dual-range-input" min="10" max="1800" value="300" step="10" />
+                  <input type="range" id="toeicTimerMaxSec" class="tv-dual-range-input" min="10" max="1800" value="600" step="10" />
+                </div>
                 <span class="tv-range-max">30p</span>
               </div>
             </div>

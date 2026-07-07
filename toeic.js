@@ -547,7 +547,19 @@ export const ToeicModule = (() => {
       const [ic, im, ix] = ['toeicAutoCloseSec','toeicTimerMinSec','toeicTimerMaxSec'].map($id);
       const bd = $id('toeicAutoCloseDisplay'), br = $id('toeicTimerRangeDisplay');
       if (bd && ic) bd.textContent = _fmtSec(+ic.value);
-      if (br && im && ix) br.textContent = `${_fmtSec(+im.value)} – ${_fmtSec(+ix.value)}`;
+      if (im && ix) {
+        let lo = +im.value, hi = +ix.value;
+        if (lo > hi) { im.value = hi; lo = hi; }
+        const fill = $id('toeicTimerFill');
+        if (fill) {
+          const MIN = +im.min, MAX = +im.max;
+          const left  = ((lo - MIN) / (MAX - MIN)) * 100;
+          const right = ((hi - MIN) / (MAX - MIN)) * 100;
+          fill.style.left  = `${left}%`;
+          fill.style.width = `${right - left}%`;
+        }
+        if (br) br.textContent = lo === hi ? _fmtSec(lo) : `${_fmtSec(lo)} – ${_fmtSec(hi)}`;
+      }
     };
 
     $id('btnSettings').addEventListener('click', () => {

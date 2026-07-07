@@ -115,14 +115,13 @@
                 <label class="form-label" style="margin-bottom:0;text-transform:none;color:var(--white);">Khoảng cách giữa các popup</label>
                 <span class="tv-slider-value-badge" id="tvTimerRangeDisplay">5 – 10 phút</span>
               </div>
-              <div class="tv-range-wrap" style="margin-bottom:8px">
-                <span class="tv-range-min">10s</span>
-                <input type="range" id="tvTimerMinSec" class="tv-range" min="10" max="1800" value="300" step="10" />
-                <span class="tv-range-max">30p</span>
-              </div>
               <div class="tv-range-wrap">
                 <span class="tv-range-min">10s</span>
-                <input type="range" id="tvTimerMaxSec" class="tv-range" min="10" max="1800" value="600" step="10" />
+                <div class="tv-dual-range-track">
+                  <div class="tv-dual-range-fill" id="tvTimerFill"></div>
+                  <input type="range" id="tvTimerMinSec" class="tv-dual-range-input" min="10" max="1800" value="300" step="10" />
+                  <input type="range" id="tvTimerMaxSec" class="tv-dual-range-input" min="10" max="1800" value="600" step="10" />
+                </div>
                 <span class="tv-range-max">30p</span>
               </div>
             </div>
@@ -212,6 +211,14 @@
       <div class="form-group">
         <label class="form-label">Ghi chú</label>
         <textarea name="note" class="form-input form-textarea" placeholder="Từ loại, gốc từ..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Từ gần nghĩa</label>
+        <textarea name="synonyms" class="form-input form-textarea" placeholder="e.g. transient, fleeting, short-lived"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Từ dễ nhầm lẫn</label>
+        <textarea name="confusingWords" class="form-input form-textarea" placeholder="Từ viết / phát âm gần giống, dễ nhầm..."></textarea>
       </div>
       <div class="form-group form-group--checkbox">
         <label class="form-checkbox-label">
@@ -308,6 +315,28 @@
               <span class="toggle-label">Chú thích</span>
             </button>
             <div class="display-note d-none"></div>
+          </div>
+
+          <div class="display-toggle-row section-synonyms d-none">
+            <button class="btn-toggle btn-toggle-synonyms">
+              <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <span class="toggle-label">Từ gần nghĩa</span>
+            </button>
+            <div class="display-section-text display-synonyms d-none"></div>
+          </div>
+
+          <div class="display-toggle-row section-confusing d-none">
+            <button class="btn-toggle btn-toggle-confusing">
+              <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <span class="toggle-label">Từ dễ nhầm lẫn</span>
+            </button>
+            <div class="display-section-text display-confusing d-none"></div>
           </div>
 
         </div>

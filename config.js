@@ -40,7 +40,7 @@ const CACHE_DATA_RECAP = 'dataRecap';
 // summary box
 const CACHE_SUMMARY_DATA = 'summaryData';
 const SUMMARY_SITES_KEY = 'summarySitesList';
-const DEFAULT_SUMMARY_SITES = `youtube.com\ndantri.com.vn`;
+const DEFAULT_SUMMARY_SITES = ``;
 
 // facebook
 const MIN_SUMMARY_LENGTH = 1000;
