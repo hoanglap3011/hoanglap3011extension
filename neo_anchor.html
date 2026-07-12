@@ -23,7 +23,7 @@
         <input type="time" id="shutdownTime" value="22:00" class="shutdown-input shutdown-input-header" />
       </div>
       <div class="neo-header-actions" id="topControls">
-        <button class="btn-ghost-neo" id="pipToggleBtn" style="display:none">Mở PiP</button>
+        <button class="btn-ghost-neo" id="pipToggleBtn">Mở PiP</button>
         <button class="btn-primary-neo" id="startBtn">Bắt đầu</button>
         <button class="btn-icon-neo" id="settingsBtn" title="Cài đặt">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="17" height="17">
@@ -220,6 +220,21 @@
           </div>
           <div id="asksPipWrap">
             <textarea id="asksPip" rows="5" spellcheck="false"></textarea>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-group-label-row">
+            <span class="settings-group-label" style="margin-bottom:0">Text nhắc nhở</span>
+            <label class="switch"><input type="checkbox" id="remindOn" /><span class="slider"></span></label>
+          </div>
+          <div id="asksRemindWrap">
+            <textarea id="asksRemind" rows="3" spellcheck="false"></textarea>
+            <div class="num" style="margin-top:8px">
+              <span>Hiển thị sau mỗi:</span>
+              <input id="remindEverySec" type="number" min="10" max="60" style="width:72px" />
+              <span>giây</span>
+            </div>
           </div>
         </div>
 

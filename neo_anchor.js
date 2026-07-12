@@ -29,8 +29,9 @@ let pipAtCenter = false;
 let pipWinId = null;
 let alertFlashTimer = null;
 let standupPipActive = false;
+let remindTimer = null, remindHideTimer = null, remindActive = false, remindLastIdx = -1;
 
-const PIP_SECTIONS = ['s-working','s-breaking','s-alert-add','s-alert-shutdown','s-standup-alert'];
+const PIP_SECTIONS = ['s-working','s-breaking','s-alert-add','s-alert-shutdown','s-standup-alert','s-remind'];
 
 // ── PiP themes (same as before) ──
 const PIP_THEMES = [
@@ -100,19 +101,19 @@ async function init() {
     if (pipWindow && !pipWindow.closed) {
       closePip();
     } else {
-      if (phase === 'idle') {
-        alert('Chưa có phiên nào đang chạy. Nhấn Bắt đầu trước.');
-        return;
-      }
       await openPip();
-      setPipPhase(phase);
-      if (phase === 'working' && workEndsAt) {
-        const task = tasks.find(t => t.id === curTaskId);
-        if (task) updatePipWorking(task, workEndsAt - Date.now());
-      } else if (phase === 'breaking' && breakEndsAt) {
-        updatePipBreaking(breakEndsAt - Date.now());
-      } else if (phase === 'alert_add') {
+      if (phase === 'idle' || phase === 'alert_add') {
+        // Chưa chạy đồng hồ → hiển thị dạng cảnh báo như lúc hết task
+        setPipPhase('alert_add');
         startAlertFlash();
+      } else {
+        setPipPhase(phase);
+        if (phase === 'working' && workEndsAt) {
+          const task = tasks.find(t => t.id === curTaskId);
+          if (task) updatePipWorking(task, workEndsAt - Date.now());
+        } else if (phase === 'breaking' && breakEndsAt) {
+          updatePipBreaking(breakEndsAt - Date.now());
+        }
       }
     }
     renderStatus();
@@ -501,15 +502,17 @@ async function openPip() {
     }, 200);
   }
   startPipRefresh();
+  scheduleRemind();
 
   pipWindow.document.body.addEventListener('mouseenter', (e) => {
-    if (standupPipActive) return;
-    if (phase === 'alert_add' || phase === 'breaking') return;
+    if (standupPipActive || remindActive) return;
+    if (phase === 'idle' || phase === 'alert_add' || phase === 'breaking') return;
     const fromTop = e.clientY < 8 && e.clientX > 5 && e.clientX < pipWindow.innerWidth - 5;
     if (!fromTop) movePip(pipAtCenter ? 'random-corner' : 'opposite-corner');
   });
   pipWindow.addEventListener('pagehide', () => {
     clearTimeout(pipRefreshTimer);
+    stopRemind();
     chrome.storage.local.remove(KEY_PIP_WIN);
     pipRegistryRemove('neo');
     pipWindow = null;
@@ -521,6 +524,7 @@ async function openPip() {
 
 function closePip() {
   clearTimeout(pipRefreshTimer);
+  stopRemind();
   if (pipWindow && !pipWindow.closed) pipWindow.close();
   pipWindow = null;
   pipWinId = null;
@@ -546,6 +550,8 @@ function setupPipContent() {
     .pip-clock { font-size:14px; font-variant-numeric:tabular-nums; flex-shrink:0;
       color:var(--neo-muted,#828ca0); letter-spacing:.04em; }
     .pip-msg { flex:1; font-size:13px; font-weight:600; }
+    .pip-remind { flex:1; text-align:center; font-size:15px; font-weight:700; line-height:1.35;
+      color:var(--neo-accent,#f0a33c); }
     .pip-ask { font-size:11px; color:var(--neo-muted,#828ca0); padding:4px 14px 0; line-height:1.4; }
     button.pip-btn { flex-shrink:0; padding:6px 12px; border-radius:20px; border:none;
       background:var(--neo-accent,#f0a33c); color:#11151f; font:12px/1 ui-sans-serif,system-ui;
@@ -611,6 +617,12 @@ function setupPipContent() {
         <button class="pip-btn" id="p-go-standup">Vào điểm danh</button>
       </div>
     </div>
+    <!-- reminder text -->
+    <div id="s-remind" class="pip-wrap hidden">
+      <div class="pip-row">
+        <span class="pip-remind" id="p-remind-text"></span>
+      </div>
+    </div>
   `;
 
   doc.getElementById('p-go-setup').addEventListener('click', () => {
@@ -633,6 +645,8 @@ async function focusAnchorTab() {
 function setPipPhase(p) {
   if (!pipWindow || pipWindow.closed) return;
   if (standupPipActive) return;
+  // Text nhắc nhở giữ PiP đủ 3 giây; hideRemind sẽ hiển thị pha mới nhất sau đó
+  if (remindActive) return;
   const doc = pipWindow.document;
   const target = `s-${p.replace('_', '-')}`;
   PIP_SECTIONS.forEach(id => doc.getElementById(id)?.classList.toggle('hidden', id !== target));
@@ -687,6 +701,58 @@ function stopAlertFlash() {
   clearTimeout(alertFlashTimer);
   if (!pipWindow || pipWindow.closed) return;
   pipWindow.document.body.classList.remove('neo-alert-loop');
+}
+
+// ── Text nhắc nhở định kỳ ──
+// Ưu tiên hiển thị: 1) nhắc đứng dậy  2) text nhắc nhở  3) trạng thái task
+function scheduleRemind() {
+  clearTimeout(remindTimer);
+  if (!cfg?.remindOn) return;
+  if (!pipWindow || pipWindow.closed) return;
+  const sec = clamp(cfg?.remindEverySec, 10, 60, 10);
+  remindTimer = setTimeout(showRemind, sec * 1000);
+}
+
+function showRemind() {
+  scheduleRemind(); // đặt lịch cho lượt kế tiếp
+  if (!pipWindow || pipWindow.closed) return;
+  if (standupPipActive) return; // nhắc đứng dậy đang chiếm PiP → bỏ qua lượt này
+
+  const texts = (cfg?.asksRemind?.length) ? cfg.asksRemind : DEFAULTS.asksRemind;
+  let i;
+  do { i = Math.floor(Math.random() * texts.length); } while (texts.length > 1 && i === remindLastIdx);
+  remindLastIdx = i;
+
+  const doc = pipWindow.document;
+  const el = doc.getElementById('p-remind-text');
+  if (el) el.textContent = texts[i];
+  PIP_SECTIONS.forEach(id => doc.getElementById(id)?.classList.toggle('hidden', id !== 's-remind'));
+  remindActive = true;
+
+  movePip('center');
+  triggerBlink();
+
+  clearTimeout(remindHideTimer);
+  remindHideTimer = setTimeout(hideRemind, 3000);
+}
+
+function hideRemind() {
+  remindActive = false;
+  if (!pipWindow || pipWindow.closed) return;
+  if (standupPipActive) return;
+  // Trả về trạng thái phiên mới nhất (pha có thể đã đổi trong lúc nhắc nhở hiển thị)
+  if (phase === 'idle' || phase === 'alert_add') {
+    setPipPhase('alert_add');
+    startAlertFlash(); // khôi phục nháy liên tục của màn cảnh báo
+  } else {
+    setPipPhase(phase);
+  }
+}
+
+function stopRemind() {
+  clearTimeout(remindTimer);
+  clearTimeout(remindHideTimer);
+  remindActive = false;
 }
 
 // ── PiP look / refresh (same logic as before) ──
@@ -870,7 +936,6 @@ function renderStatus() {
   const pipOpen = pipWindow && !pipWindow.closed;
   $('shutdownTime').disabled = sessionActive;
   $('pipToggleBtn').textContent = pipOpen ? 'Tắt PiP' : 'Mở PiP';
-  $('pipToggleBtn').style.display = sessionActive ? '' : 'none';
   $('alertAddBox').style.display = phase === 'alert_add' ? '' : 'none';
   const lockAdd = phase === 'alert_shutdown';
   const addCard = document.querySelector('.add-task-card');
@@ -897,6 +962,10 @@ function fillSettings(c) {
   $('alertDuration').value = (c.alertDuration > 0) ? c.alertDuration : '';
   $('askOn').checked       = c.askOn ?? false;
   updateAskOnUI();
+  $('asksRemind').value     = (c.asksRemind || DEFAULTS.asksRemind).join('\n');
+  $('remindOn').checked     = c.remindOn ?? false;
+  $('remindEverySec').value = clamp(c.remindEverySec, 10, 60, 10);
+  updateRemindUI();
 }
 
 function updateAskOnUI() {
@@ -904,14 +973,25 @@ function updateAskOnUI() {
   $('asksPipWrap').classList.toggle('disabled', !on);
 }
 
+function updateRemindUI() {
+  $('asksRemindWrap').classList.toggle('disabled', !$('remindOn').checked);
+}
+
 function wireSettings() {
   $('resetBtn').addEventListener('click', () => { fillSettings(DEFAULTS); saveSettings(); });
 
   // Textarea: debounce 800ms
   let debounceTimer = null;
-  $('asksPip').addEventListener('input', () => {
+  ['asksPip', 'asksRemind'].forEach(id => $(id).addEventListener('input', () => {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(saveSettings, 800);
+  }));
+
+  $('remindOn').addEventListener('change', () => { updateRemindUI(); saveSettings(); });
+  $('remindEverySec').addEventListener('keydown', blockNonDigit);
+  $('remindEverySec').addEventListener('change', () => {
+    $('remindEverySec').value = clamp($('remindEverySec').value, 10, 60, 10);
+    saveSettings();
   });
 
   ['defaultWorkMin', 'alertDuration'].forEach(id => $(id).addEventListener('keydown', blockNonDigit));
@@ -970,14 +1050,19 @@ async function saveSettings() {
   const refreshMax = hiSec / 60;
 
   const dwRaw = parseFloat($('defaultWorkMin').value);
+  const asksRemind = lines($('asksRemind').value);
   cfg = {
     defaultWorkMin: (dwRaw > 0) ? dwRaw : null,
     asksPip:    asksPip.length ? asksPip : DEFAULTS.asksPip,
     refreshMin, refreshMax,
     alertDuration: parseInt($('alertDuration').value) || null,
     askOn:         $('askOn').checked,
+    asksRemind:    asksRemind.length ? asksRemind : DEFAULTS.asksRemind,
+    remindOn:      $('remindOn').checked,
+    remindEverySec: clamp($('remindEverySec').value, 10, 60, 10),
   };
   await chrome.storage.sync.set(cfg);
+  scheduleRemind(); // áp dụng ngay bật/tắt hoặc chu kỳ mới
   flashSaved();
 }
 
@@ -1314,9 +1399,10 @@ function deactivateStandupPip() {
   if (!pipWindow || pipWindow.closed) return;
   stopAlertFlash();
   const doc = pipWindow.document;
-  const target = `s-${phase.replace('_', '-')}`;
+  // idle hiển thị màn cảnh báo giống lúc hết task
+  const target = phase === 'idle' ? 's-alert-add' : `s-${phase.replace('_', '-')}`;
   PIP_SECTIONS.forEach(id => doc.getElementById(id)?.classList.toggle('hidden', id !== target));
-  if (phase === 'alert_add') startAlertFlash();
+  if (phase === 'alert_add' || phase === 'idle') startAlertFlash();
   else if (phase === 'working') { applyPipLook(false); startPipRefresh(); }
 }
 

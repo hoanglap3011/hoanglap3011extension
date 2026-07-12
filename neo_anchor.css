@@ -291,6 +291,8 @@ input, textarea { font-family: inherit; }
 }
 #asksPipWrap { transition: opacity .18s ease; }
 #asksPipWrap.disabled { opacity: .35; pointer-events: none; }
+#asksRemindWrap { transition: opacity .18s ease; }
+#asksRemindWrap.disabled { opacity: .35; pointer-events: none; }
 
 /* Shutdown time */
 .shutdown-input {

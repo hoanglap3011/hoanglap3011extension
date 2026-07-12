@@ -11,6 +11,49 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.sync.clear();
 });
 
+// Mở và ghim tab Neo Anchor mỗi khi trình duyệt khởi động
+chrome.runtime.onStartup.addListener(async () => {
+  // Khởi động bộ đếm trước khi mở tab, để trang neo_anchor load lên là thấy ngay
+  // trạng thái tracking (initStandup đọc standupEndsAt từ storage)
+  await ensureStandupTimerRunning();
+  await openPinnedNeoAnchorTab();
+});
+
+async function ensureStandupTimerRunning() {
+  const { standupEndsAt, standupCfg } = await chrome.storage.local.get(['standupEndsAt', 'standupCfg']);
+  if (standupEndsAt && Date.now() < standupEndsAt) {
+    // Đang chạy — tạo lại alarm phòng trường hợp bị mất sau khi trình duyệt khởi động lại
+    chrome.alarms.create('standup-sitting', { when: standupEndsAt });
+    return;
+  }
+  // Chưa chạy (hoặc endsAt cũ đã quá hạn từ phiên trước) → khởi động mới
+  const maxSec = standupCfg?.maxSec || 2700;
+  const endsAt = Date.now() + maxSec * 1000;
+  await chrome.storage.local.set({ standupEndsAt: endsAt });
+  chrome.alarms.create('standup-sitting', { when: endsAt });
+  chrome.notifications.create('standup-autostart', {
+    type: 'basic',
+    iconUrl: 'image/icon.png',
+    title: 'Nhắc nhở đứng dậy',
+    message: `Đã tự động khởi động bộ đếm nhắc nhở đứng dậy (${Math.round(maxSec / 60)} phút).`,
+    priority: 1,
+  });
+}
+
+async function openPinnedNeoAnchorTab() {
+  const url = chrome.runtime.getURL('neo_anchor.html');
+  // Nếu tab đã tồn tại (Chrome khôi phục phiên trước) thì chỉ ghim lại, không mở trùng
+  const existing = await chrome.tabs.query({ url });
+  if (existing.length > 0) {
+    const tab = existing[0];
+    if (!tab.pinned) chrome.tabs.update(tab.id, { pinned: true });
+    chrome.storage.local.set({ neoAnchorTabId: tab.id });
+    return;
+  }
+  const tab = await chrome.tabs.create({ url, pinned: true, active: false });
+  chrome.storage.local.set({ neoAnchorTabId: tab.id });
+}
+
 const SETTINGS_KEY = 'LapsExtensionSettings';
 const DEFAULT_SETTINGS = {
   tvEnableAutoPopup: true,

@@ -30,6 +30,14 @@ const DEFAULTS = {
   // Hiển thị text cùng task trong cửa sổ nổi
   askOn: false,
 
+  // Text nhắc nhở định kỳ trên PiP (hiện giữa màn hình 3 giây rồi trả về trạng thái task)
+  asksRemind: [
+    "Đưa mắt ra xa và hít thở sâu",
+    "Ngồi thẳng lưng thẳng cổ ưỡn ngực",
+  ],
+  remindOn: false,
+  remindEverySec: 10, // giây, 10–60
+
 };
 
 async function getSync() {
