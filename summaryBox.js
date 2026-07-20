@@ -100,14 +100,6 @@ function initSummaryBox() {
             font-size: 14px; color: #333;
             display: flex; flex-direction: column; gap: 8px;
         }
-        #lp-box.minimized {
-            width: 220px !important; height: 38px !important;
-            bottom: 10px !important; right: 10px !important;
-            top: auto !important; left: auto !important;
-        }
-        #lp-box.minimized #content,
-        #lp-box.minimized .footer,
-        #lp-box.minimized .rz { display: none; }
         /* Tay nắm co giãn ở 4 cạnh + 4 góc */
         .rz { position: absolute; z-index: 10; }
         .rz-n  { top: 0; left: 12px; right: 12px; height: 5px; cursor: ns-resize; }
@@ -154,15 +146,12 @@ function initSummaryBox() {
     chrome.storage.local.get(['summaryBoxState'], (res) => {
         const s = res.summaryBoxState || { top: '20px', right: '20px', width: '300px', height: '200px' };
         Object.assign(lpBox.style, { top: s.top, right: s.right, left: s.left, width: s.width, height: s.height });
-        if (s.isMin) lpBox.classList.add('minimized');
     });
 
     lpBox.innerHTML = `
         <div class="header">
             <span class="title">✨ Tóm tắt</span>
             <div class="btns">
-                <button id="btn-min" title="Thu nhỏ">_</button>
-                <button id="btn-max" title="Phóng to" style="display:none">▢</button>
                 <button id="btn-close" title="Đóng">×</button>
             </div>
         </div>
@@ -177,21 +166,14 @@ function initSummaryBox() {
     const saveBoxState = () => {
         chrome.storage.local.set({ summaryBoxState: {
             top: lpBox.style.top, right: lpBox.style.right, left: lpBox.style.left,
-            width: lpBox.style.width, height: lpBox.style.height,
-            isMin: lpBox.classList.contains('minimized')
+            width: lpBox.style.width, height: lpBox.style.height
         }});
     };
 
-    const btnMin   = lpBox.querySelector('#btn-min');
-    const btnMax   = lpBox.querySelector('#btn-max');
     const btnClose = lpBox.querySelector('#btn-close');
-
-    btnMin.onclick = () => { lpBox.classList.add('minimized'); btnMin.style.display = 'none'; btnMax.style.display = 'inline'; saveBoxState(); };
-    btnMax.onclick = () => { lpBox.classList.remove('minimized'); btnMin.style.display = 'inline'; btnMax.style.display = 'none'; saveBoxState(); };
     btnClose.onclick = () => container.remove();
 
     lpBox.querySelector('.header').onmousedown = (e) => {
-        if (lpBox.classList.contains('minimized')) return;
         let startX = e.clientX, startY = e.clientY;
         let startLeft = lpBox.offsetLeft, startTop = lpBox.offsetTop;
         const onMove = (ev) => {

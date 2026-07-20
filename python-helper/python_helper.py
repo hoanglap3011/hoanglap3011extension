@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
-"""Helper tải video YouTube — server + bộ cài gộp trong 1 file (macOS / Linux / Windows).
+"""python-helper — server Python local cho extension, gộp server + bộ cài trong
+1 file duy nhất (macOS / Linux / Windows).
 
-Cài đặt (1 lần mỗi máy):  python3 ytdl_server.py install
+Extension Chrome bị nhốt trong sandbox trình duyệt nên mọi việc cần chạy chương
+trình trên máy (yt-dlp, ffmpeg...) đều gửi HTTP request đến server này qua
+background.js. Muốn thêm nghiệp vụ mới: viết hàm run_xxx + thêm nhánh endpoint
+trong Handler.do_GET (giữ 1 file để bộ cài/cập nhật luôn chỉ là 1 file).
+
+Cài đặt (1 lần mỗi máy):  python3 python_helper.py install
   → kiểm tra/cài yt-dlp + ffmpeg, copy file này vào thư mục cài đặt,
     đăng ký tự khởi động cùng máy, chạy server và tự kiểm tra.
 
-Chạy server (tự động sau khi cài):  python3 ytdl_server.py
-  Nhận request từ extension (qua background.js), chạy yt-dlp tải video
-  về thư mục Downloads, theo dõi % tiến trình từng job.
+Chạy server (tự động sau khi cài):  python3 python_helper.py
 
 Endpoint (chỉ lắng nghe 127.0.0.1):
-  GET /ping           → kiểm tra helper sống
-  GET /download?url=  → bắt đầu tải (chỉ nhận link YouTube), trả về {id}
+  GET /ping           → kiểm tra helper sống, trả {status, version}
+  GET /download?url=  → bắt đầu tải video (chỉ nhận link YouTube), trả về {id}
+                        thêm &audio=1 để chỉ tải âm thanh, chuyển sang mp3
   GET /status?id=     → {status: downloading|done|error, percent, file, error}
   GET /reveal?id=     → mở thư mục chứa file đã tải trong Finder/Explorer
 """
@@ -30,6 +35,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+VERSION = 9
+
 # thông báo có tiếng Việt — nếu console/pipe không phải UTF-8 (vd cp1252)
 # thì in ký tự thay thế chứ đừng crash (pythonw thì stdout là None)
 for _stream in (sys.stdout, sys.stderr):
@@ -43,19 +50,30 @@ PORT = 43011
 DOWNLOAD_DIR = Path.home() / "Downloads"
 SYSTEM = platform.system()  # Darwin | Linux | Windows
 if SYSTEM == "Windows":
-    INSTALL_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "ytdl-helper"
+    INSTALL_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "python-helper"
 else:
-    INSTALL_DIR = Path.home() / ".ytdl-helper"
+    INSTALL_DIR = Path.home() / ".python-helper"
 ALLOWED_HOSTS = {
     "youtube.com", "www.youtube.com", "m.youtube.com",
     "music.youtube.com", "youtu.be",
 }
 PROGRESS_RE = re.compile(r"\[download\]\s+(\d+(?:\.\d+)?)%")
 
-# ==================== SERVER ====================
+# ==================== TIỆN ÍCH CHUNG ====================
 
+# Kho trạng thái job (id → dict), extension poll qua /status
 jobs = {}
 jobs_lock = threading.Lock()
+
+
+def set_job(job_id, **fields):
+    with jobs_lock:
+        jobs.setdefault(job_id, {}).update(fields)
+
+
+def get_job(job_id):
+    with jobs_lock:
+        return dict(jobs.get(job_id) or {})
 
 
 def _find_winget_tool(name):
@@ -97,26 +115,24 @@ def find_ffmpeg():
     return None
 
 
-def set_job(job_id, **fields):
-    with jobs_lock:
-        jobs.setdefault(job_id, {}).update(fields)
+# ==================== TẢI VIDEO YOUTUBE (/download) ====================
 
-
-def get_job(job_id):
-    with jobs_lock:
-        return dict(jobs.get(job_id) or {})
-
-
-def run_download(job_id, url):
+def run_download(job_id, url, audio_only=False):
     ytdlp = find_ytdlp()
     if not ytdlp:
-        set_job(job_id, status="error", error="Không tìm thấy yt-dlp — chạy lại: python3 ytdl_server.py install")
+        set_job(job_id, status="error", error="Không tìm thấy yt-dlp — chạy lại: python3 python_helper.py install")
         return
 
+    if audio_only:
+        # chỉ tải âm thanh rồi convert sang mp3 (cần ffmpeg)
+        fmt_args = ["-f", "bestaudio/best",
+                    "--extract-audio", "--audio-format", "mp3", "--audio-quality", "0"]
+    else:
+        fmt_args = ["-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best",
+                    "--merge-output-format", "mp4"]
     cmd = [
         ytdlp,
-        "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best",
-        "--merge-output-format", "mp4",
+        *fmt_args,
         "--no-playlist", "--newline",
         "--no-simulate", "--print", "after_move:filepath",
         "-o", str(DOWNLOAD_DIR / "%(title)s [%(id)s].%(ext)s"),
@@ -176,6 +192,7 @@ def run_download(job_id, url):
 
 
 def reveal_file(path):
+    """Mở thư mục chứa file trong Finder/Explorer (endpoint /reveal)."""
     if SYSTEM == "Darwin":
         subprocess.run(["open", "-R", path])
     elif SYSTEM == "Windows":
@@ -183,6 +200,8 @@ def reveal_file(path):
     else:
         subprocess.run(["xdg-open", str(Path(path).parent)])
 
+
+# ==================== SERVER ====================
 
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code, payload):
@@ -197,16 +216,17 @@ class Handler(BaseHTTPRequestHandler):
         query = parse_qs(parsed.query)
 
         if parsed.path == "/ping":
-            return self._send(200, {"status": "ok", "version": 3})
+            return self._send(200, {"status": "ok", "version": VERSION})
 
         if parsed.path == "/download":
             url = query.get("url", [None])[0]
             host = urlparse(url or "").hostname
             if host not in ALLOWED_HOSTS:
                 return self._send(400, {"error": "chỉ nhận link YouTube"})
+            audio_only = query.get("audio", ["0"])[0] == "1"
             job_id = uuid.uuid4().hex[:8]
             set_job(job_id, status="downloading", percent=0)
-            threading.Thread(target=run_download, args=(job_id, url), daemon=True).start()
+            threading.Thread(target=run_download, args=(job_id, url, audio_only), daemon=True).start()
             return self._send(200, {"id": job_id})
 
         if parsed.path == "/status":
@@ -229,11 +249,21 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def serve():
-    print(f"yt-dlp helper: http://127.0.0.1:{PORT} → tải về {DOWNLOAD_DIR}")
+    print(f"python-helper: http://127.0.0.1:{PORT} → tải về {DOWNLOAD_DIR}")
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
 
 
-# ==================== BỘ CÀI (python3 ytdl_server.py install) ====================
+# ==================== BỘ CÀI (python3 python_helper.py install) ====================
+
+AUTOSTART_LABEL = "com.hoanglap.python-helper"
+
+# Định danh bản cài cũ (thời còn tên ytdl-helper) — installer tự gỡ nếu còn
+OLD_LABEL = "com.hoanglap.ytdl-helper"
+OLD_INSTALL_DIR = (Path.home() / ".ytdl-helper") if SYSTEM != "Windows" else \
+    (INSTALL_DIR.parent / "ytdl-helper")
+# File lẻ của bản python-helper từng tách nhiều module — dọn khi cài bản 1 file
+STALE_FILES = ["python_helper_server.py", "common.py", "youtube_downloader.py", "installer.py"]
+
 
 def say(msg):
     print(f"\n==> {msg}")
@@ -246,6 +276,35 @@ def die(msg):
 
 def run_ok(cmd):
     return subprocess.run(cmd).returncode == 0
+
+
+def cleanup_old_install():
+    """Gỡ bản ytdl-helper cũ (tránh 2 server tranh cổng) + dọn file lẻ của bản
+    tách module. Best-effort — máy sạch thì không làm gì."""
+    if SYSTEM == "Darwin":
+        old_plist = Path.home() / f"Library/LaunchAgents/{OLD_LABEL}.plist"
+        if old_plist.exists():
+            say("Phát hiện bản ytdl-helper cũ — đang gỡ...")
+            uid = subprocess.run(["id", "-u"], capture_output=True, text=True).stdout.strip()
+            subprocess.run(["launchctl", "bootout", f"gui/{uid}/{OLD_LABEL}"],
+                           capture_output=True)
+            old_plist.unlink(missing_ok=True)
+            time.sleep(2)  # chờ process cũ nhả cổng
+    elif SYSTEM == "Linux":
+        unit = Path.home() / ".config/systemd/user/ytdl-helper.service"
+        if unit.exists():
+            say("Phát hiện bản ytdl-helper cũ — đang gỡ...")
+            subprocess.run(["systemctl", "--user", "disable", "--now", "ytdl-helper"],
+                           capture_output=True)
+            unit.unlink(missing_ok=True)
+    elif SYSTEM == "Windows":
+        subprocess.run(["reg", "delete",
+                        r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run",
+                        "/v", "ytdl-helper", "/f"], capture_output=True)
+    if OLD_INSTALL_DIR.exists():
+        shutil.rmtree(OLD_INSTALL_DIR, ignore_errors=True)
+    for name in STALE_FILES:
+        (INSTALL_DIR / name).unlink(missing_ok=True)
 
 
 def ensure_tools():
@@ -297,15 +356,15 @@ def ensure_tools():
 def register_autostart(server_path):
     say("Đăng ký tự khởi động cùng máy...")
     if SYSTEM == "Darwin":
-        plist = Path.home() / "Library/LaunchAgents/com.hoanglap.ytdl-helper.plist"
+        plist = Path.home() / f"Library/LaunchAgents/{AUTOSTART_LABEL}.plist"
         uid = subprocess.run(["id", "-u"], capture_output=True, text=True).stdout.strip()
-        subprocess.run(["launchctl", "bootout", f"gui/{uid}/com.hoanglap.ytdl-helper"],
+        subprocess.run(["launchctl", "bootout", f"gui/{uid}/{AUTOSTART_LABEL}"],
                        capture_output=True)
         plist.write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>Label</key><string>com.hoanglap.ytdl-helper</string>
+    <key>Label</key><string>{AUTOSTART_LABEL}</string>
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
@@ -315,8 +374,8 @@ def register_autostart(server_path):
     <dict><key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string></dict>
     <key>RunAtLoad</key><true/>
     <key>KeepAlive</key><true/>
-    <key>StandardOutPath</key><string>/tmp/ytdl-helper.log</string>
-    <key>StandardErrorPath</key><string>/tmp/ytdl-helper.log</string>
+    <key>StandardOutPath</key><string>/tmp/python-helper.log</string>
+    <key>StandardErrorPath</key><string>/tmp/python-helper.log</string>
 </dict>
 </plist>
 """)
@@ -327,12 +386,12 @@ def register_autostart(server_path):
                 break
             time.sleep(2)
         else:
-            die("launchctl bootstrap thất bại — xem /tmp/ytdl-helper.log")
+            die("launchctl bootstrap thất bại — xem /tmp/python-helper.log")
     elif SYSTEM == "Linux":
         unit_dir = Path.home() / ".config/systemd/user"
         unit_dir.mkdir(parents=True, exist_ok=True)
-        (unit_dir / "ytdl-helper.service").write_text(f"""[Unit]
-Description=YouTube download helper (yt-dlp)
+        (unit_dir / "python-helper.service").write_text(f"""[Unit]
+Description=Python helper for Lap's extension (yt-dlp)
 
 [Service]
 ExecStart=/usr/bin/env python3 {server_path}
@@ -343,16 +402,16 @@ Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 WantedBy=default.target
 """)
         run_ok(["systemctl", "--user", "daemon-reload"])
-        if not run_ok(["systemctl", "--user", "enable", "--now", "ytdl-helper"]):
-            die("systemctl enable thất bại — xem: systemctl --user status ytdl-helper")
-        run_ok(["systemctl", "--user", "restart", "ytdl-helper"])
+        if not run_ok(["systemctl", "--user", "enable", "--now", "python-helper"]):
+            die("systemctl enable thất bại — xem: systemctl --user status python-helper")
+        run_ok(["systemctl", "--user", "restart", "python-helper"])
     elif SYSTEM == "Windows":
         pythonw = Path(sys.executable).with_name("pythonw.exe")
         runner = str(pythonw if pythonw.exists() else sys.executable)
         # schtasks /SC ONLOGON đòi quyền admin ("Access is denied") —
         # khóa Run của user (HKCU) thì không cần
         if not run_ok(["reg", "add", r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run",
-                       "/v", "ytdl-helper", "/t", "REG_SZ",
+                       "/v", "python-helper", "/t", "REG_SZ",
                        "/d", f'"{runner}" "{server_path}"', "/f"]):
             die("Đăng ký tự khởi động thất bại")
         # khóa Run chỉ chạy lúc đăng nhập — khởi động server ngay bây giờ
@@ -373,15 +432,16 @@ def verify_running():
                     return
         except Exception:
             pass
-    die("Helper không phản hồi. macOS: xem /tmp/ytdl-helper.log — "
-        "Linux: systemctl --user status ytdl-helper — Windows: chạy tay 'python ytdl_server.py' xem lỗi")
+    die("Helper không phản hồi. macOS: xem /tmp/python-helper.log — "
+        "Linux: systemctl --user status python-helper — Windows: chạy tay 'python python_helper.py' xem lỗi")
 
 
 def do_install():
+    cleanup_old_install()
     ensure_tools()
     say(f"Cài helper vào {INSTALL_DIR}...")
     INSTALL_DIR.mkdir(parents=True, exist_ok=True)
-    target = INSTALL_DIR / "ytdl_server.py"
+    target = INSTALL_DIR / "python_helper.py"
     if Path(__file__).resolve() != target.resolve():
         shutil.copy2(__file__, target)
     register_autostart(target)

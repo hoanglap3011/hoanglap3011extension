@@ -1,7 +1,7 @@
 import { initSCChecker } from './selfcontrol_bg.js';
 
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.remove([
+chrome.runtime.onInstalled.addListener(async () => {
+  await chrome.storage.local.remove([
     'neoTasks', 'neoPhase', 'neoCurrentTask',
     'neoWorkEndsAt', 'neoBreakEndsAt', 'neoAnchorTabId', 'neoPipWindowId',
     'neoShutdownTime',
@@ -9,6 +9,9 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.clear('neo-work-end');
   chrome.alarms.clear('neo-break-end');
   chrome.storage.sync.clear();
+  // Reload extension làm Chrome đóng tab neo_anchor cũ → mở lại như lúc khởi động trình duyệt
+  await ensureStandupTimerRunning();
+  await openPinnedNeoAnchorTab();
 });
 
 // Mở và ghim tab Neo Anchor mỗi khi trình duyệt khởi động
@@ -444,9 +447,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return;
     }
 
-    // ── Tải video YouTube qua helper yt-dlp local (ytdl-helper/) ──
+    // ── Tải video YouTube qua helper Python local (python-helper/) ──
     if (request.action === "ytdlStart") {
-        ytdlApi(`/download?url=${encodeURIComponent(request.url)}`)
+        ytdlApi(`/download?url=${encodeURIComponent(request.url)}${request.audio ? '&audio=1' : ''}`)
             .then(data => {
                 if (!data.id) return sendResponse({ ok: false, error: data.error });
                 sendResponse({ ok: true, id: data.id });
@@ -479,13 +482,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // hiện thành "Check internet connection") nên phải đọc file rồi tải qua data URL.
     if (request.action === "ytdlGetSetup") {
         (async () => {
-            const resp = await fetch(chrome.runtime.getURL('ytdl-helper/ytdl_server.py'));
+            const resp = await fetch(chrome.runtime.getURL('python-helper/python_helper.py'));
             const bytes = new Uint8Array(await resp.arrayBuffer());
             let bin = '';
             for (const b of bytes) bin += String.fromCharCode(b);
             await chrome.downloads.download({
                 url: `data:text/x-python;base64,${btoa(bin)}`,
-                filename: 'ytdl_server.py',
+                filename: 'python_helper.py',
             });
             sendResponse({ ok: true });
         })().catch(() => sendResponse({ ok: false }));
@@ -544,14 +547,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "getMediaInfo") {
         chrome.tabs.query({}, async (tabs) => {
             const SKIPPED = ['chrome://', 'chrome-extension://', 'about:', 'data:'];
+            // Trang neo_anchor là trang extension nhưng có music player, tự trả lời getMediaState
+            const NEO_ANCHOR_URL = chrome.runtime.getURL('neo_anchor.html');
             async function queryTab(tab) {
-                if (!tab.url || SKIPPED.some(p => tab.url.startsWith(p))) return null;
+                if (!tab.url) return null;
+                const isNeoAnchor = tab.url.startsWith(NEO_ANCHOR_URL);
+                if (!isNeoAnchor && SKIPPED.some(p => tab.url.startsWith(p))) return null;
                 const firstTry = await new Promise((resolve) => {
                     chrome.tabs.sendMessage(tab.id, { action: "getMediaState" }, (r) => {
                         if (chrome.runtime.lastError || !r) resolve(null); else resolve(r);
                     });
                 });
                 if (firstTry) return { ...firstTry, tabId: tab.id, tabTitle: tab.title, tabUrl: tab.url, favIconUrl: tab.favIconUrl };
+                if (isNeoAnchor) return null; // không thể inject content script vào trang extension
                 try {
                     const isSpotify = tab.url.includes('open.spotify.com');
                     await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: [isSpotify ? 'spotify_detector.js' : 'media_detector.js'] });

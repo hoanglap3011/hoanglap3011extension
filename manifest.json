@@ -153,7 +153,7 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "ytdl-helper/ytdl_server.py"
+        "python-helper/python_helper.py"
       ],
       "matches": [
         "*://*.youtube.com/*",

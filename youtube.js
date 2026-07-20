@@ -359,9 +359,9 @@ async function initializeYouTubeHandler(settings) {
 /**
  * ===================================================================
  * BOX "TẢI VIDEO" (bật/tắt bằng setting ytEnableDownloadButton)
- * Luồng: box → background.js → helper local (ytdl-helper/ytdl_server.py) → yt-dlp.
+ * Luồng: box → background.js → helper Python local (python-helper/) → yt-dlp.
  * UI là popup cùng kiểu Box Tóm Tắt (summaryBox.js): kéo-thả, co giãn,
- * thu nhỏ, nhớ vị trí — mọi trạng thái (hướng dẫn cài, tiến trình, kết quả)
+ * nhớ vị trí — mọi trạng thái (hướng dẫn cài, tiến trình, kết quả)
  * đều hiển thị trong nội dung box thay vì các bảng nổi rời rạc.
  * ===================================================================
  */
@@ -383,9 +383,9 @@ function initializeDownloadButton() {
     }
 
     const SETUP_COMMANDS = {
-        mac:     'python3 ~/Downloads/ytdl_server.py install',
-        linux:   'python3 ~/Downloads/ytdl_server.py install',
-        windows: 'python "$env:USERPROFILE\\Downloads\\ytdl_server.py" install',
+        mac:     'python3 ~/Downloads/python_helper.py install',
+        linux:   'python3 ~/Downloads/python_helper.py install',
+        windows: 'python "$env:USERPROFILE\\Downloads\\python_helper.py" install',
     };
 
     // ==================== Dựng box (cùng kiểu Box Tóm Tắt) ====================
@@ -421,15 +421,6 @@ function initializeDownloadButton() {
             font-size: 14px; color: #333;
             display: flex; flex-direction: column; gap: 8px;
         }
-        /* Thu nhỏ neo cạnh Box Tóm Tắt (box đó nằm ở góc phải dưới cùng) */
-        #lp-box.minimized {
-            width: 220px !important; height: 38px !important;
-            bottom: 10px !important; right: 240px !important;
-            top: auto !important; left: auto !important;
-        }
-        #lp-box.minimized #content,
-        #lp-box.minimized .footer,
-        #lp-box.minimized .rz { display: none; }
         /* Tay nắm co giãn ở 4 cạnh + 4 góc */
         .rz { position: absolute; z-index: 10; }
         .rz-n  { top: 0; left: 12px; right: 12px; height: 5px; cursor: ns-resize; }
@@ -491,21 +482,19 @@ function initializeDownloadButton() {
     chrome.storage.local.get(['downloadBoxState'], (res) => {
         const s = res.downloadBoxState || { top: '80px', right: '20px', width: '320px', height: '210px' };
         Object.assign(lpBox.style, { top: s.top, right: s.right, left: s.left, width: s.width, height: s.height });
-        if (s.isMin) lpBox.classList.add('minimized');
     });
 
     lpBox.innerHTML = `
         <div class="header">
             <span class="title">⬇️ Tải video</span>
             <div class="btns">
-                <button id="btn-min" title="Thu nhỏ">_</button>
-                <button id="btn-max" title="Phóng to" style="display:none">▢</button>
                 <button id="btn-close" title="Đóng">×</button>
             </div>
         </div>
         <div id="content"></div>
         <div class="footer">
             <button class="btn-action" id="btn-download">⬇️ Tải video</button>
+            <button class="btn-action" id="btn-download-mp3">🎵 Tải mp3</button>
         </div>
     `;
     shadow.appendChild(lpBox);
@@ -513,21 +502,14 @@ function initializeDownloadButton() {
     const saveBoxState = () => {
         chrome.storage.local.set({ downloadBoxState: {
             top: lpBox.style.top, right: lpBox.style.right, left: lpBox.style.left,
-            width: lpBox.style.width, height: lpBox.style.height,
-            isMin: lpBox.classList.contains('minimized')
+            width: lpBox.style.width, height: lpBox.style.height
         }});
     };
 
-    const btnMin   = lpBox.querySelector('#btn-min');
-    const btnMax   = lpBox.querySelector('#btn-max');
     const btnClose = lpBox.querySelector('#btn-close');
-
-    btnMin.onclick = () => { lpBox.classList.add('minimized'); btnMin.style.display = 'none'; btnMax.style.display = 'inline'; saveBoxState(); };
-    btnMax.onclick = () => { lpBox.classList.remove('minimized'); btnMin.style.display = 'inline'; btnMax.style.display = 'none'; saveBoxState(); };
     btnClose.onclick = () => { clearInterval(pollTimer); container.remove(); };
 
     lpBox.querySelector('.header').onmousedown = (e) => {
-        if (lpBox.classList.contains('minimized')) return;
         let startX = e.clientX, startY = e.clientY;
         let startLeft = lpBox.offsetLeft, startTop = lpBox.offsetTop;
         const onMove = (ev) => {
@@ -574,6 +556,7 @@ function initializeDownloadButton() {
 
     const contentEl = lpBox.querySelector('#content');
     const btnDownload = lpBox.querySelector('#btn-download');
+    const btnDownloadMp3 = lpBox.querySelector('#btn-download-mp3');
 
     // ==================== Các trạng thái hiển thị ====================
 
@@ -582,6 +565,8 @@ function initializeDownloadButton() {
     const resetButton = () => {
         btnDownload.disabled = false;
         btnDownload.textContent = '⬇️ Tải video';
+        btnDownloadMp3.disabled = false;
+        btnDownloadMp3.textContent = '🎵 Tải mp3';
     };
 
     function showIdle() {
@@ -608,7 +593,7 @@ function initializeDownloadButton() {
 
     // Thanh tiến trình: dựng 1 lần rồi chỉ cập nhật số + độ rộng,
     // để CSS transition kéo mượt giữa các lần poll
-    function showProgress(pct) {
+    function showProgress(pct, audio) {
         let wrap = contentEl.querySelector('.dl-progress');
         if (!wrap) {
             contentEl.innerHTML = '';
@@ -625,7 +610,7 @@ function initializeDownloadButton() {
             contentEl.appendChild(wrap);
         }
         wrap.querySelector('.pct-label').textContent = pct >= 100
-            ? 'Đang xử lý (ghép video/âm thanh)...'
+            ? (audio ? 'Đang xử lý (chuyển sang mp3)...' : 'Đang xử lý (ghép video/âm thanh)...')
             : `Đang tải... ${pct}%`;
         wrap.querySelector('.bar-fill').style.width = Math.min(pct, 100) + '%';
     }
@@ -687,13 +672,14 @@ function initializeDownloadButton() {
 
     // ==================== Tải + theo dõi tiến trình ====================
 
-    async function onDownloadClick() {
+    async function onDownloadClick(audio) {
         btnDownload.disabled = true;
-        btnDownload.innerHTML = '<span class="loader"></span>';
+        btnDownloadMp3.disabled = true;
+        (audio ? btnDownloadMp3 : btnDownload).innerHTML = '<span class="loader"></span>';
         setStatus('Đang gửi yêu cầu...');
-        const res = await send({ action: 'ytdlStart', url: location.href });
+        const res = await send({ action: 'ytdlStart', url: location.href, audio });
         if (res?.ok) {
-            trackJob(res.id);
+            trackJob(res.id, audio);
         } else if (res?.noHelper) {
             resetButton();
             showSetup();
@@ -703,10 +689,10 @@ function initializeDownloadButton() {
         }
     }
 
-    function trackJob(id) {
+    function trackJob(id, audio) {
         currentJobId = id;
         clearInterval(pollTimer);
-        setStatus('Đang phân tích video...');
+        setStatus('Đang tải...');
         // yt-dlp tải video 0→100% rồi tải audio lại từ 0→100% rồi ghép file —
         // giữ % không tụt lùi để thanh chạy một mạch; chạm 100% là giai đoạn audio/ghép
         let shownPct = 0;
@@ -716,7 +702,7 @@ function initializeDownloadButton() {
             if (job.status === 'downloading') {
                 // nút giữ nguyên vòng xoay — phần trăm chỉ hiện trong nội dung box
                 shownPct = Math.max(shownPct, Math.round(job.percent || 0));
-                if (shownPct > 0) showProgress(shownPct);
+                if (shownPct > 0) showProgress(shownPct, audio);
                 return;
             }
             clearInterval(pollTimer);
@@ -727,7 +713,8 @@ function initializeDownloadButton() {
         }, 500);
     }
 
-    btnDownload.onclick = onDownloadClick;
+    btnDownload.onclick = () => onDownloadClick(false);
+    btnDownloadMp3.onclick = () => onDownloadClick(true);
 
     // ==================== Điều hướng SPA ====================
 

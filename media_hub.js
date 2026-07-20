@@ -17,6 +17,8 @@
   function getDomainName(url) {
     try {
       const urlObj = new URL(url);
+      // Trang extension (neo_anchor) — hostname là extension id, hiển thị tên thay thế
+      if (urlObj.protocol === 'chrome-extension:') return 'Neo Anchor';
       return urlObj.hostname.replace('www.', '');
     } catch {
       return 'Unknown';

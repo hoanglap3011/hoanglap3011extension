@@ -125,10 +125,20 @@ async function init() {
   initStandup(local);
 
   // Phase transition messages from background service worker
-  chrome.runtime.onMessage.addListener((msg) => {
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.type === 'neo-work-end')   onWorkEnd();
     if (msg.type === 'neo-break-end')  onBreakEnd();
     if (msg.type === 'standup-alert')  showStandupAlert();
+
+    // Media Hub hỏi trạng thái nhạc đang phát trong tab này
+    if (msg.action === 'getMediaState' || msg.action === 'rescanMedia') {
+      sendResponse(getMusicMediaState());
+      return true;
+    }
+    if (msg.action === 'mediaControl') {
+      sendResponse(handleMusicControl(msg.command, msg.value));
+      return true;
+    }
   });
 
   // Storage change (another tab modified tasks)
@@ -1292,6 +1302,53 @@ function fmtSec(s) {
   if (!isFinite(s) || s < 0) return '0:00';
   const m = Math.floor(s / 60);
   return `${m}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+}
+
+// ── Media Hub integration ──
+// Trả về trạng thái theo đúng format của media_detector.js để Media Hub hiển thị
+function getMusicMediaState() {
+  if (musicTracks.length === 0 || !musicAudio.src) return { hasMedia: false };
+  return {
+    hasMedia: true,
+    isPlaying: !musicAudio.paused && !musicAudio.ended,
+    isPaused: musicAudio.paused,
+    currentTime: musicAudio.currentTime,
+    duration: musicAudio.duration,
+    volume: musicAudio.volume,
+    muted: musicAudio.muted,
+    title: musicTracks[musicIdx].name.replace(/\.mp3$/i, ''),
+    thumbnail: '',
+    isVideo: false,
+    src: musicAudio.src,
+    canPlayNext: musicTracks.length > 1,
+    canPlayPrevious: musicTracks.length > 1
+  };
+}
+
+function handleMusicControl(command, value) {
+  if (musicTracks.length === 0 || !musicAudio.src) return { success: false, error: 'No media found' };
+  try {
+    switch (command) {
+      case 'play':         musicAudio.play().catch(() => {}); break;
+      case 'pause':        musicAudio.pause(); break;
+      case 'toggle':       togglePlay(); break;
+      case 'seek':         musicAudio.currentTime = value; break;
+      case 'seekForward':  musicAudio.currentTime = Math.min(musicAudio.duration || 0, musicAudio.currentTime + (value || 10)); break;
+      case 'seekBackward': musicAudio.currentTime = Math.max(0, musicAudio.currentTime - (value || 10)); break;
+      case 'volume':
+        musicAudio.volume = Math.max(0, Math.min(1, value));
+        $('musicVolume').value = Math.round(musicAudio.volume * 100);
+        break;
+      case 'mute':         musicAudio.muted = true; break;
+      case 'unmute':       musicAudio.muted = false; break;
+      case 'next':         musicStep(+1, true); break;
+      case 'previous':     musicStep(-1, true); break;
+      default: return { success: false, error: 'Unknown command' };
+    }
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
 }
 
 // 'pick' | 'perm' | 'empty' | 'player'
