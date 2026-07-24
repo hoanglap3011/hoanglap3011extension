@@ -38,6 +38,9 @@ const DEFAULTS = {
   remindOn: false,
   remindEverySec: 10, // giây, 10–60
 
+  // Chưa mở PiP → overlay cảnh báo đè lên mọi trang web yêu cầu mở PiP
+  pipRemindOn: true,
+
 };
 
 async function getSync() {

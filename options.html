@@ -68,6 +68,19 @@
             color: #c62828;
         }
 
+        /* Nút hành động nhỏ (section Python Helper...) */
+        .ph-btn {
+            padding: 6px 14px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        .ph-btn:hover { background: #f5f5f5; }
+        .ph-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
         /* Mũi tên collapse */
         .collapse-arrow {
             font-size: 12px;
@@ -575,6 +588,53 @@ trang xem video (cần helper yt-dlp trên máy).">
                     <div class="textarea-hint">
                         Ví dụ: <code>facebook.com</code>, <code>youtube.com</code>, <code>vnexpress.net</code>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================= -->
+        <!-- SECTION: SERVER PYTHON HELPER -->
+        <!-- ============================= -->
+        <div class="section-card" id="card-python-helper">
+            <div class="section-header" data-target="body-python-helper">
+                <div class="section-header-left">
+                    <span class="section-icon">🐍</span>
+                    <span class="section-title">Server Python Helper</span>
+                    <span class="section-badge off" id="badge-python-helper">...</span>
+                </div>
+                <span class="collapse-arrow">▼</span>
+            </div>
+            <div class="section-body" id="body-python-helper">
+                <div class="setting-sub-row">
+                    <div style="font-size:13px;color:#666;line-height:1.6">
+                        Server chạy trên máy (cổng 43011), phục vụ tính năng <strong>tải video YouTube</strong> (yt-dlp)
+                        và <strong>kiểm tra SelfControl</strong> ở tầng hệ điều hành.
+                    </div>
+                </div>
+                <div class="setting-sub-row">
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                        <span id="ph-status" style="font-size:14px">⏳ Đang kiểm tra...</span>
+                        <button id="ph-btn-check" class="ph-btn">🔄 Kiểm tra lại</button>
+                        <button id="ph-btn-stop" class="ph-btn" style="display:none">⏻ Tắt server</button>
+                    </div>
+                </div>
+                <div class="setting-sub-row" id="ph-setup" style="display:none">
+                    <div style="font-size:13px;color:#555;line-height:1.7">
+                        Trình duyệt không cho extension tự cài hay khởi động phần mềm trên máy,
+                        nên cần chạy bộ cài 1 lần (cài xong server tự chạy cùng máy):<br>
+                        1. Bấm <strong>Tải bộ cài</strong> (1 file về Downloads)<br>
+                        2. Mở <span id="ph-terminal-name">Terminal</span> chạy lệnh:
+                    </div>
+                    <code id="ph-setup-cmd"
+                        style="display:block;background:#f1f3f4;border-radius:6px;padding:6px 8px;margin:6px 0;font-size:12px;word-break:break-all;user-select:all"></code>
+                    <div style="font-size:13px;color:#555;line-height:1.7">
+                        3. Quay lại đây bấm <strong>Kiểm tra lại</strong>.<br>
+                        <span style="color:#888">(Máy đã cài rồi nhưng server đang tắt? Chạy đúng lệnh trên là bật lại.)</span>
+                    </div>
+                    <div style="margin-top:8px">
+                        <button id="ph-btn-download" class="ph-btn">📥 Tải bộ cài</button>
+                    </div>
+                    <div id="ph-setup-status" style="font-size:12px;color:#888;min-height:16px;margin-top:4px"></div>
                 </div>
             </div>
         </div>

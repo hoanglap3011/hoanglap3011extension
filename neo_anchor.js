@@ -101,20 +101,7 @@ async function init() {
     if (pipWindow && !pipWindow.closed) {
       closePip();
     } else {
-      await openPip();
-      if (phase === 'idle' || phase === 'alert_add') {
-        // Chưa chạy đồng hồ → hiển thị dạng cảnh báo như lúc hết task
-        setPipPhase('alert_add');
-        startAlertFlash();
-      } else {
-        setPipPhase(phase);
-        if (phase === 'working' && workEndsAt) {
-          const task = tasks.find(t => t.id === curTaskId);
-          if (task) updatePipWorking(task, workEndsAt - Date.now());
-        } else if (phase === 'breaking' && breakEndsAt) {
-          updatePipBreaking(breakEndsAt - Date.now());
-        }
-      }
+      await openPipWithState();
     }
     renderStatus();
   });
@@ -162,6 +149,47 @@ async function init() {
     tick();
     tickTimer = setInterval(tick, 1000);
   }
+
+  // Tự mở PiP khi trang load (tab được background mở lúc khởi động trình duyệt /
+  // reload extension) — chưa có task thì PiP hiện luôn cảnh báo "thêm task".
+  // Chrome bắt buộc user gesture cho documentPictureInPicture nên thường lần
+  // thử đầu bị chặn → mở ngay ở thao tác đầu tiên của người dùng trong tab này.
+  if (pipSupported && (!pipWindow || pipWindow.closed)) {
+    const opened = await openPipWithState();
+    if (opened) {
+      renderStatus();
+    } else {
+      const openOnGesture = (e) => {
+        document.removeEventListener('pointerdown', openOnGesture, true);
+        document.removeEventListener('keydown', openOnGesture, true);
+        // Bấm thẳng nút toggle PiP thì để handler của nút tự xử lý, tránh mở rồi đóng ngay
+        if (e.target.closest && e.target.closest('#pipToggleBtn')) return;
+        openPipWithState().then(() => renderStatus());
+      };
+      document.addEventListener('pointerdown', openOnGesture, true);
+      document.addEventListener('keydown', openOnGesture, true);
+    }
+  }
+}
+
+// Mở PiP và hiển thị đúng trạng thái hiện tại (idle → cảnh báo phải có task)
+async function openPipWithState() {
+  await openPip();
+  if (!pipWindow || pipWindow.closed) return false;
+  if (phase === 'idle' || phase === 'alert_add') {
+    // Chưa chạy đồng hồ → hiển thị dạng cảnh báo như lúc hết task
+    setPipPhase('alert_add');
+    startAlertFlash();
+  } else {
+    setPipPhase(phase);
+    if (phase === 'working' && workEndsAt) {
+      const task = tasks.find(t => t.id === curTaskId);
+      if (task) updatePipWorking(task, workEndsAt - Date.now());
+    } else if (phase === 'breaking' && breakEndsAt) {
+      updatePipBreaking(breakEndsAt - Date.now());
+    }
+  }
+  return true;
 }
 
 async function stopAll() {
@@ -976,6 +1004,7 @@ function fillSettings(c) {
   $('remindOn').checked     = c.remindOn ?? false;
   $('remindEverySec').value = clamp(c.remindEverySec, 10, 60, 10);
   updateRemindUI();
+  $('pipRemindOn').checked  = c.pipRemindOn ?? true;
 }
 
 function updateAskOnUI() {
@@ -1020,6 +1049,7 @@ function wireSettings() {
 
   $('askOn').addEventListener('change', () => { updateAskOnUI(); saveSettings(); });
   $('alertDuration').addEventListener('change', saveSettings);
+  $('pipRemindOn').addEventListener('change', saveSettings);
 }
 
 const lines = v => v.split('\n').map(s => s.trim()).filter(Boolean);
@@ -1070,6 +1100,7 @@ async function saveSettings() {
     asksRemind:    asksRemind.length ? asksRemind : DEFAULTS.asksRemind,
     remindOn:      $('remindOn').checked,
     remindEverySec: clamp($('remindEverySec').value, 10, 60, 10),
+    pipRemindOn:   $('pipRemindOn').checked,
   };
   await chrome.storage.sync.set(cfg);
   scheduleRemind(); // áp dụng ngay bật/tắt hoặc chu kỳ mới

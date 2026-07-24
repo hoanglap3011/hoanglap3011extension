@@ -1,4 +1,5 @@
 import { initSCChecker } from './selfcontrol_bg.js';
+import { initPipReminder } from './pip_reminder_bg.js';
 
 chrome.runtime.onInstalled.addListener(async () => {
   await chrome.storage.local.remove([
@@ -45,15 +46,22 @@ async function ensureStandupTimerRunning() {
 
 async function openPinnedNeoAnchorTab() {
   const url = chrome.runtime.getURL('neo_anchor.html');
+  // Chưa có task nào đang chờ/chạy → mở tab active để cảnh báo "phải có task"
+  // đập vào mắt ngay; thao tác đầu tiên trong tab sẽ tự bung PiP (Chrome yêu cầu
+  // user gesture nên PiP không thể tự mở khi chưa đụng vào trang)
+  const { neoTasks } = await chrome.storage.local.get('neoTasks');
+  const hasTask = (neoTasks || []).some(t =>
+    t.status === 'pending' || t.status === 'running' || t.status === 'breaking');
   // Nếu tab đã tồn tại (Chrome khôi phục phiên trước) thì chỉ ghim lại, không mở trùng
   const existing = await chrome.tabs.query({ url });
   if (existing.length > 0) {
     const tab = existing[0];
     if (!tab.pinned) chrome.tabs.update(tab.id, { pinned: true });
+    if (!hasTask) chrome.tabs.update(tab.id, { active: true });
     chrome.storage.local.set({ neoAnchorTabId: tab.id });
     return;
   }
-  const tab = await chrome.tabs.create({ url, pinned: true, active: false });
+  const tab = await chrome.tabs.create({ url, pinned: true, active: !hasTask });
   chrome.storage.local.set({ neoAnchorTabId: tab.id });
 }
 
@@ -716,3 +724,4 @@ async function getFreshGoogleTokens() {
 
 
 initSCChecker();
+initPipReminder();

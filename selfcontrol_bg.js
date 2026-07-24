@@ -24,9 +24,34 @@ async function setOverlayActive(val) {
 }
 
 // ============================================================
-// Kiểm tra 1 site — cache-bust để bypass DNS/HTTP cache
+// Kiểm tra 1 site
 // ============================================================
+// Ưu tiên hỏi python-helper (kiểm tra ở tầng OS: DNS + kết nối TCP mới mỗi lần).
+// Fetch từ service worker không đáng tin: Chrome có DNS cache + connection pool
+// riêng nên site đã bị SelfControl chặn (nhất là youtube.com với QUIC/Google IP)
+// vẫn có thể fetch thành công → báo sai "chưa bị chặn".
+const SC_HELPER_BASE = 'http://127.0.0.1:43011';
+
+async function checkViaHelper(hostname) {
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(() => controller.abort(), 5000);
+    try {
+        const r = await fetch(`${SC_HELPER_BASE}/check_block?host=${encodeURIComponent(hostname)}`,
+            { signal: controller.signal });
+        if (!r.ok) return null; // helper bản cũ chưa có endpoint này
+        const json = await r.json();
+        return typeof json.blocked === 'boolean' ? { hostname, blocked: json.blocked } : null;
+    } catch (_) {
+        return null; // helper không chạy → fallback
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
+// Fallback khi không có helper — cache-bust để bypass DNS/HTTP cache
 async function checkOneSite(hostname) {
+    const viaHelper = await checkViaHelper(hostname);
+    if (viaHelper) return viaHelper;
     const bust = `_sc=${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const url  = `https://${hostname}/?${bust}`;
 

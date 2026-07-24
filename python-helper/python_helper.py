@@ -19,12 +19,16 @@ Endpoint (chỉ lắng nghe 127.0.0.1):
                         thêm &audio=1 để chỉ tải âm thanh, chuyển sang mp3
   GET /status?id=     → {status: downloading|done|error, percent, file, error}
   GET /reveal?id=     → mở thư mục chứa file đã tải trong Finder/Explorer
+  GET /check_block?host= → {blocked: true|false} — host có bị chặn ở tầng OS không
+  GET /quit           → tắt server (gỡ khỏi launchd/systemd session — bật lại
+                        bằng lệnh install hoặc đăng nhập lại máy)
 """
 import json
 import os
 import platform
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
@@ -35,7 +39,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-VERSION = 9
+VERSION = 11
 
 # thông báo có tiếng Việt — nếu console/pipe không phải UTF-8 (vd cp1252)
 # thì in ký tự thay thế chứ đừng crash (pythonw thì stdout là None)
@@ -201,6 +205,49 @@ def reveal_file(path):
         subprocess.run(["xdg-open", str(Path(path).parent)])
 
 
+# ==================== KIỂM TRA CHẶN WEBSITE (/check_block) ====================
+
+# IP mà /etc/hosts thường trỏ về khi chặn domain (SelfControl, adblock hosts...)
+SINKHOLE_IPS = {"0.0.0.0", "127.0.0.1", "::", "::1"}
+
+
+def check_block(host):
+    """Host có bị chặn ở tầng hệ điều hành không. Phải kiểm tra ngoài trình
+    duyệt: Chrome có DNS cache + connection pool riêng nên fetch từ extension
+    vẫn có thể thành công với site đã bị SelfControl chặn."""
+    try:
+        infos = socket.getaddrinfo(host, 443, proto=socket.IPPROTO_TCP)
+    except OSError:
+        return True  # không phân giải được → coi như bị chặn
+    for family, type_, proto, _, addr in infos:
+        if addr[0] in SINKHOLE_IPS:
+            continue
+        try:
+            with socket.socket(family, type_, proto) as s:
+                s.settimeout(3)
+                s.connect(addr)
+                return False  # mở được kết nối mới → chưa bị chặn
+        except OSError:
+            continue
+    return True
+
+
+# ==================== TẮT SERVER (/quit) ====================
+
+def stop_server():
+    """Tắt server theo cách 'dính' với cơ chế autostart của từng OS — nếu chỉ
+    exit thì launchd/systemd (KeepAlive/Restart) sẽ tự kéo server dậy lại ngay.
+    Server sẽ tự chạy lại khi đăng nhập máy, hoặc chạy lại lệnh install."""
+    time.sleep(0.5)  # cho response /quit kịp trả về trình duyệt
+    if SYSTEM == "Darwin":
+        subprocess.run(["launchctl", "bootout", f"gui/{os.getuid()}/{AUTOSTART_LABEL}"],
+                       capture_output=True)
+    elif SYSTEM == "Linux":
+        subprocess.run(["systemctl", "--user", "stop", "python-helper"],
+                       capture_output=True)
+    os._exit(0)  # Windows (khóa Run chỉ chạy lúc đăng nhập) + fallback chung
+
+
 # ==================== SERVER ====================
 
 class Handler(BaseHTTPRequestHandler):
@@ -234,6 +281,16 @@ class Handler(BaseHTTPRequestHandler):
             if not job:
                 return self._send(404, {"error": "không có job này"})
             return self._send(200, job)
+
+        if parsed.path == "/check_block":
+            host = query.get("host", [None])[0]
+            if not host or not re.fullmatch(r"[A-Za-z0-9.-]+", host):
+                return self._send(400, {"error": "host không hợp lệ"})
+            return self._send(200, {"host": host, "blocked": check_block(host)})
+
+        if parsed.path == "/quit":
+            threading.Thread(target=stop_server, daemon=True).start()
+            return self._send(200, {"status": "stopping"})
 
         if parsed.path == "/reveal":
             job = get_job(query.get("id", [""])[0])
