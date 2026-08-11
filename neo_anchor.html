@@ -183,6 +183,13 @@
           </svg>
           Cài đặt
         </div>
+        <span id="savedMsg">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+               stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Đã lưu cài đặt
+        </span>
         <button class="neo-modal-close" id="settingsCloseBtn">✕</button>
       </div>
       <div class="neo-modal-body">
@@ -232,8 +239,20 @@
             <textarea id="asksRemind" rows="3" spellcheck="false"></textarea>
             <div class="num" style="margin-top:8px">
               <span>Hiển thị sau mỗi:</span>
-              <input id="remindEverySec" type="number" min="10" max="60" style="width:72px" />
-              <span>giây</span>
+            </div>
+            <div class="range-slider-wrap">
+              <div class="range-slider-track" id="remindTrack">
+                <div class="range-slider-fill" id="remindFill"></div>
+                <input type="range" id="remindMinSec" class="range-input range-input-min"
+                  min="10" max="60" step="5" value="10" />
+                <input type="range" id="remindMaxSec" class="range-input range-input-max"
+                  min="10" max="60" step="5" value="30" />
+              </div>
+              <div class="range-labels">
+                <span class="range-label-edge">10 giây</span>
+                <span id="remindRangeDisplay" class="range-label-val"></span>
+                <span class="range-label-edge">1 phút</span>
+              </div>
             </div>
           </div>
         </div>
@@ -258,7 +277,6 @@
 
         <div class="settings-footer">
           <button class="btn-ghost-neo" id="resetBtn">Khôi phục mặc định</button>
-          <span id="savedMsg"></span>
         </div>
 
       </div>

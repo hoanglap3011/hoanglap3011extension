@@ -36,7 +36,9 @@ const DEFAULTS = {
     "Ngồi thẳng lưng thẳng cổ ưỡn ngực",
   ],
   remindOn: false,
-  remindEverySec: 10, // giây, 10–60
+  // Chu kỳ nhắc nhở (giây) — ngẫu nhiên trong khoảng [min, max]
+  remindMinSec: 10,
+  remindMaxSec: 30,
 
   // Chưa mở PiP → overlay cảnh báo đè lên mọi trang web yêu cầu mở PiP
   pipRemindOn: true,

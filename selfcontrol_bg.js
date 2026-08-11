@@ -7,7 +7,7 @@ const SC_ALARM_NAME   = 'sc_periodic_check';
 const SC_ALARM_PERIOD = 1; // phút — check định kỳ mỗi 1 phút
 
 const SC_DEFAULTS = {
-    scEnable: false,
+    scEnable: true,
     scSiteList: 'facebook.com\nyoutube.com\nvnexpress.net',
 };
 
@@ -192,6 +192,17 @@ async function handleNewTab(tabId, tabUrl) {
     }
 
     await sendOrInject(tabId, { action: 'scShowOverlay', unblockedSites });
+}
+
+// ============================================================
+// Export: bật lại bộ kiểm tra mỗi khi extension được load / trình duyệt khởi động.
+// Giá trị cũ nằm trong storage nên chỉ đổi SC_DEFAULTS là không đủ.
+// ============================================================
+export async function forceEnableSCChecker() {
+    const data     = await chrome.storage.local.get(SC_SETTINGS_KEY);
+    const settings = { ...SC_DEFAULTS, ...(data[SC_SETTINGS_KEY] || {}) };
+    if (settings.scEnable) return;
+    await chrome.storage.local.set({ [SC_SETTINGS_KEY]: { ...settings, scEnable: true } });
 }
 
 // ============================================================

@@ -30,7 +30,8 @@ export const TodolistModule = {
         });
     },
 
-    openToDoListWeekFromDay(dayStr) {
+    openToDoListWeekFromDay(dayStr, onOpened) {
+        const done = () => { if (typeof onOpened === 'function') onOpened(); };
         const keyToDoList = CACHE_TODOLIST + "." + dayStr;
         StorageModule.get([CACHE_TODOLIST], (obj) => {
             const raw = obj[CACHE_TODOLIST];
@@ -41,7 +42,7 @@ export const TodolistModule = {
                         const foundObj = arr.find(item => item && Object.prototype.hasOwnProperty.call(item, keyToDoList));
                         if (foundObj) {
                             const url = foundObj[keyToDoList];
-                            if (url) { window.open(url, '_blank'); return; }
+                            if (url) { window.open(url, '_blank'); done(); return; }
                         }
                     }
                 } catch (e) {
@@ -63,7 +64,7 @@ export const TodolistModule = {
                     const idx = arr.findIndex(item => item && Object.prototype.hasOwnProperty.call(item, keyToDoList));
                     if (idx >= 0) arr[idx] = { [keyToDoList]: url };
                     else arr.push({ [keyToDoList]: url });
-                    StorageModule.set({ [CACHE_TODOLIST]: arr }, () => {});
+                    StorageModule.set({ [CACHE_TODOLIST]: arr }, () => done());
                 });
             });
         });

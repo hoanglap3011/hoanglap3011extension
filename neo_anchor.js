@@ -67,6 +67,7 @@ async function init() {
   breakEndsAt = local[KEY_BREAK_END] || null;
 
   cfg = await getSync();
+  await migrateRemindEvery();
 
   // Restore shutdown time field
   let savedShutdown = local[KEY_SHUTDOWN];
@@ -227,6 +228,7 @@ function wireAddTask() {
       $('customWork').value = selectedWork;
       $('breakHint').textContent = formatBreakLabel(selectedBreak);
       $('customRow').classList.add('on');
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.toggle('on', b === btn));
       $('taskNameInput').focus();
     });
   });
@@ -747,8 +749,25 @@ function scheduleRemind() {
   clearTimeout(remindTimer);
   if (!cfg?.remindOn) return;
   if (!pipWindow || pipWindow.closed) return;
-  const sec = clamp(cfg?.remindEverySec, 10, 60, 10);
+  const { lo, hi } = remindRangeSec(cfg);
+  const sec = lo + Math.random() * (hi - lo);
   remindTimer = setTimeout(showRemind, sec * 1000);
+}
+
+// Cấu hình cũ chỉ có một chu kỳ cố định remindEverySec → giữ nguyên nhịp đó dưới dạng khoảng min = max
+async function migrateRemindEvery() {
+  const raw = await chrome.storage.sync.get(['remindEverySec', 'remindMinSec']);
+  if (raw.remindEverySec == null || raw.remindMinSec != null) return;
+  const sec = clamp(raw.remindEverySec, 10, 60, DEFAULTS.remindMinSec);
+  cfg.remindMinSec = cfg.remindMaxSec = sec;
+  await chrome.storage.sync.set({ remindMinSec: sec, remindMaxSec: sec });
+  await chrome.storage.sync.remove('remindEverySec');
+}
+
+function remindRangeSec(c) {
+  const lo = clamp(c?.remindMinSec, 10, 60, DEFAULTS.remindMinSec);
+  const hi = clamp(c?.remindMaxSec, 10, 60, DEFAULTS.remindMaxSec);
+  return { lo, hi: Math.max(lo, hi) };
 }
 
 function showRemind() {
@@ -1002,7 +1021,10 @@ function fillSettings(c) {
   updateAskOnUI();
   $('asksRemind').value     = (c.asksRemind || DEFAULTS.asksRemind).join('\n');
   $('remindOn').checked     = c.remindOn ?? false;
-  $('remindEverySec').value = clamp(c.remindEverySec, 10, 60, 10);
+  const remindRange = remindRangeSec(c);
+  $('remindMinSec').value = remindRange.lo;
+  $('remindMaxSec').value = remindRange.hi;
+  updateRemindSlider();
   updateRemindUI();
   $('pipRemindOn').checked  = c.pipRemindOn ?? true;
 }
@@ -1027,22 +1049,19 @@ function wireSettings() {
   }));
 
   $('remindOn').addEventListener('change', () => { updateRemindUI(); saveSettings(); });
-  $('remindEverySec').addEventListener('keydown', blockNonDigit);
-  $('remindEverySec').addEventListener('change', () => {
-    $('remindEverySec').value = clamp($('remindEverySec').value, 10, 60, 10);
-    saveSettings();
-  });
 
   ['defaultWorkMin', 'alertDuration'].forEach(id => $(id).addEventListener('keydown', blockNonDigit));
 
-  // Dual-handle refresh slider — debounce writes to avoid sync quota exhaustion
+  // Dual-handle sliders — debounce writes to avoid sync quota exhaustion
   let sliderDebounce = null;
-  ['refreshMin', 'refreshMax'].forEach(id =>
+  const wireSlider = (ids, update) => ids.forEach(id =>
     $(id).addEventListener('input', () => {
-      updateRefreshSlider();
+      update();
       clearTimeout(sliderDebounce);
       sliderDebounce = setTimeout(saveSettings, 300);
     }));
+  wireSlider(['refreshMin', 'refreshMax'], updateRefreshSlider);
+  wireSlider(['remindMinSec', 'remindMaxSec'], updateRemindSlider);
 
   // Numbers: save on blur
   $('defaultWorkMin').addEventListener('change', saveSettings);
@@ -1066,19 +1085,26 @@ function fmtSeconds(s) {
   return r ? `${m} phút ${r} giây` : `${m} phút`;
 }
 
-function updateRefreshSlider() {
-  let lo = parseInt($('refreshMin').value);
-  let hi = parseInt($('refreshMax').value);
+function updateRangeSlider(minId, maxId, fillId, displayId, MIN, MAX) {
+  let lo = parseInt($(minId).value);
+  let hi = parseInt($(maxId).value);
   // Enforce lo ≤ hi
-  if (lo > hi) { $('refreshMin').value = hi; lo = hi; }
-  const MIN = 10, MAX = 600;
+  if (lo > hi) { $(minId).value = hi; lo = hi; }
   const fillLeft  = ((lo - MIN) / (MAX - MIN)) * 100;
   const fillRight = ((hi - MIN) / (MAX - MIN)) * 100;
-  $('refreshFill').style.left  = `${fillLeft}%`;
-  $('refreshFill').style.width = `${fillRight - fillLeft}%`;
-  $('refreshRangeDisplay').textContent = lo === hi
+  $(fillId).style.left  = `${fillLeft}%`;
+  $(fillId).style.width = `${fillRight - fillLeft}%`;
+  $(displayId).textContent = lo === hi
     ? fmtSeconds(lo)
     : `${fmtSeconds(lo)} – ${fmtSeconds(hi)}`;
+}
+
+function updateRefreshSlider() {
+  updateRangeSlider('refreshMin', 'refreshMax', 'refreshFill', 'refreshRangeDisplay', 10, 600);
+}
+
+function updateRemindSlider() {
+  updateRangeSlider('remindMinSec', 'remindMaxSec', 'remindFill', 'remindRangeDisplay', 10, 60);
 }
 
 async function saveSettings() {
@@ -1099,7 +1125,8 @@ async function saveSettings() {
     askOn:         $('askOn').checked,
     asksRemind:    asksRemind.length ? asksRemind : DEFAULTS.asksRemind,
     remindOn:      $('remindOn').checked,
-    remindEverySec: clamp($('remindEverySec').value, 10, 60, 10),
+    remindMinSec: clamp($('remindMinSec').value, 10, 60, DEFAULTS.remindMinSec),
+    remindMaxSec: clamp($('remindMaxSec').value, 10, 60, DEFAULTS.remindMaxSec),
     pipRemindOn:   $('pipRemindOn').checked,
   };
   await chrome.storage.sync.set(cfg);
@@ -1126,9 +1153,9 @@ let savedMsgTimer = null;
 function flashSaved() {
   const el = $('savedMsg');
   if (!el) return;
-  el.textContent = 'Đã lưu cài đặt';
+  el.classList.add('show');
   clearTimeout(savedMsgTimer);
-  savedMsgTimer = setTimeout(() => { el.textContent = ''; }, 2000);
+  savedMsgTimer = setTimeout(() => el.classList.remove('show'), 2000);
 }
 
 // ══════════════════════════════════════════════

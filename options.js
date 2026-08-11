@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Storage keys cho SelfControl Checker
     const SC_SETTINGS_KEY = 'scCheckerSettings';
     const SC_DEFAULTS = {
-        scEnable: false,
+        scEnable: true,
         scSiteList: 'facebook.com\nyoutube.com\nvnexpress.net',
     };
 

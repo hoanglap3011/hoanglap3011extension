@@ -1,4 +1,4 @@
-import { initSCChecker } from './selfcontrol_bg.js';
+import { initSCChecker, forceEnableSCChecker } from './selfcontrol_bg.js';
 import { initPipReminder } from './pip_reminder_bg.js';
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -11,6 +11,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   chrome.alarms.clear('neo-break-end');
   chrome.storage.sync.clear();
   // Reload extension làm Chrome đóng tab neo_anchor cũ → mở lại như lúc khởi động trình duyệt
+  await forceEnableSCChecker();
   await ensureStandupTimerRunning();
   await openPinnedNeoAnchorTab();
 });
@@ -19,6 +20,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 chrome.runtime.onStartup.addListener(async () => {
   // Khởi động bộ đếm trước khi mở tab, để trang neo_anchor load lên là thấy ngay
   // trạng thái tracking (initStandup đọc standupEndsAt từ storage)
+  await forceEnableSCChecker();
   await ensureStandupTimerRunning();
   await openPinnedNeoAnchorTab();
 });

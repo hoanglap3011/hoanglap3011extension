@@ -37,11 +37,12 @@ document.addEventListener('DOMContentLoaded', () => {
             id: 'open_todolist',
             name: 'Mở trang To Do List',
             keywords: 'to do list todolist',
+            // Giữ hub mở để chọn ngày; đóng lại sau khi todolist đã mở xong
             keepOpen: true,
             action: () => {
                 DatePickerModule.pickDate(searchInput, (selectedDate) => {
                     const dateStr = DateModule.formatDate(selectedDate);
-                    TodolistModule.openToDoListWeekFromDay(dateStr);
+                    TodolistModule.openToDoListWeekFromDay(dateStr, () => window.close());
                 });
             }
         },
