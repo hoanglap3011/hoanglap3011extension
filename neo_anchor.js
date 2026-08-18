@@ -30,6 +30,9 @@ let pipWinId = null;
 let alertFlashTimer = null;
 let standupPipActive = false;
 let remindTimer = null, remindHideTimer = null, remindActive = false, remindLastIdx = -1;
+// Vị trí chuột (toạ độ màn hình thật) lần cuối bắt được trong tab neo hoặc cửa sổ PiP
+let lastMouseScreen = null; // { x, y, t }
+const MOUSE_FRESH_MS = 60_000;
 
 const PIP_SECTIONS = ['s-working','s-breaking','s-alert-add','s-alert-shutdown','s-standup-alert','s-remind'];
 
@@ -91,6 +94,7 @@ async function init() {
     if (e.target === $('settingsOverlay')) $('settingsOverlay').classList.remove('open');
   });
 
+  trackMouseOn(window);
   $('startBtn').addEventListener('click', onMainBtn);
   document.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 's') {
@@ -538,12 +542,25 @@ async function openPip() {
       const win = await chrome.windows.get(newWin.id).catch(() => null);
       if (!win) return;
       const titleBar = win.height - pipWindow.innerHeight;
-      chrome.windows.update(newWin.id, { width: 360, height: 90 + titleBar });
+      const w = 360, h = 90 + titleBar;
+      const upd = { width: w, height: h };
+      // Chrome luôn mở PiP ở màn hình chính → kéo sang màn hình người dùng đang dùng
+      const area = await getTargetArea();
+      const cx = win.left + win.width / 2, cy = win.top + win.height / 2;
+      const onArea = cx >= area.left && cx < area.left + area.width &&
+                     cy >= area.top  && cy < area.top  + area.height;
+      if (!onArea) {
+        upd.left = area.left + Math.round((area.width  - w) / 2);
+        upd.top  = area.top  + Math.round((area.height - h) / 2);
+        pipAtCenter = true;
+      }
+      chrome.windows.update(newWin.id, upd);
     }, 200);
   }
   startPipRefresh();
   scheduleRemind();
 
+  trackMouseOn(pipWindow);
   pipWindow.document.body.addEventListener('mouseenter', (e) => {
     if (standupPipActive || remindActive) return;
     if (phase === 'idle' || phase === 'alert_add' || phase === 'breaking') return;
@@ -867,6 +884,46 @@ function applyPipLook(blink) {
 }
 
 // mode: 'center' | 'random-corner' | 'opposite-corner'
+// ── Đa màn hình: đoán màn hình người dùng đang thao tác ──
+function trackMouseOn(win) {
+  const on = (e) => { lastMouseScreen = { x: e.screenX, y: e.screenY, t: Date.now() }; };
+  win.addEventListener('mousemove', on, true);
+  win.addEventListener('pointerdown', on, true);
+}
+
+// Trả về workArea (left/top/width/height, toạ độ toàn cục nhiều màn hình) của màn
+// hình nên hiển thị PiP. Ưu tiên: chuột → cửa sổ Chrome focus gần nhất → tab neo → primary.
+async function getTargetArea() {
+  let displays = [];
+  try { displays = await chrome.system.display.getInfo(); } catch (_) {}
+  if (!displays.length) {
+    return { left: 0, top: 0, width: window.screen.width, height: window.screen.height };
+  }
+  const at = (x, y) => displays.find(d =>
+    x >= d.workArea.left && x < d.workArea.left + d.workArea.width &&
+    y >= d.workArea.top  && y < d.workArea.top  + d.workArea.height);
+
+  if (lastMouseScreen && Date.now() - lastMouseScreen.t < MOUSE_FRESH_MS) {
+    const d = at(lastMouseScreen.x, lastMouseScreen.y);
+    if (d) return d.workArea;
+  }
+  try {
+    const w = await chrome.windows.getLastFocused();
+    if (w && w.id !== pipWinId && w.left != null) {
+      const d = at(w.left + w.width / 2, w.top + w.height / 2);
+      if (d) return d.workArea;
+    }
+  } catch (_) {}
+  try {
+    const w = await chrome.windows.getCurrent();
+    if (w && w.left != null) {
+      const d = at(w.left + w.width / 2, w.top + w.height / 2);
+      if (d) return d.workArea;
+    }
+  } catch (_) {}
+  return (displays.find(d => d.isPrimary) || displays[0]).workArea;
+}
+
 async function movePip(mode, { force = false } = {}) {
   if (!force && standupPipActive) return;
   const id = pipWinId;
@@ -874,19 +931,21 @@ async function movePip(mode, { force = false } = {}) {
   let pip;
   try { pip = await chrome.windows.get(id); } catch (_) { return; }
 
-  const sw = window.screen.width, sh = window.screen.height;
-  const pw = pip.width,           ph = pip.height;
+  const area = await getTargetArea();
+  const ox = area.left, oy = area.top;
+  const sw = area.width, sh = area.height;
+  const pw = pip.width,  ph = pip.height;
   const m  = 16; // margin từ mép màn hình
   const corners = [
-    { left: m,          top: m          }, // trên-trái
-    { left: sw - pw - m, top: m          }, // trên-phải
-    { left: m,          top: sh - ph - m }, // dưới-trái
-    { left: sw - pw - m, top: sh - ph - m }, // dưới-phải
+    { left: ox + m,           top: oy + m           }, // trên-trái
+    { left: ox + sw - pw - m, top: oy + m           }, // trên-phải
+    { left: ox + m,           top: oy + sh - ph - m }, // dưới-trái
+    { left: ox + sw - pw - m, top: oy + sh - ph - m }, // dưới-phải
   ];
   let target;
 
   if (mode === 'center') {
-    target = { left: Math.round((sw - pw) / 2), top: Math.round((sh - ph) / 2) };
+    target = { left: ox + Math.round((sw - pw) / 2), top: oy + Math.round((sh - ph) / 2) };
     pipAtCenter = true;
   } else if (mode === 'random-corner') {
     target = corners[Math.floor(Math.random() * 4)];
@@ -894,11 +953,17 @@ async function movePip(mode, { force = false } = {}) {
   } else { // 'opposite-corner'
     const cx = pip.left + pw / 2;
     const cy = pip.top  + ph / 2;
-    // góc đối diện: đảo cả trục X lẫn Y
-    target = {
-      left: cx <= sw / 2 ? sw - pw - m : m,
-      top:  cy <= sh / 2 ? sh - ph - m : m,
-    };
+    const onArea = cx >= ox && cx < ox + sw && cy >= oy && cy < oy + sh;
+    if (!onArea) {
+      // PiP đang ở màn hình khác → nhảy thẳng sang một góc của màn hình đích
+      target = corners[Math.floor(Math.random() * 4)];
+    } else {
+      // góc đối diện: đảo cả trục X lẫn Y
+      target = {
+        left: cx <= ox + sw / 2 ? ox + sw - pw - m : ox + m,
+        top:  cy <= oy + sh / 2 ? oy + sh - ph - m : oy + m,
+      };
+    }
     pipAtCenter = false;
   }
 
