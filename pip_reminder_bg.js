@@ -10,9 +10,11 @@ const PIP_ALARM_PERIOD = 1; // phút
 // ============================================================
 // Helpers
 // ============================================================
+const NEO_SETTINGS_KEY = 'neoSettings';
+
 async function isEnabled() {
-    const data = await chrome.storage.sync.get('pipRemindOn');
-    return data.pipRemindOn ?? true; // mặc định Bật
+    const data = await chrome.storage.local.get(NEO_SETTINGS_KEY);
+    return data[NEO_SETTINGS_KEY]?.pipRemindOn ?? true; // mặc định Bật
 }
 
 async function getOverlayActive() {
@@ -150,9 +152,13 @@ export function initPipReminder() {
 
     // Setting đổi (màn Cài đặt neo_anchor) → áp dụng ngay
     chrome.storage.onChanged.addListener((changes, namespace) => {
-        if (namespace === 'sync' && changes.pipRemindOn) {
-            if (changes.pipRemindOn.newValue ?? true) startAlarm();
-            runCheck();
+        if (namespace === 'local' && changes[NEO_SETTINGS_KEY]) {
+            const before = changes[NEO_SETTINGS_KEY].oldValue?.pipRemindOn ?? true;
+            const after  = changes[NEO_SETTINGS_KEY].newValue?.pipRemindOn ?? true;
+            if (before !== after) {
+                if (after) startAlarm();
+                runCheck();
+            }
         }
         // PiP vừa mở/đóng → phản ứng ngay không chờ alarm
         if (namespace === 'local' && changes.neoPipWindowId) {

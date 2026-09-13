@@ -30,6 +30,7 @@ const CACHE_AUTO_NEXT = 'autoNextSwitchState';
 const CACHE_SHOW_TOOLBAR = 'showToolbarSwitchState';
 const CACHE_HIDE_UNREQUIRED = 'hideUnrequiredSwitchState';
 const CACHE_SHOW_CONGRATS = 'showCongratSwitchState';
+const CACHE_SHOW_THEME = 'showThemeSwitchState';
 
 // intent-time
 const CACHE_HABIT_LIST = 'habitList';

@@ -75,3 +75,12 @@ body {
 .command-list li.selected small {
     color: var(--color-primary-light);
 }
+
+/* --- Dòng dịch nhanh (luôn ở cuối danh sách) --- */
+.command-list li.translate-row small {
+    color: var(--color-primary);
+}
+/* Khi dòng dịch đang được chọn, nền đã là màu primary nên chữ phụ phải sáng lên */
+.command-list li.translate-row.selected small {
+    color: var(--color-primary-light);
+}

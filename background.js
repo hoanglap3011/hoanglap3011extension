@@ -9,12 +9,34 @@ chrome.runtime.onInstalled.addListener(async () => {
   ]);
   chrome.alarms.clear('neo-work-end');
   chrome.alarms.clear('neo-break-end');
-  chrome.storage.sync.clear();
+  await migrateNeoSettingsToLocal();
   // Reload extension làm Chrome đóng tab neo_anchor cũ → mở lại như lúc khởi động trình duyệt
   await forceEnableSCChecker();
   await ensureStandupTimerRunning();
   await openPinnedNeoAnchorTab();
 });
+
+/**
+ * Cài đặt Neo trước đây nằm ở chrome.storage.sync (đồng bộ nhiều máy).
+ * Nay chuyển về chrome.storage.local, gom trong một key 'neoSettings'.
+ * Chạy một lần, và KHÔNG xoá cài đặt trong local — người dùng giữ nguyên thiết lập
+ * của mình qua các lần cập nhật extension.
+ */
+async function migrateNeoSettingsToLocal() {
+    try {
+        const NEO_SETTINGS_KEY = 'neoSettings';
+        const existing = await chrome.storage.local.get(NEO_SETTINGS_KEY);
+        const old = await chrome.storage.sync.get(null);
+
+        // Chỉ chuyển khi local chưa có và sync còn dữ liệu cũ
+        if (!existing[NEO_SETTINGS_KEY] && old && Object.keys(old).length) {
+            await chrome.storage.local.set({ [NEO_SETTINGS_KEY]: old });
+        }
+        await chrome.storage.sync.clear(); // sync không còn được dùng nữa
+    } catch (_) {
+        // Lỗi ở bước dọn dẹp không được chặn quá trình cài đặt
+    }
+}
 
 // Mở và ghim tab Neo Anchor mỗi khi trình duyệt khởi động
 chrome.runtime.onStartup.addListener(async () => {
@@ -151,11 +173,58 @@ const TV_TIMER_KEY   = 'tvTimerSettings';
 const TV_ALARM_NAME  = 'tuvung_random_popup';
 const TV_TIMER_DEFS  = { timerMinSec: 300, timerMaxSec: 600 };
 
+// ── IndexedDB từ vựng (cùng DB với tuvung.js) ──
+const TV_DB_NAME = 'tuvung_db';
+const TV_DB_VERSION = 1;
+const TV_STORE = 'words';
+let _tvDb = null;
+
+function _openTuvungDB() {
+    if (_tvDb) return Promise.resolve(_tvDb);
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(TV_DB_NAME, TV_DB_VERSION);
+        // Chỉ đọc: nếu DB chưa tồn tại thì tuvung.js sẽ tạo, ở đây tạo tạm cho đúng schema
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(TV_STORE)) {
+                const store = db.createObjectStore(TV_STORE, { keyPath: 'id' });
+                store.createIndex('order', 'order');
+                store.createIndex('activeKey', 'activeKey');
+            }
+        };
+        req.onsuccess = (e) => { _tvDb = e.target.result; resolve(_tvDb); };
+        req.onerror   = (e) => reject(e.target.error);
+    });
+}
+
+// Lấy đúng 1 từ đang bật, không nạp cả kho vào bộ nhớ service worker
+async function _tvGetRandom() {
+    const db = await _openTuvungDB();
+    const range = IDBKeyRange.only(1);
+    const total = await new Promise((res, rej) => {
+        const r = db.transaction(TV_STORE, 'readonly').objectStore(TV_STORE).index('activeKey').count(range);
+        r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    });
+    if (!total) return null;
+
+    const skip = Math.floor(Math.random() * total);
+    return new Promise((res, rej) => {
+        const r = db.transaction(TV_STORE, 'readonly').objectStore(TV_STORE).index('activeKey').openCursor(range);
+        let moved = false;
+        r.onsuccess = () => {
+            const c = r.result;
+            if (!c) { res(null); return; }
+            if (!moved && skip > 0) { moved = true; c.advance(skip); return; }
+            const { order, activeKey, ...entry } = c.value;
+            res(entry);
+        };
+        r.onerror = () => rej(r.error);
+    });
+}
+
 async function showTuvungPopup(source = 'auto') {
-    const data = await chrome.storage.local.get([TV_STORAGE_KEY]);
-    const list = (data[TV_STORAGE_KEY] || []).filter(e => e.isActive !== false);
-    if (!list.length) {return null; }
-    const entry = list[Math.floor(Math.random() * list.length)];
+    const entry = await _tvGetRandom().catch(() => null);
+    if (!entry) { return null; }
     await chrome.storage.local.set({ [TV_PENDING_KEY]: entry });
     return _openPopupWindow(chrome.runtime.getURL(`tuvung.html?mode=popup&source=${source}`),
         { popupKey: 'tv' });
@@ -175,7 +244,10 @@ const TOEIC_DB_NAME    = 'toeic_db';
 const TOEIC_DB_VERSION = 1;
 const TOEIC_STORE      = 'questions';
 
+let _toeicDb = null;
+
 function _openToeicDB() {
+    if (_toeicDb) return Promise.resolve(_toeicDb);
     return new Promise((resolve, reject) => {
         const req = indexedDB.open(TOEIC_DB_NAME, TOEIC_DB_VERSION);
         req.onupgradeneeded = (e) => {
@@ -184,31 +256,60 @@ function _openToeicDB() {
                 db.createObjectStore(TOEIC_STORE, { keyPath: '_id', autoIncrement: true });
             }
         };
-        req.onsuccess = (e) => resolve(e.target.result);
+        req.onsuccess = (e) => { _toeicDb = e.target.result; resolve(_toeicDb); };
         req.onerror   = (e) => reject(e.target.error);
     });
 }
 
-async function _toeicGetAll() {
+// Đọc đúng 1 câu hỏi theo _id
+async function _toeicGetById(id) {
     const db = await _openToeicDB();
     return new Promise((resolve, reject) => {
-        const req = db.transaction(TOEIC_STORE, 'readonly').objectStore(TOEIC_STORE).getAll();
-        req.onsuccess = (e) => resolve(e.target.result || []);
-        req.onerror   = (e) => reject(e.target.error);
+        const req = db.transaction(TOEIC_STORE, 'readonly').objectStore(TOEIC_STORE).get(id);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror   = () => reject(req.error);
+    });
+}
+
+// Dựng lại bảng tra khi chưa có (kho dữ liệu tải từ bản cũ).
+// Duyệt bằng cursor và chỉ giữ lại _id + part, không gom cả kho vào bộ nhớ.
+function _toeicRebuildPartIndex() {
+    return new Promise((resolve, reject) => {
+        _openToeicDB().then((db) => {
+            const index = { __all: [] };
+            const req = db.transaction(TOEIC_STORE, 'readonly').objectStore(TOEIC_STORE).openCursor();
+            req.onsuccess = async () => {
+                const c = req.result;
+                if (c) {
+                    const key = String(c.value.part || '').trim();
+                    (index[key] ||= []).push(c.value._id);
+                    index.__all.push(c.value._id);
+                    c.continue();
+                    return;
+                }
+                if (!index.__all.length) { resolve(null); return; }
+                await chrome.storage.local.set({ toeicPartIndex: index });
+                resolve(index);
+            };
+            req.onerror = () => reject(req.error);
+        }).catch(reject);
     });
 }
 
 async function showToeicPopup(source = 'auto') {
-    const list = await _toeicGetAll();   // ← đọc IndexedDB thay vì chrome.storage.local
-    if (!list.length) {return null; }
+    // Chỉ đọc bảng tra (mảng số) rồi lấy đúng 1 câu, thay vì nạp cả ngân hàng câu hỏi
+    const stored = await chrome.storage.local.get(['toeicPopupParts', 'toeicPartIndex']);
+    const index = stored.toeicPartIndex || await _toeicRebuildPartIndex();
+    if (!index?.__all?.length) { return null; }
 
-    const partsData = await chrome.storage.local.get(['toeicPopupParts']);
-    const parts = partsData.toeicPopupParts;
-    const pool  = (Array.isArray(parts) && parts.length)
-        ? list.filter(q => parts.includes(String(q.part || '').trim()))
-        : list;
-    const safePool = pool.length ? pool : list;   // ← lọc Part ra rỗng thì fallback toàn bộ
-    const q = safePool[Math.floor(Math.random() * safePool.length)];
+    const parts = stored.toeicPopupParts;
+    const pool = (Array.isArray(parts) && parts.length)
+        ? parts.flatMap(p => index[p] || [])
+        : index.__all;
+    const safePool = pool.length ? pool : index.__all;   // ← lọc Part ra rỗng thì fallback toàn bộ
+
+    const q = await _toeicGetById(safePool[Math.floor(Math.random() * safePool.length)]);
+    if (!q) { return null; }
     await chrome.storage.local.set({ [TOEIC_PENDING_KEY]: q });
 
     return _openPopupWindow(chrome.runtime.getURL(`toeic.html?mode=popup&source=${source}`),
@@ -276,7 +377,50 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === 'standup-sitting') handleStandupAlarm();
     if (alarm.name === 'neo-work-end')  handleNeoAlarm('neo-work-end');
     if (alarm.name === 'neo-break-end') handleNeoAlarm('neo-break-end');
+    if (alarm.name.startsWith(HENGIO_ALARM_PREFIX)) finishHenGioTimer(alarm.name.slice(HENGIO_ALARM_PREFIX.length));
 });
+
+// ==================== HẸN GIỜ (hengio.html) ====================
+
+const HENGIO_STORE_KEY = 'hengioTimers';
+const HENGIO_ALARM_PREFIX = 'hengio-';
+
+// Chốt trạng thái "hết giờ" + bắn thông báo. Gọi từ alarm hoặc từ trang hengio.html,
+// nhưng chỉ chạy thật sự 1 lần cho mỗi bộ hẹn giờ.
+async function finishHenGioTimer(id) {
+    const data = await chrome.storage.local.get(HENGIO_STORE_KEY);
+    const list = Array.isArray(data[HENGIO_STORE_KEY]) ? data[HENGIO_STORE_KEY] : [];
+    const timer = list.find(t => t.id === id);
+
+    chrome.alarms.clear(HENGIO_ALARM_PREFIX + id);
+    if (!timer || timer.status === 'done') return;
+
+    timer.status = 'done';
+    timer.remainingSec = 0;
+    timer.endsAt = null;
+    timer.finishedAt = Date.now();
+    await chrome.storage.local.set({ [HENGIO_STORE_KEY]: list });
+
+    chrome.notifications.create(`${HENGIO_ALARM_PREFIX}${id}`, {
+        type: 'basic',
+        iconUrl: 'image/icon.png',
+        title: '⏰ Hết giờ!',
+        message: timer.label || 'Bộ hẹn giờ đã kết thúc.',
+        priority: 2,
+        requireInteraction: true,
+    });
+}
+
+async function openOrFocusHenGioTab() {
+    const url = chrome.runtime.getURL('hengio.html');
+    const tabs = await chrome.tabs.query({ url });
+    if (tabs.length) {
+        await chrome.tabs.update(tabs[0].id, { active: true });
+        chrome.windows.update(tabs[0].windowId, { focused: true });
+    } else {
+        chrome.tabs.create({ url });
+    }
+}
 
 async function handleNeoAlarm(type) {
     const { neoAnchorTabId } = await chrome.storage.local.get('neoAnchorTabId');
@@ -319,6 +463,11 @@ async function openOrFocusStandupTab() {
 }
 
 chrome.notifications.onClicked.addListener(async (id) => {
+    if (id.startsWith(HENGIO_ALARM_PREFIX)) {
+        chrome.notifications.clear(id);
+        openOrFocusHenGioTab();
+        return;
+    }
     if (id === 'standup-alert') {
         chrome.notifications.clear('standup-alert');
         openOrFocusStandupTab();
@@ -414,6 +563,11 @@ chrome.commands.onCommand.addListener((command) => {
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+
+    if (request.type === 'hengio-done') {
+        finishHenGioTimer(request.id).then(() => sendResponse({ ok: true })).catch(() => sendResponse({ ok: false }));
+        return true;
+    }
 
     if (request.type === 'neo-notify') {
         chrome.notifications.create(request.id, {

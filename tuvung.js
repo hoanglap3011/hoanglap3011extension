@@ -1,5 +1,6 @@
 import { LoadingModule } from './LoadingModule.js';
 import { StorageModule } from './StorageModule.js';
+import { SystemNotifyModule } from './SystemNotifyModule.js';
 
 export const TuVungModule = (() => {
 
@@ -83,56 +84,166 @@ export const TuVungModule = (() => {
     }
   };
 
-  const getAll = async () => (await _storageGet(STORAGE_KEY)) || [];
+  // ==========================================================
+  // --- KHO TỪ VỰNG: IndexedDB (mỗi từ là một bản ghi) ---
+  // Chạy được cả trong extension lẫn bản web nên không cần
+  // nhánh localStorage riêng như trước.
+  // ==========================================================
+  const DB_NAME = 'tuvung_db';
+  const DB_VERSION = 1;
+  const STORE = 'words';
+  let _dbInstance = null;
+
+  const _openDB = () => new Promise((resolve, reject) => {
+    if (_dbInstance) { resolve(_dbInstance); return; }
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE)) {
+        const store = db.createObjectStore(STORE, { keyPath: 'id' });
+        store.createIndex('order', 'order');          // giữ đúng thứ tự hiển thị cũ
+        store.createIndex('activeKey', 'activeKey');  // 1/0 vì IndexedDB không index được boolean
+      }
+    };
+    req.onsuccess = (e) => { _dbInstance = e.target.result; resolve(_dbInstance); };
+    req.onerror   = (e) => reject(e.target.error);
+  });
+
+  const _tx = async (mode, fn) => {
+    const db = await _openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, mode);
+      const out = fn(tx.objectStore(STORE));
+      tx.oncomplete = () => resolve(out?.result ?? out);
+      tx.onerror    = () => reject(tx.error);
+    });
+  };
+  const _req = (request) => new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror   = () => reject(request.error);
+  });
+
+  // Bản ghi trong DB = entry + 2 trường phụ phục vụ index
+  const _toRecord = (entry, order) => ({
+    ...entry,
+    order: order ?? entry.order ?? 0,
+    activeKey: entry.isActive !== false ? 1 : 0,
+  });
+  // Trả ra ngoài thì bỏ 2 trường phụ đi cho giống dữ liệu cũ
+  const _fromRecord = ({ order, activeKey, ...entry }) => entry;
+
+  // Chuyển dữ liệu từ chrome.storage.local sang IndexedDB, chỉ chạy một lần.
+  // Key 'tuvung_list' cũ được GIỮ NGUYÊN làm bản sao lưu.
+  const _migrateIfNeeded = async () => {
+    const db = await _openDB();
+    const count = await _req(db.transaction(STORE, 'readonly').objectStore(STORE).count());
+    if (count > 0) return;
+
+    const old = (await _storageGet(STORAGE_KEY)) || [];
+    if (!old.length) return;
+    await _bulkReplace(old);
+  };
+
+  // Ghi đè toàn bộ kho (dùng khi kéo dữ liệu từ server, hoặc lúc chuyển đổi lần đầu)
+  const _bulkReplace = (list) => _tx('readwrite', (store) => {
+    store.clear();
+    list.forEach((entry, i) => {
+      const id = entry.id ?? (Date.now() + i);
+      store.put(_toRecord({ ...entry, id }, i));
+    });
+  });
+
+  const _ready = (async () => { try { await _migrateIfNeeded(); } catch (_) {} })();
+
+  const getAll = async () => {
+    await _ready;
+    const db = await _openDB();
+    const rows = await _req(db.transaction(STORE, 'readonly').objectStore(STORE).index('order').getAll());
+    return rows.map(_fromRecord);
+  };
 
   const add = async (entry, imageFile = null) => {
-    const list = await getAll();
+    await _ready;
+    const db = await _openDB();
+    // Từ mới lên đầu danh sách: order nhỏ hơn phần tử nhỏ nhất hiện có
+    const first = await _req(db.transaction(STORE, 'readonly').objectStore(STORE).index('order').openCursor());
+    const minOrder = first ? first.value.order : 0;
+
     const newEntry = { id: Date.now(), ..._normalizeEntry(entry), createdAt: new Date().toISOString() };
-    list.unshift(newEntry);
-    await _storageSet(STORAGE_KEY, list);
+    await _tx('readwrite', (store) => store.put(_toRecord(newEntry, minOrder - 1)));
 
     const b64 = imageFile ? await _fileToBase64(imageFile) : null;
     const serverData = await _syncOneToServer('add', newEntry, b64);
-    if (serverData?.imageUrl) { list[0].imageUrl = serverData.imageUrl; await _storageSet(STORAGE_KEY, list); }
-    return list;
+    if (serverData?.imageUrl) {
+      newEntry.imageUrl = serverData.imageUrl;
+      await _tx('readwrite', (store) => store.put(_toRecord(newEntry, minOrder - 1)));
+    }
+    return getAll();
   };
 
-  const update = async (index, entry, imageFile = null) => {
-    const list = await getAll();
-    if (index < 0 || index >= list.length) return list;
+  const update = async (id, entry, imageFile = null) => {
+    await _ready;
+    const db = await _openDB();
+    const current = await _req(db.transaction(STORE, 'readonly').objectStore(STORE).get(id));
+    if (!current) return getAll();
 
-    list[index] = { ...list[index], ..._normalizeEntry(entry), updatedAt: new Date().toISOString() };
-    await _storageSet(STORAGE_KEY, list);
+    const updated = { ...current, ..._normalizeEntry(entry), id: current.id, updatedAt: new Date().toISOString() };
+    await _tx('readwrite', (store) => store.put(_toRecord(updated, current.order)));
 
     const b64 = imageFile ? await _fileToBase64(imageFile) : null;
-    const serverData = await _syncOneToServer('update', list[index], b64);
-    if (serverData?.imageUrl) { list[index].imageUrl = serverData.imageUrl; await _storageSet(STORAGE_KEY, list); }
-    return list;
+    const serverData = await _syncOneToServer('update', _fromRecord(updated), b64);
+    if (serverData?.imageUrl) {
+      updated.imageUrl = serverData.imageUrl;
+      await _tx('readwrite', (store) => store.put(_toRecord(updated, current.order)));
+    }
+    return getAll();
   };
 
-  const remove = async (index) => {
-    const list = await getAll();
-    const entry = list.splice(index, 1)[0];
-    await _storageSet(STORAGE_KEY, list);
+  const remove = async (id) => {
+    await _ready;
+    const db = await _openDB();
+    const entry = await _req(db.transaction(STORE, 'readonly').objectStore(STORE).get(id));
+    await _tx('readwrite', (store) => store.delete(id));
 
     if (entry) {
       _syncOneToServer('delete', { id: entry.id, imageUrl: entry.imageUrl })
         .then((res) => {
-          if (res !== null && typeof chrome !== 'undefined' && chrome.notifications) {
-            chrome.notifications.create({
-              type: 'basic', iconUrl: chrome.runtime.getURL('image/icon.png'),
-              title: 'Đồng bộ thành công', message: `Đã xóa vĩnh viễn từ "${entry.word}" khỏi server.`
-            });
+          if (res !== null) {
+            SystemNotifyModule.show(
+              '✅ Đồng bộ thành công',
+              `Đã xóa vĩnh viễn từ "${entry.word}" khỏi server.`,
+              'tuvung-delete'
+            );
           }
         }).catch(() => {});
     }
-    return list;
+    return getAll();
   };
 
+  // Lấy đúng MỘT từ đang bật, không nạp cả kho vào bộ nhớ
   const getRandom = async () => {
-    const list = await getAll();
-    const active = list.filter(e => e.isActive !== false);
-    return active.length ? active[Math.floor(Math.random() * active.length)] : null;
+    await _ready;
+    const db = await _openDB();
+    const range = IDBKeyRange.only(1);
+    const total = await _req(
+      db.transaction(STORE, 'readonly').objectStore(STORE).index('activeKey').count(range)
+    );
+    if (!total) return null;
+
+    // Transaction tự đóng sau mỗi await, nên phải mở transaction mới cho cursor
+    const skip = Math.floor(Math.random() * total);
+    return new Promise((resolve, reject) => {
+      const req = db.transaction(STORE, 'readonly').objectStore(STORE)
+        .index('activeKey').openCursor(range);
+      let moved = false;
+      req.onsuccess = () => {
+        const c = req.result;
+        if (!c) { resolve(null); return; }
+        if (!moved && skip > 0) { moved = true; c.advance(skip); return; }
+        resolve(_fromRecord(c.value));
+      };
+      req.onerror = () => reject(req.error);
+    });
   };
 
   const pullFromServer = () => new Promise((resolve, reject) => {
@@ -146,13 +257,13 @@ export const TuVungModule = (() => {
         const json = await res.json();
         if (json.code !== 1) throw new Error(json.error);
 
-        await _storageSet(STORAGE_KEY, json.data || []);
+        await _bulkReplace(json.data || []);
         resolve(json.data || []);
       } catch (err) { reject(err); } finally { LoadingModule.hide(); }
     });
   });
 
-  const mountForm = async (container, editIdx = -1, onComplete, onCancel) => {
+  const mountForm = async (container, editId = null, onComplete, onCancel) => {
     const tpl = document.getElementById('tpl-form');
     container.innerHTML = '';
     container.appendChild(tpl.content.cloneNode(true));
@@ -171,10 +282,9 @@ export const TuVungModule = (() => {
       imgWrap.classList.toggle('d-none', !src);
     };
 
-    if (editIdx >= 0) {
+    if (editId !== null && editId !== undefined) {
       container.querySelector('.comp-title').textContent = 'Sửa từ vựng';
-      const allWords = await getAll();
-      const e = allWords[editIdx];
+      const e = (await getAll()).find(w => String(w.id) === String(editId));
       if (e) {
         els.word.value = e.word; els.meaning.value = e.meaning;
         els.ipa.value = e.ipa || ''; els.example.value = e.example || '';
@@ -228,7 +338,9 @@ export const TuVungModule = (() => {
           partOfSpeech: checkedPos ? checkedPos.value : '',
         };
 
-        editIdx === -1 ? await add(entry, _selectedFile) : await update(editIdx, entry, _selectedFile);
+        (editId === null || editId === undefined)
+          ? await add(entry, _selectedFile)
+          : await update(editId, entry, _selectedFile);
 
         statusEl.textContent = '✅ Thành công!'; statusEl.style.color = '#5cb85c';
         setTimeout(_wrappedComplete, 800);
@@ -375,11 +487,18 @@ export const TuVungModule = (() => {
 
   };
 
-  const openAddForm = () => IS_EXT
-    ? chrome.windows.create({ url: chrome.runtime.getURL('tuvung.html?mode=add-form'), type: 'popup', width: 500, height: 680, focused: true })
-    : (location.href = 'tuvung.html?mode=add-form');
+  const openAddForm = (prefill = null) => {
+    const params = new URLSearchParams({ mode: 'add-form' });
+    if (prefill?.word) params.set('word', prefill.word);
+    if (prefill?.meaning) params.set('meaning', prefill.meaning);
+    const url = `tuvung.html?${params.toString()}`;
 
-  let _mgrWords = [], _mgrFiltered = [], _delIdx = -1;
+    return IS_EXT
+      ? chrome.windows.create({ url: chrome.runtime.getURL(url), type: 'popup', width: 500, height: 680, focused: true })
+      : (location.href = url);
+  };
+
+  let _mgrWords = [], _mgrFiltered = [], _delId = null;
 
   const _initManager = async () => {
     const $ = id => document.getElementById(id);
@@ -418,9 +537,10 @@ export const TuVungModule = (() => {
 
     const loadData = async () => { _mgrWords = await getAll(); _mgrFiltered = [..._mgrWords]; renderList(); };
     const closeModal = () => r.overlay.classList.remove('active');
-    const openModalForm = (idx) => { r.overlay.classList.add('active'); mountForm(r.container, idx, () => { closeModal(); loadData(); }, closeModal); };
-    const closeConfirm = () => { _delIdx = -1; r.confirmOver.classList.remove('active'); };
-    const openConfirm = (idx) => { _delIdx = idx; r.msg.textContent = `Xóa từ "${_mgrWords[idx].word}"?`; r.confirmOver.classList.add('active'); };
+    const _byId = (id) => _mgrWords.find(w => String(w.id) === String(id));
+    const openModalForm = (id) => { r.overlay.classList.add('active'); mountForm(r.container, id, () => { closeModal(); loadData(); }, closeModal); };
+    const closeConfirm = () => { _delId = null; r.confirmOver.classList.remove('active'); };
+    const openConfirm = (id) => { _delId = id; r.msg.textContent = `Xóa từ "${_byId(id)?.word ?? ''}"?`; r.confirmOver.classList.add('active'); };
 
     await loadData();
 
@@ -507,7 +627,7 @@ export const TuVungModule = (() => {
       if (el) el.addEventListener('input', () => { _updateBadges(); saveSettings(); });
     });
 
-    $('btnOpenForm').addEventListener('click', () => openModalForm(-1));
+    $('btnOpenForm').addEventListener('click', () => openModalForm(null));
     $('btnDemo').addEventListener('click', async () => {
       if (IS_EXT) { chrome.runtime.sendMessage({ action: 'showTuvungPopup' }); return; }
       const entry = await getRandom();
@@ -518,9 +638,25 @@ export const TuVungModule = (() => {
     $('btnCancelDelete').addEventListener('click', closeConfirm);
 
     const doPull = async () => {
-      if (!confirm('Ghi đè local bằng dữ liệu từ Server?')) return;
-      try { await pullFromServer(); loadData(); }
-      catch (err) { alert('Lỗi đồng bộ: ' + (err?.message || err)); }
+      const dangCo = _mgrWords.length;
+      const canhBao = dangCo
+        ? `Tải dữ liệu từ Server và GHI ĐÈ toàn bộ ${dangCo} từ đang có trên máy?`
+        : 'Tải dữ liệu từ vựng từ Server về máy?';
+      if (!confirm(canhBao)) return;
+
+      try {
+        const data = await pullFromServer();
+        await loadData();
+        SystemNotifyModule.show(
+          '✅ Đồng bộ từ vựng xong',
+          `Đã tải ${(data || []).length} từ từ Server về máy.`,
+          'tuvung-sync'
+        );
+      } catch (err) {
+        const msg = err?.message || err;
+        alert('Lỗi đồng bộ: ' + msg);
+        SystemNotifyModule.show('❌ Đồng bộ từ vựng thất bại', String(msg), 'tuvung-sync');
+      }
     };
     $('btnPullServer').addEventListener('click', () => {
       StorageModule.get([CACHE_PASS], (res) => {
@@ -529,21 +665,21 @@ export const TuVungModule = (() => {
         doPull();
       });
     });
-    $('btnConfirmDelete').addEventListener('click', async () => { if(_delIdx >= 0) { await remove(_delIdx); closeConfirm(); loadData(); } });
+    $('btnConfirmDelete').addEventListener('click', async () => { if (_delId !== null) { await remove(_byId(_delId)?.id ?? _delId); closeConfirm(); loadData(); } });
 
     r.list.addEventListener('click', (e) => {
       const btnEdit = e.target.closest('.btn-icon-edit');
       const btnDel = e.target.closest('.btn-icon-delete');
-      if (btnEdit) { openModalForm(_mgrWords.findIndex(x => String(x.id) === btnEdit.dataset.id)); return; }
-      if (btnDel) { openConfirm(_mgrWords.findIndex(x => String(x.id) === btnDel.dataset.id)); return; }
+      if (btnEdit) { openModalForm(_byId(btnEdit.dataset.id)?.id); return; }
+      if (btnDel)  { openConfirm(_byId(btnDel.dataset.id)?.id); return; }
       // Web: chạm thẻ để xem chi tiết (extension dùng double-click bên dưới)
       if (!IS_EXT) {
         const card = e.target.closest('.word-card');
         if (!card) return;
         const eb = card.querySelector('.btn-icon-edit');
-        const idx = eb ? _mgrWords.findIndex(x => String(x.id) === eb.dataset.id) : -1;
-        if (idx < 0) return;
-        _storageSet(PENDING_KEY, _mgrWords[idx]).then(() => {
+        const entry = eb ? _byId(eb.dataset.id) : null;
+        if (!entry) return;
+        _storageSet(PENDING_KEY, entry).then(() => {
           location.href = 'tuvung.html?mode=popup&source=manual';
         });
       }
@@ -577,10 +713,10 @@ export const TuVungModule = (() => {
       if (e.target.closest('.btn-icon')) return;
       const btnEdit = card.querySelector('.btn-icon-edit');
       if (!btnEdit) return;
-      const idx = _mgrWords.findIndex(x => String(x.id) === btnEdit.dataset.id);
-      if (idx < 0) return;
+      const entry = _byId(btnEdit.dataset.id);
+      if (!entry) return;
       // Lưu entry rồi mở popup window (giống manual popup)
-      chrome.storage.local.set({ [PENDING_KEY]: _mgrWords[idx] }, () => {
+      chrome.storage.local.set({ [PENDING_KEY]: entry }, () => {
         chrome.runtime.sendMessage({ action: 'showTuvungPopupEntry' });
       });
     });
@@ -607,7 +743,14 @@ export const TuVungModule = (() => {
         if (mode === 'add-form') {
           const card = Object.assign(document.createElement('div'), { className: 'comp-card' });
           document.getElementById('standaloneContainer').appendChild(card);
-          mountForm(card, -1, closeWin, closeWin);
+          await mountForm(card, null, closeWin, closeWin);
+
+          // Mở từ hub (sau khi dịch) thì điền sẵn từ và nghĩa
+          const els = card.querySelector('form')?.elements;
+          if (els) {
+            if (params.get('word')) els.word.value = params.get('word');
+            if (params.get('meaning')) els.meaning.value = params.get('meaning');
+          }
         } else if (mode === 'popup') {
           document.body.classList.add('popup-mode');
           document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeWin(); });

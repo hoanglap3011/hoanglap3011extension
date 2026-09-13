@@ -1,5 +1,6 @@
 import { StorageModule } from './StorageModule.js';
 import { LoadingModule } from './LoadingModule.js';
+import { SystemNotifyModule } from './SystemNotifyModule.js';
 
 const VietGidoApp = {
   // --- Cấu hình & Hằng số ---
@@ -14,6 +15,7 @@ const VietGidoApp = {
     CACHE_QUOTES: CACHE_QUOTES,
     CACHE_PASS: CACHE_PASS,
     CACHE_SHOW_CONGRATS: CACHE_SHOW_CONGRATS,
+    CACHE_SHOW_THEME: CACHE_SHOW_THEME,
   },
 
   // --- Trạng thái của ứng dụng ---
@@ -21,6 +23,8 @@ const VietGidoApp = {
     entryCount: 0,
     quillInstances: new Map(),
     currentCategoryConfig: null,
+    themeEnabled: false,  // Giao diện theo danh mục, mặc định TẮT
+    lastThemeConfig: null, // Danh mục gần nhất đã yêu cầu vẽ giao diện
     // animationId: null
   },
 
@@ -90,6 +94,7 @@ const VietGidoApp = {
     const ids = ['danhMucSelect', 'entriesContainer', 'addBtn', 'submitBtn', 'updateDanhMucBtn', 'autoNextTheLoaiBietOnSwtich', 'loadingOverlay', 'loadingQuote', 'congratsOverlay', 'confettiCanvas',
       'toggleAllToolbarsSwitch',
       'toggleCongratsOverlaySwitch',
+      'toggleThemeSwitch',
       , 'autoHideUnRequiredFieldSwtich'
     ];
     ids.forEach(id => this.dom[id] = document.getElementById(id));
@@ -121,6 +126,13 @@ const VietGidoApp = {
     if (this.dom.toggleCongratsOverlaySwitch) {
         this.dom.toggleCongratsOverlaySwitch.addEventListener('change', e => {
             StorageModule.set({ [this.config.CACHE_SHOW_CONGRATS]: e.target.checked });
+        });
+    }
+
+    if (this.dom.toggleThemeSwitch) {
+        this.dom.toggleThemeSwitch.addEventListener('change', e => {
+            StorageModule.set({ [this.config.CACHE_SHOW_THEME]: e.target.checked });
+            this.ui.applyThemeEnabled.call(this, e.target.checked);
         });
     }    
   },
@@ -165,6 +177,15 @@ const VietGidoApp = {
         if (this.dom.toggleCongratsOverlaySwitch) {
             this.dom.toggleCongratsOverlaySwitch.checked = show;
         }
+    });    
+
+    StorageModule.get(this.config.CACHE_SHOW_THEME, data => {
+        let showTheme = data[this.config.CACHE_SHOW_THEME];
+        if (showTheme == null) showTheme = false; // Mặc định là TẮT giao diện theo danh mục
+        if (this.dom.toggleThemeSwitch) {
+            this.dom.toggleThemeSwitch.checked = showTheme;
+        }
+        this.ui.applyThemeEnabled.call(this, showTheme);
     });    
   },
 
@@ -302,6 +323,8 @@ const VietGidoApp = {
 
         this.render.buildEntriesForSelected.call(this, this.dom.danhMucSelect?.value);
 
+        SystemNotifyModule.show('✅ Viết Gì Đó', 'Đã lưu dữ liệu thành công!', 'vietgido-save');
+
         const showCongrats = this.dom.toggleCongratsOverlaySwitch ? this.dom.toggleCongratsOverlaySwitch.checked : true;
         if (showCongrats) {
             this.ui.showCongrats.call(this);
@@ -310,6 +333,7 @@ const VietGidoApp = {
         }
       } catch (err) {
         this.ui.showNotification.call(this, `❌ Lỗi: ${err.message}`, 'error');
+        SystemNotifyModule.show('❌ Viết Gì Đó', `Lưu thất bại: ${err.message}`, 'vietgido-save');
       } finally {
         LoadingModule.hide();
         this.ui.setButtonsState.call(this, true);
@@ -952,11 +976,20 @@ const VietGidoApp = {
 
 
     applyTheme(categoryConfig) {
+      // Nhớ lại danh mục gần nhất để khi bật lại switch là vẽ được ngay
+      this.state.lastThemeConfig = categoryConfig || null;
+
       let dynamicThemeStyle = document.getElementById('dynamic-theme-style');
       if (!dynamicThemeStyle) {
         dynamicThemeStyle = document.createElement('style');
         dynamicThemeStyle.id = 'dynamic-theme-style';
         document.head.appendChild(dynamicThemeStyle);
+      }
+
+      // Đang tắt giao diện theo danh mục -> để trang trắng trơn
+      if (!this.state.themeEnabled) {
+        dynamicThemeStyle.innerHTML = '';
+        return;
       }
 
       if (!categoryConfig || !categoryConfig.color) {
@@ -969,6 +1002,13 @@ const VietGidoApp = {
       const emojiLayer = this.helpers.generateEmojiBackground(emojis);
       const finalBackgroundImage = emojiLayer !== 'none' ? `${emojiLayer}, ${gradientLayer}` : gradientLayer;
       dynamicThemeStyle.innerHTML = `body { background-image: ${finalBackgroundImage} !important; background-repeat: repeat, repeat !important; background-color: #f5f5f5 !important; }`;
+    },
+
+    // Bật/tắt toàn bộ giao diện theo danh mục (nền, emoji, bảng màu)
+    applyThemeEnabled(enabled) {
+      this.state.themeEnabled = !!enabled;
+      document.body.classList.toggle('theme-off', !enabled);
+      this.ui.applyTheme.call(this, this.state.lastThemeConfig || this.state.currentCategoryConfig);
     },
 
 // --- THAY THẾ TOÀN BỘ HÀM NÀY ---
@@ -984,6 +1024,7 @@ const VietGidoApp = {
       }, duration); // SỬ DỤNG DURATION MỚI
     },
     // --- KẾT THÚC THAY THẾ ---
+
 
 
 

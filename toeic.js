@@ -3,6 +3,7 @@
 // ================================================================
 import { LoadingModule } from './LoadingModule.js';
 import { StorageModule } from './StorageModule.js';
+import { SystemNotifyModule } from './SystemNotifyModule.js';
 
 export const ToeicModule = (() => {
 
@@ -22,6 +23,7 @@ export const ToeicModule = (() => {
   const _set = (key, val) => new Promise(res => StorageModule.set({ [key]: val }, res));
 
   // ── IndexedDB — lưu câu hỏi (không giới hạn quota) ────────────
+  const PART_INDEX_KEY = 'toeicPartIndex';
   const DB_NAME    = 'toeic_db';
   const DB_VERSION = 1;
   const STORE_NAME = 'questions';
@@ -45,7 +47,7 @@ export const ToeicModule = (() => {
   /** Xoá toàn bộ và ghi mới — dùng transaction để atomic */
   const _dbSaveAll = async (arr) => {
     const db = await _openDB();
-    return new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       const tx    = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
       store.clear();
@@ -53,6 +55,22 @@ export const ToeicModule = (() => {
       tx.oncomplete = () => resolve();
       tx.onerror    = (e) => reject(e.target.error);
     });
+    await _savePartIndex(arr);
+  };
+
+  /**
+   * Bảng tra "part -> danh sách _id" (chỉ toàn số, vài chục KB).
+   * Nhờ nó background.js lấy được 1 câu ngẫu nhiên mà không phải nạp cả ngân hàng câu hỏi.
+   */
+  const _savePartIndex = async (arr) => {
+    const index = { __all: [] };
+    arr.forEach((item, i) => {
+      const id = i + 1;
+      const key = String(item.part || '').trim();
+      (index[key] ||= []).push(id);
+      index.__all.push(id);
+    });
+    await _set(PART_INDEX_KEY, index);
   };
 
   /** Đọc toàn bộ câu hỏi */
@@ -497,13 +515,27 @@ export const ToeicModule = (() => {
 
     // ── Đồng bộ ──
     const doSync = async () => {
-      if (!confirm('Ghi đè dữ liệu local bằng dữ liệu từ Google Sheet?')) return;
+      const dangCo = _all.length;
+      const canhBao = dangCo
+        ? `Tải dữ liệu từ Google Sheet và GHI ĐÈ toàn bộ ${dangCo} câu hỏi đang có trên máy?`
+        : 'Tải dữ liệu câu hỏi từ Google Sheet về máy?';
+      if (!confirm(canhBao)) return;
+
       try {
-        await pullFromServer();
+        const data = await pullFromServer();
         _parts.clear(); _years.clear();
         document.querySelectorAll('.chip').forEach(c => c.classList.remove('chip--active'));
         await loadData();
-      } catch (err) { alert('Lỗi đồng bộ: ' + err.message); }
+        SystemNotifyModule.show(
+          '✅ Đồng bộ TOEIC xong',
+          `Đã tải ${(data || []).length} câu hỏi từ Google Sheet về máy.`,
+          'toeic-sync'
+        );
+      } catch (err) {
+        const msg = err?.message || err;
+        alert('Lỗi đồng bộ: ' + msg);
+        SystemNotifyModule.show('❌ Đồng bộ TOEIC thất bại', String(msg), 'toeic-sync');
+      }
     };
 
     $id('btnSync').addEventListener('click', () => {

@@ -440,3 +440,38 @@ input:checked + .slider:before {
     /* Dùng scale(1.5) để đảm bảo các hiệu ứng nhỏ (như Cup) lấp đầy màn hình */
     transform: translate(-50%, -50%) scale(1.5); 
 }
+/* =================================== */
+/* --- CHẾ ĐỘ TẮT GIAO DIỆN THEO DANH MỤC --- */
+/* Trang trắng trơn, không emoji nền, màu sắc dịu lại */
+/* =================================== */
+body.theme-off {
+    /* Bảng màu trung tính thay cho bảng màu rực rỡ */
+    --color-primary: #64748b;
+    --color-primary-hover: #475569;
+    --color-success: #4b5563;
+    --color-success-hover: #374151;
+    --color-warning: #94a3b8;
+    --color-warning-hover: #64748b;
+    --color-danger: #b08886;
+    --color-danger-hover: #966c6a;
+    --color-amber: #9ca3af;
+    --color-amber-hover: #6b7280;
+    --color-background: var(--color-white);
+
+    background: var(--color-white);
+    background-image: none;
+}
+body.theme-off .vg-entry {
+    background: var(--color-white);
+    backdrop-filter: none;
+    border: 1px solid #e5e7eb;
+    box-shadow: var(--shadow-sm);
+}
+body.theme-off .btn {
+    box-shadow: var(--shadow-sm);
+    font-weight: normal;
+}
+body.theme-off .btn:hover:not(:disabled) {
+    transform: none;
+    box-shadow: var(--shadow-md);
+}

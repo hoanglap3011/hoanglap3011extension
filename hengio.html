@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hẹn giờ</title>
+    <link rel="stylesheet" href="hengio.css">
+</head>
+
+<body>
+    <div class="container">
+        <header class="page-header">
+            <h1>⏳ Hẹn giờ</h1>
+            <p class="sub">Chạy nhiều bộ đếm ngược song song. Hết giờ sẽ có thông báo của trình duyệt (đang ở tab nào
+                cũng thấy).</p>
+        </header>
+
+        <form id="createForm" class="creator">
+            <div class="fields">
+                <label class="field">
+                    <span>Giờ</span>
+                    <input type="number" id="inputH" min="0" max="99" value="0" inputmode="numeric">
+                </label>
+                <label class="field">
+                    <span>Phút</span>
+                    <input type="number" id="inputM" min="0" max="59" value="5" inputmode="numeric">
+                </label>
+                <label class="field">
+                    <span>Giây</span>
+                    <input type="number" id="inputS" min="0" max="59" value="0" inputmode="numeric">
+                </label>
+                <label class="field field--name">
+                    <span>Tên (không bắt buộc)</span>
+                    <input type="text" id="inputLabel" maxlength="60" placeholder="Ví dụ: Luộc trứng">
+                </label>
+            </div>
+
+            <div class="presets" id="presets">
+                <button type="button" class="chip" data-sec="60">1 phút</button>
+                <button type="button" class="chip" data-sec="180">3 phút</button>
+                <button type="button" class="chip" data-sec="300">5 phút</button>
+                <button type="button" class="chip" data-sec="600">10 phút</button>
+                <button type="button" class="chip" data-sec="900">15 phút</button>
+                <button type="button" class="chip" data-sec="1800">30 phút</button>
+                <button type="button" class="chip" data-sec="3600">1 giờ</button>
+            </div>
+
+            <div class="creator-actions">
+                <label class="chk">
+                    <input type="checkbox" id="inputSound">
+                    <span>🔔 Báo âm thanh khi kết thúc</span>
+                </label>
+                <button type="submit" class="btn btn--primary">Bắt đầu đếm ngược</button>
+            </div>
+            <p class="form-error" id="formError" hidden></p>
+        </form>
+
+        <div class="list-header">
+            <h2>Đang chạy</h2>
+            <button type="button" id="clearDoneBtn" class="btn btn--ghost" hidden>Xoá các bộ đã xong</button>
+        </div>
+
+        <p class="empty" id="emptyState">Chưa có bộ hẹn giờ nào. Đặt thời gian phía trên rồi bấm "Bắt đầu đếm ngược".</p>
+        <div class="timer-list" id="timerList"></div>
+    </div>
+
+    <script src="hengio.js"></script>
+</body>
+
+</html>

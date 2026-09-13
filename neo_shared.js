@@ -3,18 +3,18 @@
 const DEFAULTS = {
   // Text hiển thị cùng task trên cửa sổ nổi PiP
   asksPip: [
-    "Mình đang làm đúng việc này chứ?",
-    "Tab vừa mở phục vụ gì cho việc này?",
-    "Nếu chỉ còn 30 phút, mình sẽ làm gì?",
-    "Cái đang làm có đưa mình đến đích không?",
-    "Đang bị kéo đi hay đang chủ động?",
-    "Nếu nhìn lại sau 1 giờ, mình có hài lòng không?",
-    "Việc này có thực sự cần làm ngay không?",
-    "Đang tránh né điều gì?",
-    "20% nào quyết định 80% việc này? — mình đang làm nó chưa?",
-    "Có hít thở sâu và thư giãn khi làm không đấy?",
-    "Có đang ngồi thẳng lưng thẳng cổ ưỡn ngực không đấy?",
-    "Thi thoảng có đưa mắt ra xa thư giãn không đấy?"
+    "Am I working on the right thing?",
+    "How does the tab I just opened serve this?",
+    "If I had only 30 minutes left, what would I do?",
+    "Is what I'm doing taking me to the finish line?",
+    "Am I being pulled along, or am I in control?",
+    "Looking back an hour from now, will I be happy with this?",
+    "Does this really need to be done right now?",
+    "What am I avoiding?",
+    "Which 20% decides 80% of this — am I doing it yet?",
+    "Am I breathing deeply and staying relaxed?",
+    "Is my back straight, neck tall, chest open?",
+    "Am I looking into the distance now and then to rest my eyes?"
   ],
 
   // Thời gian làm mặc định (phút)
@@ -32,10 +32,10 @@ const DEFAULTS = {
 
   // Text nhắc nhở định kỳ trên PiP (hiện giữa màn hình 3 giây rồi trả về trạng thái task)
   asksRemind: [
-    "Đưa mắt ra xa và hít thở sâu",
-    "Ngồi thẳng lưng thẳng cổ ưỡn ngực",
+    "Look into the distance and breathe deeply",
+    "Sit up straight, neck tall, chest open",
   ],
-  remindOn: false,
+  remindOn: true,
   // Chu kỳ nhắc nhở (giây) — ngẫu nhiên trong khoảng [min, max]
   remindMinSec: 10,
   remindMaxSec: 30,
@@ -45,9 +45,21 @@ const DEFAULTS = {
 
 };
 
-async function getSync() {
-  const data = await chrome.storage.sync.get(null);
-  return { ...DEFAULTS, ...data };
+// Cài đặt Neo nằm gọn trong MỘT key của chrome.storage.local.
+// Trước đây để ở chrome.storage.sync (đồng bộ nhiều máy) — không cần nữa,
+// đổi sang local để bỏ trần 100 KB và trần số lần ghi mỗi phút.
+const NEO_SETTINGS_KEY = 'neoSettings';
+
+async function getNeoSettings() {
+  const data = await chrome.storage.local.get(NEO_SETTINGS_KEY);
+  return { ...DEFAULTS, ...(data[NEO_SETTINGS_KEY] || {}) };
+}
+
+async function saveNeoSettings(patch) {
+  const current = await getNeoSettings();
+  const next = { ...current, ...patch };
+  await chrome.storage.local.set({ [NEO_SETTINGS_KEY]: next });
+  return next;
 }
 
 function fmtRemaining(ms) {

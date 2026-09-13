@@ -69,7 +69,7 @@ async function init() {
   workEndsAt  = local[KEY_WORK_END]  || null;
   breakEndsAt = local[KEY_BREAK_END] || null;
 
-  cfg = await getSync();
+  cfg = await getNeoSettings();
   await migrateRemindEvery();
 
   // Restore shutdown time field
@@ -773,12 +773,14 @@ function scheduleRemind() {
 
 // Cấu hình cũ chỉ có một chu kỳ cố định remindEverySec → giữ nguyên nhịp đó dưới dạng khoảng min = max
 async function migrateRemindEvery() {
-  const raw = await chrome.storage.sync.get(['remindEverySec', 'remindMinSec']);
+  const raw = await getNeoSettings();
   if (raw.remindEverySec == null || raw.remindMinSec != null) return;
   const sec = clamp(raw.remindEverySec, 10, 60, DEFAULTS.remindMinSec);
   cfg.remindMinSec = cfg.remindMaxSec = sec;
-  await chrome.storage.sync.set({ remindMinSec: sec, remindMaxSec: sec });
-  await chrome.storage.sync.remove('remindEverySec');
+  const { remindEverySec, ...rest } = raw;
+  await chrome.storage.local.set({
+    [NEO_SETTINGS_KEY]: { ...rest, remindMinSec: sec, remindMaxSec: sec },
+  });
 }
 
 function remindRangeSec(c) {
@@ -1085,7 +1087,7 @@ function fillSettings(c) {
   $('askOn').checked       = c.askOn ?? false;
   updateAskOnUI();
   $('asksRemind').value     = (c.asksRemind || DEFAULTS.asksRemind).join('\n');
-  $('remindOn').checked     = c.remindOn ?? false;
+  $('remindOn').checked     = c.remindOn ?? DEFAULTS.remindOn;
   const remindRange = remindRangeSec(c);
   $('remindMinSec').value = remindRange.lo;
   $('remindMaxSec').value = remindRange.hi;
@@ -1194,7 +1196,7 @@ async function saveSettings() {
     remindMaxSec: clamp($('remindMaxSec').value, 10, 60, DEFAULTS.remindMaxSec),
     pipRemindOn:   $('pipRemindOn').checked,
   };
-  await chrome.storage.sync.set(cfg);
+  await saveNeoSettings(cfg);
   scheduleRemind(); // áp dụng ngay bật/tắt hoặc chu kỳ mới
   flashSaved();
 }
