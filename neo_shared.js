@@ -1,5 +1,4 @@
 // shared.js — dùng chung cho anchor/popup/options (content script tự chứa)
-
 const DEFAULTS = {
   // Text hiển thị cùng task trên cửa sổ nổi PiP
   asksPip: [
@@ -16,20 +15,15 @@ const DEFAULTS = {
     "Is my back straight, neck tall, chest open?",
     "Am I looking into the distance now and then to rest my eyes?"
   ],
-
   // Thời gian làm mặc định (phút)
   defaultWorkMin: 5,
-
   // Chu kỳ tự làm mới (phút) — ngẫu nhiên trong khoảng [min, max]
   refreshMin: 3,
   refreshMax: 7,
-
-  // Thời lượng nháy mạnh (giây); null = không nháy
+  // Thời lượng nháy ngắn (giây); null = không nháy
   alertDuration: 2,
-
   // Hiển thị text cùng task trong cửa sổ nổi
   askOn: false,
-
   // Text nhắc nhở định kỳ trên PiP (hiện giữa màn hình 3 giây rồi trả về trạng thái task)
   asksRemind: [
     "Look into the distance and breathe deeply",
@@ -39,10 +33,17 @@ const DEFAULTS = {
   // Chu kỳ nhắc nhở (giây) — ngẫu nhiên trong khoảng [min, max]
   remindMinSec: 10,
   remindMaxSec: 30,
-
   // Chưa mở PiP → overlay cảnh báo đè lên mọi trang web yêu cầu mở PiP
   pipRemindOn: true,
-
+  // Gây chú ý mạnh — bắt buộc xác nhận (bấm đúng ký hiệu mới tắt được)
+  //   'off'   : chỉ nháy + rung cửa sổ, không bắt xác nhận
+  //   'phase' : bắt xác nhận khi hết giờ làm / hết giờ nghỉ
+  //   'all'   : thêm cả mỗi lần PiP tự làm mới trong lúc làm
+  ackMode: 'phase',
+  // Chưa xác nhận sau bấy nhiêu giây → leo thang (PiP to hơn, rung, kêu to hơn)
+  ackEscalateSec: 8,
+  // Phát âm thanh khi gây chú ý mạnh
+  alertSoundOn: true,
 };
 
 // Cài đặt Neo nằm gọn trong MỘT key của chrome.storage.local.

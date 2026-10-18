@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="neo_anchor.css" />
 </head>
 <body>
-
   <!-- Header -->
   <header class="neo-header">
     <div class="neo-header-inner">
@@ -79,13 +78,11 @@
         <!-- Music Working -->
         <div class="neo-card music-card">
           <div class="neo-section-title">Music Working</div>
-
           <div id="musicAction">
             <button type="button" id="musicPickBtn" class="btn-ghost-neo" style="width:100%">Chọn thư mục nhạc</button>
             <button type="button" id="musicPermBtn" class="btn-ghost-neo" style="width:100%;display:none">Cho phép truy cập thư mục</button>
             <div id="musicEmptyMsg" class="music-empty" style="display:none">Không có file .mp3 nào trong thư mục.</div>
           </div>
-
           <div id="musicPlayerUI" style="display:none">
             <div id="musicTrackName" class="music-track-name">—</div>
             <div class="music-progress-wrap">
@@ -258,10 +255,36 @@
         </div>
 
         <div class="settings-group">
-          <div class="settings-group-label">Gây chú ý mạnh</div>
+          <div class="settings-group-label">Nháy ngắn</div>
           <div class="num">
             <input id="alertDuration" type="number" min="1" max="60" placeholder="—" style="width:72px" />
-            <span>giây</span>
+            <span>giây (mỗi lần nháy chọn ngẫu nhiên 1 kiểu hiệu ứng)</span>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-group-label">Gây chú ý mạnh — bắt buộc xác nhận</div>
+          <select id="ackMode" class="neo-select">
+            <option value="off">Tắt — chỉ nháy + rung cửa sổ</option>
+            <option value="phase">Khi hết giờ làm / hết giờ nghỉ</option>
+            <option value="all">Hết giờ làm / nghỉ + mỗi lần tự làm mới PiP</option>
+          </select>
+          <div id="ackEscalateWrap" class="settings-sub">
+            <div class="num">
+              <span>Chưa xác nhận sau</span>
+              <input id="ackEscalateSec" type="number" min="3" max="60" style="width:72px" />
+              <span>giây → PiP to hơn, rung, kêu to hơn</span>
+            </div>
+            <div class="switch-row">
+              <span class="switch-name">Âm thanh khi gây chú ý mạnh</span>
+              <label class="switch"><input type="checkbox" id="alertSoundOn" checked /><span class="slider"></span></label>
+            </div>
+            <div class="settings-hint">
+              PiP chỉ tắt cảnh báo khi bấm đúng ký hiệu được yêu cầu (đề đổi mỗi lần, vị trí xáo trộn).
+              Có thể gõ phím số / mũi tên khi PiP đang focus.
+            </div>
+            <div class="settings-hint" id="ackStats"></div>
+            <div><button type="button" class="btn-ghost-neo" id="ackTestBtn">Thử ngay</button></div>
           </div>
         </div>
 
@@ -278,7 +301,6 @@
         <div class="settings-footer">
           <button class="btn-ghost-neo" id="resetBtn">Khôi phục mặc định</button>
         </div>
-
       </div>
     </div>
   </div>

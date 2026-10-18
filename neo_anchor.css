@@ -10,7 +10,6 @@
   --green:      #5fc88f;
   --red:        #ff6b60;
   --line:       #1e3050;
-
   --shadow-sm: 0 2px 8px rgba(0,0,0,.2);
   --shadow-md: 0 8px 32px rgba(0,0,0,.35);
   --radius:    12px;
@@ -48,14 +47,12 @@ input, textarea { font-family: inherit; }
 .neo-logo-mark { font-size: 22px; color: var(--gold); line-height: 1; }
 .neo-title { font-size: 15px; font-weight: 700; letter-spacing: .18em; color: var(--text); }
 .neo-subtitle { font-size: 11px; color: var(--text-muted); letter-spacing: .06em; margin-top: 2px; }
-
 .neo-header-center {
   display: flex; align-items: center; gap: 8px;
   position: absolute; left: 50%; transform: translateX(-50%);
 }
 .neo-header-center-label { font-size: 11px; color: var(--text-muted); letter-spacing: .08em; white-space: nowrap; }
 .shutdown-input-header { font-size: 15px; font-weight: 600; }
-
 .neo-header-actions { display: flex; align-items: center; gap: 8px; }
 
 .btn-primary-neo {
@@ -97,7 +94,6 @@ input, textarea { font-family: inherit; }
   border: 1px solid var(--red); border-radius: var(--radius-sm);
   font-size: 13px; color: var(--text);
 }
-
 .alert-add-box {
   max-width: 720px; margin: 14px auto 0; padding: 12px 18px;
   border-radius: var(--radius-sm); border: 1px solid var(--gold);
@@ -177,7 +173,6 @@ input, textarea { font-family: inherit; }
 .task-table tbody tr { border-bottom: 1px solid var(--line); }
 .task-table tbody tr:last-child { border-bottom: none; }
 .task-table td { padding: 8px 10px; vertical-align: middle; }
-
 .td-idx  { color: var(--text-muted); width: 28px; text-align: center; }
 .td-name { font-weight: 600; color: var(--text); }
 .td-phase { color: var(--text-muted); font-size: 11px; white-space: nowrap; width: 36px; }
@@ -185,20 +180,16 @@ input, textarea { font-family: inherit; }
 .td-time { color: var(--text-muted); white-space: nowrap; width: 56px; }
 .td-clock { width: 62px; font-variant-numeric: tabular-nums; }
 .td-del  { width: 30px; text-align: center; }
-
 .tr-task-work { border-bottom: none !important; }
 .tr-last { border-bottom: 2px solid var(--border) !important; }
 .tr-run  { background: rgba(240,163,60,.06); }
 .tr-break { background: rgba(95,200,143,.06); }
 .tr-done { opacity: .45; }
 .tr-done .td-name { text-decoration: line-through; font-weight: 400; }
-
 .st-run   { color: var(--gold);  font-size: 11px; font-weight: 700; letter-spacing: .06em; }
 .st-break { color: var(--green); font-size: 11px; font-weight: 700; letter-spacing: .06em; }
 .st-done  { color: var(--text-muted); font-size: 11px; }
-
 .task-empty { color: var(--text-muted); font-size: 13px; padding: 18px 10px; }
-
 .task-del {
   background: none; border: none; color: var(--text-muted);
   cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px;
@@ -210,7 +201,6 @@ input, textarea { font-family: inherit; }
 .add-task-card .neo-section-title { margin-bottom: 12px; }
 
 .preset-row { display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px; margin-bottom: 10px; }
-
 .preset-btn {
   background: var(--navy-mid); border: 1px solid var(--border); border-radius: 50px;
   color: var(--text-muted); padding: 7px 14px; font: 13px/1.4 inherit; cursor: pointer;
@@ -295,6 +285,17 @@ input, textarea { font-family: inherit; }
 #asksRemindWrap { transition: opacity .18s ease; }
 #asksRemindWrap.disabled { opacity: .35; pointer-events: none; }
 
+/* Gây chú ý mạnh */
+.neo-select {
+  background: var(--navy-mid); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text); padding: 8px 11px; font: inherit; font-size: 13px; cursor: pointer;
+}
+.neo-select:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-color: transparent; }
+.settings-sub { display: flex; flex-direction: column; gap: 10px; transition: opacity .18s ease; }
+.settings-sub.disabled { opacity: .35; pointer-events: none; }
+.settings-hint { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+#ackStats { color: var(--gold); }
+
 /* Shutdown time */
 .shutdown-input {
   background: var(--navy-mid); border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -322,7 +323,6 @@ textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-col
 
 /* ── Dual-handle range slider ── */
 .range-slider-wrap { display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
-
 .range-slider-track {
   position: relative; height: 4px;
   background: var(--border); border-radius: 2px;
@@ -363,7 +363,6 @@ textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-col
 /* Switch rows */
 .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .switch-name { font-size: 13px; color: var(--text); }
-
 .switch { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider { position: absolute; cursor: pointer; inset: 0; background: var(--border); border-radius: 20px; transition: .2s; }
@@ -402,13 +401,11 @@ textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-col
 
 /* ── Music player ── */
 .music-card { min-width: 0; }
-
 .music-track-name {
   font-size: 13px; font-weight: 600; color: var(--text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   margin-bottom: 12px;
 }
-
 .music-progress-wrap { margin-bottom: 12px; }
 .music-progress-bar {
   width: 100%; height: 4px; background: var(--border); border-radius: 2px;
@@ -424,7 +421,6 @@ textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-col
   display: flex; justify-content: space-between;
   font-size: 10px; color: var(--text-muted); letter-spacing: .04em;
 }
-
 .music-controls {
   display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
 }
@@ -441,7 +437,6 @@ textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-col
   background: var(--gold); border-color: transparent; color: var(--navy);
 }
 .music-ctrl-main:hover { background: var(--gold-light); color: var(--navy); }
-
 .music-ctrl-repeat { position: relative; }
 .music-ctrl-repeat.on { border-color: var(--gold); color: var(--gold); background: rgba(240,163,60,.1); }
 .repeat-badge {
@@ -451,7 +446,6 @@ textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-col
   font-size: 8px; font-weight: 700; line-height: 12px; text-align: center;
   pointer-events: none;
 }
-
 .music-vol-wrap {
   display: flex; align-items: center; gap: 6px;
   margin-left: auto; flex-shrink: 0;
@@ -468,7 +462,6 @@ textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-col
   background: var(--gold); cursor: pointer;
 }
 .music-vol-slider:hover { background: var(--text-muted); }
-
 .music-empty { font-size: 12px; color: var(--text-muted); line-height: 1.6; padding-top: 4px; }
 
 /* ── PiP CSS variables (used in JS) ── */
@@ -477,7 +470,6 @@ textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-col
 
 /* ── Standup card ── */
 .standup-card { padding: 14px 16px; }
-
 .standup-row {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
 }
@@ -492,7 +484,6 @@ textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-col
 }
 .standup-min-input:focus { border-color: var(--gold); }
 .standup-unit { font-size: 12px; color: var(--text-muted); }
-
 .btn-standup-primary {
   background: var(--gold); color: var(--navy); border: none;
   border-radius: var(--radius-sm); padding: 5px 12px;
@@ -505,7 +496,6 @@ textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-col
   font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap;
 }
 .btn-standup-ghost:hover { color: var(--text); border-color: var(--text-muted); }
-
 .standup-alert-row {
   display: flex; flex-direction: column; gap: 8px;
   padding-top: 2px;
@@ -523,4 +513,3 @@ textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-col
 }
 .standup-checkin-input:focus { border-color: var(--gold); }
 .standup-checkin-input::placeholder { color: var(--text-muted); font-style: italic; }
-
