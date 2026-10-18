@@ -221,7 +221,15 @@ document.addEventListener('DOMContentLoaded', () => {
             action: () => {
                 chrome.tabs.create({ url: 'https://notebook.google.com/notebook/75741b2e-19a2-430c-984d-0eb11aa1aac0' })
             }
-        },       
+        },    
+        {
+            id: 'gemini',
+            name: 'gemini',
+            keywords: 'gemini',
+            action: () => {
+                chrome.tabs.create({ url: 'https://www.google.com/search?sca_esv=a64ae909476153df&rlz=1C1GCEU_enVN1226VN1226&biw=1920&bih=911&sxsrf=APpeQntmT9tGpnB-SMYmnaCMNpbad-E7sg%3A1786069983172&ei=30N1at-aCpydhvcPnKfG4Qg&uact=5&sclient=gws-wiz-serp&udm=50&fbs=ABfTbFW4UnGvBVgqDYjq_ksvF_WzL0qSsUjsQCJMDr-_PEHsElEq-XkTNsyVCf0qvOFQ8LnuuR9cbg58QXWYnT3_hh-_8Vra65L0ejGJoDMpRuoUqXVIF_V1qwtmZ6UodYfmS5t1ampSqHH37YJIP7yrNhqvZALTbr6AgQyVLW-7jOCm60GM0QZmIpD5nrIITe4bNjRapHYrjT7mhkWhrplv6Q4gH0wXmGsJUJA3EuV9MV2dGVMhehsjbjz-sGjODVI3_Imbmp2z&ntc=1&cs=0&atvm=2&zs=1&ved=2ahUKEwiVxva0vY2WAxUGjuEIHfTeIu4Qoo4PegYIAggCEAc' })
+            }
+        }, 		
         {
             id: 'open_betterversion',
             name: 'Better Version',

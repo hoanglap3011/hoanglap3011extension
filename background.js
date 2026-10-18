@@ -1,5 +1,9 @@
 import { initSCChecker, forceEnableSCChecker } from './selfcontrol_bg.js';
 import { initPipReminder } from './pip_reminder_bg.js';
+import {
+    TV_GROUPS_KEY, TV_RELATIONS_KEY, TV_FILTER_KEY,
+    tvIsEligible, tvBuildFilterCtx, tvIsPopupEligible,
+} from './tuvung_core.js';
 
 chrome.runtime.onInstalled.addListener(async () => {
   await chrome.storage.local.remove([
@@ -197,25 +201,38 @@ function _openTuvungDB() {
     });
 }
 
-// Lấy đúng 1 từ đang bật, không nạp cả kho vào bộ nhớ service worker
+// Lấy ngẫu nhiên 1 từ hợp lệ theo BỘ LỌC MÀN QUẢN LÝ (xem tvIsPopupEligible trong tuvung_core.js).
+// Duyệt cursor 1 lượt + reservoir sampling: không gom cả kho vào bộ nhớ service worker.
+// Nếu bộ lọc ra rỗng → fallback bỏ lọc (vẫn tôn trọng từ / nhóm đang tắt).
 async function _tvGetRandom() {
     const db = await _openTuvungDB();
-    const range = IDBKeyRange.only(1);
-    const total = await new Promise((res, rej) => {
-        const r = db.transaction(TV_STORE, 'readonly').objectStore(TV_STORE).index('activeKey').count(range);
-        r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    const st = await chrome.storage.local.get([TV_GROUPS_KEY, TV_RELATIONS_KEY, TV_FILTER_KEY]);
+    const ctx = tvBuildFilterCtx({
+        groups: st[TV_GROUPS_KEY], relations: st[TV_RELATIONS_KEY], filter: st[TV_FILTER_KEY],
     });
-    if (!total) return null;
+    const groupMap = ctx.groupMap;
 
-    const skip = Math.floor(Math.random() * total);
     return new Promise((res, rej) => {
-        const r = db.transaction(TV_STORE, 'readonly').objectStore(TV_STORE).index('activeKey').openCursor(range);
-        let moved = false;
+        const r = db.transaction(TV_STORE, 'readonly').objectStore(TV_STORE)
+            .index('activeKey').openCursor(IDBKeyRange.only(1));
+        let pick = null, nPick = 0;          // khớp bộ lọc
+        let fb = null, nFb = 0;              // fallback: bỏ bộ lọc
         r.onsuccess = () => {
             const c = r.result;
-            if (!c) { res(null); return; }
-            if (!moved && skip > 0) { moved = true; c.advance(skip); return; }
-            const { order, activeKey, ...entry } = c.value;
+            if (c) {
+                const w = c.value;
+                if (tvIsPopupEligible(w, ctx)) {
+                    if (Math.random() * ++nPick < 1) pick = w;
+                }
+                if (ctx.active && tvIsEligible(w, groupMap, null)) {
+                    if (Math.random() * ++nFb < 1) fb = w;
+                }
+                c.continue();
+                return;
+            }
+            const chosen = pick || fb;
+            if (!chosen) { res(null); return; }
+            const { order, activeKey, ...entry } = chosen;
             res(entry);
         };
         r.onerror = () => rej(r.error);
@@ -372,8 +389,8 @@ async function _handleAlarm(isEnabledFn, showFn, scheduleFn, popupKey) {
 }
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === TV_ALARM_NAME)    _handleAlarm(_isTvEnabled,    showTuvungPopup, scheduleTvAlarm,    'TV');
-    if (alarm.name === TOEIC_ALARM_NAME) _handleAlarm(_isToeicEnabled, showToeicPopup,  scheduleToeicAlarm, 'TOEIC');
+    if (alarm.name === TV_ALARM_NAME)    _handleAlarm(_isTvEnabled,    showTuvungPopup, scheduleTvAlarm,    'tv');
+    if (alarm.name === TOEIC_ALARM_NAME) _handleAlarm(_isToeicEnabled, showToeicPopup,  scheduleToeicAlarm, 'toeic');
     if (alarm.name === 'standup-sitting') handleStandupAlarm();
     if (alarm.name === 'neo-work-end')  handleNeoAlarm('neo-work-end');
     if (alarm.name === 'neo-break-end') handleNeoAlarm('neo-break-end');
@@ -545,17 +562,42 @@ async function kiemTraNotebookTonTai(notebookId) {
     } catch (e) { return null; }
 }
 
-chrome.commands.onCommand.addListener((command) => {
+// ── Phím tắt: nếu trang đã mở sẵn thì focus vào tab/cửa sổ đó, không mở trùng ──
+// Duyệt TẤT CẢ tab (kể cả tab trong cửa sổ popup) rồi so khớp bằng startsWith,
+// vì tabs.query({ url }) không nhận pattern chrome:// và không khớp khi URL có thêm ?/#.
+async function focusExistingTab(matchFn) {
+    const tabs = await chrome.tabs.query({});
+    const tab  = tabs.find(t => matchFn(t.url || t.pendingUrl || ''));
+    if (!tab) return false;
+    await chrome.windows.update(tab.windowId, { focused: true });   // đưa cửa sổ chứa tab lên trước
+    await chrome.tabs.update(tab.id, { active: true });             // chọn đúng tab trong cửa sổ đó
+    return true;
+}
+const HUB_URL     = chrome.runtime.getURL('hub.html');
+const OPTIONS_URL = chrome.runtime.getURL('options.html');
+const isExtensionsPage = (u) => u.startsWith('chrome://extensions') || u.startsWith('edge://extensions');
+
+chrome.commands.onCommand.addListener(async (command) => {
   if (command === "open_command_hub") {
+    if (await focusExistingTab(u => u.startsWith(HUB_URL))) return;
     const width = 600; const height = 400;
     chrome.windows.getLastFocused((lastWindow) => {
       const left = lastWindow.left + Math.round((lastWindow.width - width) / 2);
       const top  = lastWindow.top  + Math.round((lastWindow.height - height) / 2);
-      chrome.windows.create({ url: chrome.runtime.getURL('hub.html'), type: 'popup', width, height, left, top, focused: true });
+      chrome.windows.create({ url: HUB_URL, type: 'popup', width, height, left, top, focused: true });
     });
+    return;
   }
-  if (command === "open_option")         { chrome.tabs.create({ url: chrome.runtime.getURL("options.html") }); return; }
-  if (command === "open-extensions-page") { chrome.tabs.create({ url: 'chrome://extensions/' }); return; }
+  if (command === "open_option") {
+    if (await focusExistingTab(u => u.startsWith(OPTIONS_URL))) return;
+    chrome.tabs.create({ url: OPTIONS_URL });
+    return;
+  }
+  if (command === "open-extensions-page") {
+    if (await focusExistingTab(isExtensionsPage)) return;
+    chrome.tabs.create({ url: 'chrome://extensions/' });
+    return;
+  }
   if (command === "open_media_hub") {
     chrome.windows.create({ url: chrome.runtime.getURL("media_hub.html"), type: 'popup', width: 630, height: 600 });
     return;
@@ -586,8 +628,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     if (request.action === "showTuvungPopupEntry") {
-        // Pending đã được set từ tuvung.js; chỉ cần mở cửa sổ
-        _openPopupWindow(chrome.runtime.getURL('tuvung.html?mode=popup&source=manual'), { popupKey: 'tv' })
+        // Pending (từ + danh sách đang lọc) đã được set từ tuvung.js; mở ở chế độ 'entry'
+        _openPopupWindow(chrome.runtime.getURL('tuvung.html?mode=popup&source=entry'), { popupKey: 'tv' })
             .then(() => sendResponse({ ok: true }));
         return true;
     }

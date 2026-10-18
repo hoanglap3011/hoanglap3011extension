@@ -52,6 +52,30 @@
       background: #35363a;
     }
 
+    /* Media đang nhận phím tắt (Space / ↑ / ↓) */
+    .media-item {
+      outline: 2px solid transparent;
+      outline-offset: -2px;
+    }
+
+    .media-item.active {
+      outline-color: #1a73e8;
+    }
+
+    .shortcut-hint {
+      font-size: 12px;
+      color: #9aa0a6;
+      margin: -8px 0 12px;
+    }
+
+    .shortcut-hint kbd {
+      background: #3c4043;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: inherit;
+      color: #e8eaed;
+    }
+
     .thumbnail {
       width: 120px;
       height: 90px;
@@ -325,6 +349,7 @@
 <body>
   <div class="container">
     <h1>🎵 Media Hub</h1>
+    <div class="shortcut-hint"><kbd>Space</kbd> phát/dừng &nbsp; <kbd>↑</kbd> <kbd>↓</kbd> âm lượng — áp dụng cho media có viền xanh (rê chuột để chọn)</div>
     <div id="mediaContainer">
       <div class="loading">
         <div class="spinner"></div>
@@ -341,4 +366,4 @@
 
   <script src="media_hub.js"></script>
 </body>
-</html>
+</html>

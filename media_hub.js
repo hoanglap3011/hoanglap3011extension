@@ -4,6 +4,9 @@
 
   let mediaData = [];
   let updateInterval = null;
+  let isLoading = false;        // chống chồng request khi lần quét trước chưa xong
+  let activeTabId = null;       // media đang được chọn để nhận phím tắt (Space / ↑ / ↓)
+  const VOLUME_STEP = 0.05;     // mỗi lần nhấn ↑/↓ tăng/giảm 5%
 
   // Format time (seconds to MM:SS)
   function formatTime(seconds) {
@@ -252,6 +255,32 @@
         updateMediaItem(existingItems[index], media);
       });
     }
+    highlightActive();
+  }
+
+  // ===== MEDIA ĐANG CHỌN (nhận phím tắt) =====
+  // Giữ media đã chọn trước đó; nếu nó không còn thì chọn media đang phát, không có thì media đầu tiên.
+  function getActiveMedia() {
+    if (!mediaData.length) return null;
+    let media = mediaData.find(m => m.tabId === activeTabId);
+    if (!media) {
+      media = mediaData.find(m => m.isPlaying) || mediaData[0];
+      activeTabId = media.tabId;
+    }
+    return media;
+  }
+
+  function highlightActive() {
+    const active = getActiveMedia();
+    document.querySelectorAll('.media-item').forEach(item => {
+      item.classList.toggle('active', !!active && parseInt(item.dataset.tabId) === active.tabId);
+    });
+  }
+
+  function setActive(tabId) {
+    if (activeTabId === tabId) return;
+    activeTabId = tabId;
+    highlightActive();
   }
 
   // Attach event listeners to controls
@@ -274,14 +303,18 @@
     // Media items (for focus tab)
     document.querySelectorAll('.media-item').forEach(item => {
       item.addEventListener('click', handleMediaItemClick);
+      // Rê chuột vào item nào thì phím tắt áp dụng cho item đó
+      item.addEventListener('mouseenter', () => setActive(parseInt(item.dataset.tabId)));
     });
   }
 
   // Handle control button clicks
   function handleControlClick(e) {
     e.stopPropagation();
+    this.blur();   // bỏ focus khỏi nút, nếu không lần nhấn Space sau sẽ "click" lại nút này
     const action = this.dataset.action;
     const tabId = parseInt(this.dataset.tabId);
+    setActive(tabId);
     
     let command = action;
     let value = null;
@@ -334,6 +367,7 @@
     e.stopPropagation();
     const tabId = parseInt(this.dataset.tabId);
     const volume = parseInt(this.value) / 100;
+    setActive(tabId);
 
     // OPTIMISTIC UPDATE: Cập nhật UI ngay
     const mediaIndex = mediaData.findIndex(m => m.tabId === tabId);
@@ -408,21 +442,20 @@ function handleMediaItemClick(e) {
 }
   // Load media data from all tabs
   function loadMediaData() {
+    if (isLoading) return;   // lần trước chưa xong thì bỏ qua, tránh dồn request mỗi 2s
+    isLoading = true;
     chrome.runtime.sendMessage({ action: 'getMediaInfo' }, (response) => {
-      if (response && response.mediaInfos) {
-        mediaData = response.mediaInfos;
-        renderMediaList();
-      } else {
-        mediaData = [];
-        renderMediaList();
-      }
+      isLoading = false;
+      if (chrome.runtime.lastError) { /* service worker vừa thức dậy, lần sau thử lại */ }
+      mediaData = (response && response.mediaInfos) ? response.mediaInfos : [];
+      renderMediaList();
     });
   }
 
-  // Force rescan tất cả content scripts, sau đó mới load data
+  // Quét lại từ đầu: hiện loading rồi load ngay.
+  // (Trước đây gửi 'rescanMedia' tới mọi tab rồi chờ thêm 300ms — thừa, vì 'getMediaState'
+  //  vốn đã gọi findPrimaryMedia() quét lại DOM mỗi lần được hỏi.)
   function forceRescanAndLoad() {
-
-    // Hiện loading ngay lập tức
     const container = document.getElementById('mediaContainer');
     container.innerHTML = `
       <div class="loading">
@@ -430,25 +463,8 @@ function handleMediaItemClick(e) {
         <p>Đang quét lại media...</p>
       </div>
     `;
-
-    // Gửi rescanMedia tới tất cả tab để reset cache
-    chrome.tabs.query({}, (tabs) => {
-      const rescanPromises = tabs
-        .filter(tab => tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://'))
-        .map(tab => new Promise((resolve) => {
-          chrome.tabs.sendMessage(tab.id, { action: 'rescanMedia' }, () => {
-            // Bỏ qua lỗi (tab không có content script)
-            if (chrome.runtime.lastError) { /* silent */ }
-            resolve();
-          });
-        }));
-
-      // Sau khi tất cả tab đã rescan xong, fetch data
-      Promise.all(rescanPromises).then(() => {
-        // Thêm delay nhỏ để đảm bảo DOM được quét xong
-        setTimeout(loadMediaData, 300);
-      });
-    });
+    isLoading = false;
+    loadMediaData();
   }
 
   // Auto refresh every 2 seconds (đủ để cập nhật progress bar)
@@ -464,21 +480,71 @@ function handleMediaItemClick(e) {
     }
   }
 
+  // ===== PHÍM TẮT =====
+  // Space: play/pause | ↑: tăng âm lượng | ↓: giảm âm lượng
+  // Áp dụng cho media đang chọn (viền xanh) — chỉnh volume của chính media đó, giống thanh trượt cạnh icon loa.
+  function sendControl(tabId, command, value = null, delay = 300) {
+    chrome.runtime.sendMessage({ action: 'controlMedia', tabId, command, value }, () => {
+      if (chrome.runtime.lastError) { /* bỏ qua */ }
+      setTimeout(loadMediaData, delay);
+    });
+  }
+
+  function refreshItemUI(media) {
+    const idx = mediaData.indexOf(media);
+    const items = document.querySelectorAll('#mediaContainer .media-item');
+    if (items[idx]) updateMediaItem(items[idx], media);
+  }
+
+  function changeVolume(media, delta) {
+    const current = media.muted ? 0 : (media.volume || 0);
+    const volume = Math.round(Math.max(0, Math.min(1, current + delta)) * 100) / 100;
+    // Đang mute mà nhấn ↑ → bỏ mute để nghe được
+    if (media.muted && delta > 0) {
+      media.muted = false;
+      sendControl(media.tabId, 'unmute', null, 0);
+    }
+    media.volume = volume;
+    refreshItemUI(media);
+    sendControl(media.tabId, 'volume', volume);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    const isSpace = e.code === 'Space';
+    const isUp    = e.key === 'ArrowUp';
+    const isDown  = e.key === 'ArrowDown';
+    if (!isSpace && !isUp && !isDown) return;
+
+    // Chặn hành vi mặc định: cuộn trang, "click" nút đang focus, thanh trượt tự nhảy giá trị
+    e.preventDefault();
+    if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+
+    const media = getActiveMedia();
+    if (!media) return;
+
+    if (isSpace) {
+      if (e.repeat) return;   // giữ Space không toggle liên tục
+      media.isPlaying = !media.isPlaying;
+      media.isPaused  = !media.isPaused;
+      refreshItemUI(media);
+      sendControl(media.tabId, 'toggle', null, media.isSpotify ? 400 : 200);
+      return;
+    }
+    changeVolume(media, isUp ? VOLUME_STEP : -VOLUME_STEP);
+  });
+
   // Initialize
   document.addEventListener('DOMContentLoaded', () => {
-    
-    // Mỗi lần mở Media Hub: luôn quét lại từ đầu
-    setTimeout(() => {
-      forceRescanAndLoad();
-      startAutoRefresh();
-    }, 300);
+    // Load ngay khi mở, không chờ thêm (trước đây trễ 300ms + rescan + 300ms)
+    loadMediaData();
+    startAutoRefresh();
 
-    // Refresh button: quét lại toàn bộ, không dùng cache
+    // Refresh button: quét lại toàn bộ
     document.getElementById('refreshBtn').addEventListener('click', () => {
       stopAutoRefresh();
       forceRescanAndLoad();
-      // Khởi động lại auto refresh sau khi rescan xong
-      setTimeout(startAutoRefresh, 1000);
+      startAutoRefresh();
     });
 
     // Stop refresh when page is hidden

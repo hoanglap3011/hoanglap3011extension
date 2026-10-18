@@ -19,7 +19,6 @@
           <span class="mgr-logo-icon">辞</span>
           <div>
             <h1 class="mgr-title">Từ Vựng</h1>
-            <p class="mgr-subtitle">Vocabulary Manager</p>
           </div>
         </div>
         <div class="mgr-header-actions">
@@ -31,6 +30,12 @@
             </svg>
           </button>
 
+          <button class="btn-primary" id="btnGroups" title="Thêm · sửa · xoá nhóm từ vựng">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>
+            </svg>
+            Quản lý nhóm
+          </button>
           <button class="btn-primary" id="btnPullServer" title="Ghi đè local bằng dữ liệu từ Google Sheet">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
               <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
@@ -58,18 +63,66 @@
 
     <main class="mgr-main">
 
-      <div class="mgr-search-bar">
-        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-        </svg>
-        <input type="text" id="searchInput" class="search-input" placeholder="Tìm từ vựng…" />
-      </div>
+      <!-- Sticky: Search + Bộ lọc -->
+      <div class="mgr-sticky">
+        <div class="mgr-search-bar">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input type="text" id="searchInput" class="search-input" placeholder="Tìm từ, nghĩa, ví dụ…  (Ctrl+F)" autocomplete="off" />
+          <!-- Chỉ hiện khi ô tìm có chữ -->
+          <span class="search-result-badge d-none" id="searchResultBadge"></span>
+          <button type="button" class="search-clear d-none" id="btnSearchClear" title="Xoá từ khoá (Esc)" aria-label="Xoá từ khoá">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="12" height="12">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="filter-section">
+          <div class="filter-row">
+            <span class="filter-label">Nhóm</span>
+            <!-- chips nhóm được build động bởi JS -->
+            <div class="filter-chips" id="groupFilter"></div>
+          </div>
+          <div class="filter-row">
+            <span class="filter-label">Từ loại</span>
+            <div class="filter-chips" id="posFilter">
+              <button class="chip" data-pos="Noun">Noun</button>
+              <button class="chip" data-pos="Verb">Verb</button>
+              <button class="chip" data-pos="Adjective">Adj.</button>
+              <button class="chip" data-pos="Adverb">Adv.</button>
+              <button class="chip" data-pos="Phrase">Phrase</button>
+              <button class="chip" data-pos="Preposition">Prep.</button>
+              <button class="chip" data-pos="Conjunction">Conj.</button>
+              <button class="chip" data-pos="__none__">Chưa rõ</button>
+            </div>
+          </div>
+          <div class="filter-row">
+            <span class="filter-label">Nội dung</span>
+            <!-- Có / Không: build động bởi JS -->
+            <div class="filter-chips yn-filters" id="ynFilter"></div>
+          </div>
+          <div class="filter-row">
+            <span class="filter-label">Trạng thái</span>
+            <div class="filter-chips" id="statusFilter">
+              <button class="chip" data-status="on">Đang bật</button>
+              <button class="chip" data-status="off">Đang tắt</button>
+            </div>
+            <div class="filter-tools">
+              <button class="chip chip--ghost" id="btnClearFilters" title="Bỏ toàn bộ bộ lọc">Xoá lọc</button>
+              <button class="chip chip--ghost" id="btnBulkMode" title="Chọn nhiều từ để gán nhóm / bật tắt">☑ Chọn nhiều</button>
+            </div>
+          </div>
+        </div>
+      </div><!-- /.mgr-sticky -->
 
       <div class="word-list" id="wordList"></div>
-      
+      <div id="lazySentinel" class="lazy-sentinel"></div>
+
       <div class="empty-state d-none" id="emptyState">
         <div class="empty-icon">📖</div>
-        <p class="empty-text">Chưa có từ vựng nào.<br/>Nhấn <strong>+ Thêm từ mới</strong> để bắt đầu!</p>
+        <p class="empty-text" id="emptyText">Chưa có từ vựng nào.<br/>Nhấn <strong>+ Thêm từ mới</strong> để bắt đầu!</p>
       </div>
     </main>
 
@@ -79,31 +132,31 @@
 
     
     <div class="modal-overlay" id="settingsOverlay">
-      <div class="comp-card" id="settingsContainer">
+      <div class="comp-card comp-card--settings" id="settingsContainer">
         <div class="comp-header">
           <div class="comp-logo">
             <span class="comp-logo-icon">⚙️</span>
             <div>
               <h2 class="comp-title">Cài đặt</h2>
-              <p class="comp-subtitle">Từ Vựng</p>
             </div>
           </div>
+          <span class="comp-status settings-status" id="tvSettingsStatus"></span>
           <button class="comp-close" id="btnCloseSettings">✕</button>
         </div>
-        <div class="comp-body">
+        <div class="comp-body settings-grid">
 
-          <div class="form-group">
-            <label class="form-label">Popup tự động</label>
-            <div class="tv-setting-row">
-              <span class="tv-setting-label-modal">Bật / Tắt</span>
+          <!-- Cột trái: popup tự động -->
+          <section class="settings-col">
+            <div class="settings-col-head">
+              <span class="form-label">Popup tự động</span>
               <label class="tv-switch">
                 <input type="checkbox" id="tvEnableAutoPopup" />
                 <span class="tv-slider"></span>
               </label>
             </div>
             <div id="popupSettingsArea">
-              <div class="tv-slider-label-row mt-3">
-                <label class="form-label" style="margin-bottom:0;text-transform:none;color:var(--white);">Thời gian tự đóng popup</label>
+              <div class="tv-slider-label-row">
+                <span class="settings-item-label">Tự đóng sau</span>
                 <span class="tv-slider-value-badge" id="tvAutoCloseDisplay">30 giây</span>
               </div>
               <div class="tv-range-wrap mb-3">
@@ -112,7 +165,7 @@
                 <span class="tv-range-max">2p</span>
               </div>
               <div class="tv-slider-label-row">
-                <label class="form-label" style="margin-bottom:0;text-transform:none;color:var(--white);">Khoảng cách giữa các popup</label>
+                <span class="settings-item-label">Khoảng cách giữa các popup</span>
                 <span class="tv-slider-value-badge" id="tvTimerRangeDisplay">5 – 10 phút</span>
               </div>
               <div class="tv-range-wrap">
@@ -125,12 +178,91 @@
                 <span class="tv-range-max">30p</span>
               </div>
             </div>
-          </div>
+          </section>
 
-          <p class="comp-status" id="tvSettingsStatus"></p>
+          <!-- Cột phải: trường hiện sẵn -->
+          <section class="settings-col">
+            <div class="settings-col-head">
+              <span class="form-label">Trường hiện sẵn khi mở popup</span>
+              <div class="filter-chips">
+                <button type="button" class="chip chip--settings chip--mini" id="btnRevealAllOn">Bật hết</button>
+                <button type="button" class="chip chip--settings chip--mini" id="btnRevealAllOff">Tắt hết</button>
+              </div>
+            </div>
+            <div id="tvRevealFields" class="reveal-grid"></div>
+          </section>
+
         </div>
       </div>
     </div>
+    <!-- Thanh thao tác hàng loạt -->
+    <div class="bulk-bar d-none" id="bulkBar">
+      <span class="bulk-count" id="bulkCount">Đã chọn 0</span>
+      <div class="bulk-actions">
+        <button class="bulk-btn" id="bulkSelectAll" title="Chọn tất cả từ đang hiển thị theo bộ lọc">Chọn hết</button>
+        <button class="bulk-btn" id="bulkClear">Bỏ chọn</button>
+        <span class="bulk-sep"></span>
+        <button class="bulk-btn bulk-btn--gold" id="bulkAddGroup">+ Gán nhóm</button>
+        <button class="bulk-btn" id="bulkRemoveGroup">− Bỏ nhóm</button>
+        <button class="bulk-btn" id="bulkActivate">Bật</button>
+        <button class="bulk-btn" id="bulkDeactivate">Tắt</button>
+        <button class="bulk-btn bulk-btn--close" id="bulkExit" title="Thoát chế độ chọn nhiều">✕</button>
+      </div>
+    </div>
+
+    <!-- Modal quản lý nhóm -->
+    <div class="modal-overlay" id="groupsOverlay">
+      <div class="comp-card comp-card--wide">
+        <div class="comp-header">
+          <div class="comp-logo">
+            <span class="comp-logo-icon">🏷️</span>
+            <div>
+              <h2 class="comp-title">Nhóm từ vựng</h2>
+              <p class="comp-subtitle">Thêm · sửa · xoá</p>
+            </div>
+          </div>
+          <button class="comp-close" id="btnCloseGroups">✕</button>
+        </div>
+        <div class="comp-body">
+          <form class="group-form" id="groupForm" autocomplete="off">
+            <div class="group-form-row">
+              <input type="text" name="name" class="form-input" placeholder="Tên nhóm, ví dụ: 600 từ TOEIC" maxlength="60" required />
+              <button type="submit" class="btn-primary" id="btnGroupSubmit">Thêm</button>
+              <button type="button" class="btn-cancel d-none" id="btnGroupCancelEdit">Hủy</button>
+            </div>
+            <input type="text" name="description" class="form-input mt-2" placeholder="Mô tả (không bắt buộc)" maxlength="200" />
+            <div class="color-swatches" id="groupColorSwatches"></div>
+          </form>
+          <div class="group-list" id="groupList"></div>
+          <p class="settings-hint">Xoá nhóm KHÔNG xoá từ, chỉ gỡ từ khỏi nhóm.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal chọn nhóm cho thao tác hàng loạt -->
+    <div class="modal-overlay" id="groupPickOverlay">
+      <div class="comp-card">
+        <div class="comp-header">
+          <div class="comp-logo">
+            <span class="comp-logo-icon">🏷️</span>
+            <div>
+              <h2 class="comp-title" id="groupPickTitle">Gán nhóm</h2>
+              <p class="comp-subtitle" id="groupPickSubtitle"></p>
+            </div>
+          </div>
+          <button class="comp-close" id="btnCloseGroupPick">✕</button>
+        </div>
+        <div class="comp-body">
+          <div class="filter-chips" id="groupPickChips"></div>
+          <p class="settings-hint" id="groupPickHint"></p>
+          <div class="comp-actions">
+            <button type="button" class="btn-cancel" id="btnCancelGroupPick">Hủy</button>
+            <button type="button" class="btn-primary" id="btnConfirmGroupPick">Áp dụng</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-overlay" id="confirmOverlay">
       <div class="confirm-box">
         <div class="confirm-icon">🗑️</div>
@@ -157,78 +289,117 @@
         <span class="comp-logo-icon">辞</span>
         <div>
           <h2 class="comp-title">Thêm từ mới</h2>
-          <p class="comp-subtitle">Vocabulary Manager</p>
         </div>
       </div>
       <button class="comp-close" aria-label="Đóng">✕</button>
     </div>
-    <form class="comp-body" autocomplete="off">
-      <div class="form-group">
-        <label class="form-label">Từ <span class="required">*</span></label>
-        <input type="text" name="word" class="form-input" placeholder="e.g. ephemeral" required />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Từ loại</label>
-        <div class="pos-radio-group">
-          <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Noun" /><span>Noun</span></label>
-          <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Verb" /><span>Verb</span></label>
-          <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Adjective" /><span>Adj.</span></label>
-          <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Adverb" /><span>Adv.</span></label>
-          <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Phrase" /><span>Phrase</span></label>
-          <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Preposition" /><span>Prep.</span></label>
-          <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Conjunction" /><span>Conj.</span></label>
+    <form class="comp-body form-2col" autocomplete="off">
+      <div class="form-cols">
+
+        <!-- Cột trái: từ, IPA, từ loại, nghĩa, ví dụ -->
+        <div class="form-col">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Từ <span class="required">*</span></label>
+              <input type="text" name="word" class="form-input" placeholder="e.g. ephemeral" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">IPA</label>
+              <input type="text" name="ipa" class="form-input form-input--ipa" placeholder="e.g. /ɪˈfem.ər.əl/" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Từ loại</label>
+            <div class="pos-radio-group">
+              <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Noun" /><span>Noun</span></label>
+              <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Verb" /><span>Verb</span></label>
+              <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Adjective" /><span>Adj.</span></label>
+              <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Adverb" /><span>Adv.</span></label>
+              <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Phrase" /><span>Phrase</span></label>
+              <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Preposition" /><span>Prep.</span></label>
+              <label class="pos-radio-label"><input type="radio" name="partOfSpeech" value="Conjunction" /><span>Conj.</span></label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tiếng Việt <span class="required">*</span></label>
+            <input type="text" name="meaning" class="form-input" placeholder="e.g. phù du, thoáng qua" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ví dụ</label>
+            <textarea name="example" class="form-input form-textarea" placeholder="e.g. Beauty is ephemeral, but art endures."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nghĩa ví dụ</label>
+            <textarea name="exampleMeaning" class="form-input form-textarea" placeholder="e.g. Vẻ đẹp thì phù du..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ghi chú</label>
+            <textarea name="note" class="form-input form-textarea" placeholder="Từ loại, gốc từ..."></textarea>
+          </div>
         </div>
+
+        <!-- Cột phải: ảnh, từ liên quan, nhóm -->
+        <div class="form-col">
+          <div class="form-group">
+            <label class="form-label">Ảnh ví dụ</label>
+            <div class="form-upload-row">
+              <input type="text" name="imageUrl" class="form-input form-input--upload" placeholder="Nhập link ảnh (URL)..." />
+              <label class="btn-primary btn-upload">
+                Tải lên
+                <input type="file" name="imageFile" accept="image/*" class="d-none" />
+              </label>
+            </div>
+            <div class="image-preview-wrap d-none">
+              <img class="image-preview" src="" alt="Preview" />
+            </div>
+          </div>
+          <div class="form-group rel-picker" data-rel="synonym">
+            <label class="form-label">Từ gần nghĩa</label>
+            <div class="rel-selected"></div>
+            <input type="text" class="form-input rel-search" placeholder="Tìm từ đã có (theo từ hoặc nghĩa)…" autocomplete="off" />
+            <div class="rel-suggest d-none"></div>
+            <div class="rel-quick d-none">
+              <input type="text" class="form-input rel-quick-word" placeholder="Từ mới" maxlength="100" />
+              <input type="text" class="form-input rel-quick-meaning" placeholder="Nghĩa tiếng Việt rồi Enter" maxlength="200" />
+              <button type="button" class="btn-primary rel-quick-save">Thêm</button>
+              <button type="button" class="btn-cancel rel-quick-cancel">Hủy</button>
+            </div>
+          </div>
+          <div class="form-group rel-picker" data-rel="confusing">
+            <label class="form-label">Từ dễ nhầm lẫn</label>
+            <div class="rel-selected"></div>
+            <input type="text" class="form-input rel-search" placeholder="Tìm từ viết / phát âm gần giống…" autocomplete="off" />
+            <div class="rel-suggest d-none"></div>
+            <div class="rel-quick d-none">
+              <input type="text" class="form-input rel-quick-word" placeholder="Từ mới" maxlength="100" />
+              <input type="text" class="form-input rel-quick-meaning" placeholder="Nghĩa tiếng Việt rồi Enter" maxlength="200" />
+              <button type="button" class="btn-primary rel-quick-save">Thêm</button>
+              <button type="button" class="btn-cancel rel-quick-cancel">Hủy</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nhóm</label>
+            <div class="filter-chips form-group-chips"></div>
+            <div class="group-inline-add">
+              <input type="text" class="form-input group-inline-input" placeholder="+ Tạo nhóm mới rồi Enter" maxlength="60" />
+            </div>
+          </div>
+        </div>
+
       </div>
-      <div class="form-group">
-        <label class="form-label">IPA</label>
-        <input type="text" name="ipa" class="form-input form-input--ipa" placeholder="e.g. /ɪˈfem.ər.əl/" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Tiếng Việt <span class="required">*</span></label>
-        <input type="text" name="meaning" class="form-input" placeholder="e.g. phù du, thoáng qua" required />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Ví dụ</label>
-        <textarea name="example" class="form-input form-textarea" placeholder="e.g. Beauty is ephemeral, but art endures."></textarea>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Nghĩa ví dụ</label>
-        <textarea name="exampleMeaning" class="form-input form-textarea" placeholder="e.g. Vẻ đẹp thì phù du..."></textarea>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Ảnh ví dụ</label>
-        <div class="form-upload-row">
-          <input type="text" name="imageUrl" class="form-input form-input--upload" placeholder="Nhập link ảnh (URL)..." />
-          <label class="btn-primary btn-upload">
-            Tải lên
-            <input type="file" name="imageFile" accept="image/*" class="d-none" />
+
+      <!-- Footer: kích hoạt + nút -->
+      <div class="form-footer">
+        <div class="form-group form-group--checkbox">
+          <label class="form-checkbox-label">
+            <input type="checkbox" name="isActive" checked />
+            <span>Kích hoạt hiển thị ngẫu nhiên</span>
           </label>
         </div>
-        <div class="image-preview-wrap d-none">
-          <img class="image-preview" src="" alt="Preview" />
+        <div class="comp-actions">
+          <button type="button" class="btn-cancel">Hủy</button>
+          <button type="submit" class="btn-primary btn-submit">Lưu từ</button>
         </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Ghi chú</label>
-        <textarea name="note" class="form-input form-textarea" placeholder="Từ loại, gốc từ..."></textarea>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Từ gần nghĩa</label>
-        <textarea name="synonyms" class="form-input form-textarea" placeholder="e.g. transient, fleeting, short-lived"></textarea>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Từ dễ nhầm lẫn</label>
-        <textarea name="confusingWords" class="form-input form-textarea" placeholder="Từ viết / phát âm gần giống, dễ nhầm..."></textarea>
-      </div>
-      <div class="form-group form-group--checkbox">
-        <label class="form-checkbox-label">
-          <input type="checkbox" name="isActive" checked />
-          <span>Kích hoạt hiển thị ngẫu nhiên</span>
-        </label>
-      </div>
-      <div class="comp-actions">
-        <button type="button" class="btn-cancel">Hủy</button>
-        <button type="submit" class="btn-primary btn-submit">Lưu từ</button>
       </div>
       <p class="comp-status"></p>
     </form>
@@ -244,7 +415,8 @@
         </div>
         <div class="display-header-right">
           <span class="display-countdown d-none"></span>
-          <button class="comp-close btn-close-display">✕</button>
+          <!-- Nút X chỉ hiện ở bản web; extension dùng nút đóng của cửa sổ -->
+          <button class="comp-close btn-close-display d-none" aria-label="Đóng">✕</button>
         </div>
       </div>
 
@@ -254,7 +426,7 @@
         <div class="display-col-left">
 
           <div class="display-ipa-row">
-            <button class="btn-play-audio" title="Nghe phát âm">
+            <button class="btn-play-audio" title="Nghe phát âm (↑)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
                 <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
                 <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
@@ -284,7 +456,7 @@
               <span class="toggle-label">Câu ví dụ</span>
             </button>
             <div class="display-example-content d-none">
-              <button class="btn-play-audio btn-play-example">
+              <button class="btn-play-audio btn-play-example" title="Nghe câu ví dụ (↓)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
                   <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
                   <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
@@ -325,7 +497,7 @@
               </svg>
               <span class="toggle-label">Từ gần nghĩa</span>
             </button>
-            <div class="display-section-text display-synonyms d-none"></div>
+            <div class="display-section-text display-synonyms rel-list d-none"></div>
           </div>
 
           <div class="display-toggle-row section-confusing d-none">
@@ -336,7 +508,7 @@
               </svg>
               <span class="toggle-label">Từ dễ nhầm lẫn</span>
             </button>
-            <div class="display-section-text display-confusing d-none"></div>
+            <div class="display-section-text display-confusing rel-list d-none"></div>
           </div>
 
         </div>
@@ -357,6 +529,12 @@
           </div>
         </div>
 
+      </div>
+      <!-- Footer: Từ trước · Hiện/Ẩn tất cả · Từ sau -->
+      <div class="display-footer d-none">
+        <button type="button" class="btn-nav btn-nav-prev" title="Từ trước (←)">← Từ trước</button>
+        <button type="button" class="btn-nav btn-nav-center btn-toggle-all" title="Hiện / Ẩn tất cả (Space)">Hiện tất cả</button>
+        <button type="button" class="btn-nav btn-nav-primary btn-nav-next" title="Từ sau (→)">Từ sau →</button>
       </div>
     </div>
   </template>

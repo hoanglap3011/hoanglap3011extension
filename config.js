@@ -1,6 +1,6 @@
 // api
 const API = 
-"https://script.google.com/macros/s/AKfycbwv3RCl6kyDGcfMn6MyijSUZiIQFP30z7rTKs1rDPf1A_lE1KsXmllKSEhIFLd15JK5/exec"
+"https://script.google.com/macros/s/AKfycbwIFXBca78sRKPoALqyqVoF-wqR_nUz59NAYU1P7irj9bRNrYIvXxN8zXdJddYKuWsx/exec"
 ;
 
 const API_ACTION_GET_ALL_SUMMARY = "getAllSummary";
@@ -15,6 +15,8 @@ const API_ACTION_GET_METADATA_INTENT_TIME = "getMetaDataIntentTime";
 const API_ACTION_ADD_INTENT_TIME_DATA = "addIntentTimeData";
 const API_ACTION_TUVUNG_GET_ALL = "tuvungGetAll";
 const API_ACTION_TUVUNG_SYNC_ONE = "tuvungSyncOne";
+const API_ACTION_TUVUNG_BULK_UPDATE = "tuvungBulkUpdate";   // gán/bỏ nhóm, bật/tắt nhiều từ 1 lần
+const API_ACTION_TUVUNG_GROUP_SYNC = "tuvungGroupSync";     // thêm/sửa/xoá/sắp xếp nhóm
 const API_ACTION_TOEIC_GET_ALL = "toeicGetAll";
 
 // CACHE KEYS
